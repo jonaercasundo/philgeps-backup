@@ -5,58 +5,55 @@
   <title>Login - PhilGEPS Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light d-flex align-items-center" style="height:100vh;">
-<!-- TOAST -->
- <?php
- 
-if (isset($_GET['toast']) && isset($_GET['type'])){
-    $toast = $_GET['toast'];
-    $type = $_GET['type'];
- echo "<div class='position-fixed bottom-0 end-0 p-3' style='z-index: 9999;'>
-  <div id='myToast' class='toast text-bg-$type' role='alert' aria-live='assertive' aria-atomic='true'>
-    <div class='toast-header'>
-      <strong class='me-auto'>PhilGEPS Tracker</strong>
-      <small class='text-muted'></small>
-      <button type='button' class='btn-close' data-bs-dismiss='toast' aria-label='Close'></button>
+<body class="bg-light d-flex align-items-center justify-content-center" style="height:100vh;">
+
+<?php
+// Toast message
+if (!empty($_GET['toast']) && !empty($_GET['type'])):
+    $toast = htmlspecialchars($_GET['toast'], ENT_QUOTES, 'UTF-8');
+    $type = htmlspecialchars($_GET['type'], ENT_QUOTES, 'UTF-8');
+?>
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+  <div id="myToast" class="toast text-bg-<?= $type ?>" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto">PhilGEPS Tracker</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
-    <div class='toast-body' id='toastMessage'>
-      $toast
-    </div>
+    <div class="toast-body"><?= $toast ?></div>
   </div>
 </div>
 
 <script>
-  window.addEventListener('DOMContentLoaded', (event) => {
-    const toastEl = document.getElementById('myToast');
-    const toast = new bootstrap.Toast(toastEl);
-    toast.show();
-  });
+document.addEventListener('DOMContentLoaded', () => {
+  const toastEl = document.getElementById('myToast');
+  if (toastEl) new bootstrap.Toast(toastEl).show();
+});
 </script>
-";
- };
- ?>
-  <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-md-4">
-        <div class="card shadow-lg">
-          <div class="card-body p-4">
-            <h4 class="text-center mb-3">PhilGEPS Tracker</h4>
-            <form method="POST" action="script/authenticate.php">
-              <div class="mb-3">
-                <label>Email</label>
-                <input type="email" name="username" class="form-control" placeholder="Enter email">
-              </div>
-              <div class="mb-3">
-                <label>Password</label>
-                <input type="password" name="password" class="form-control" placeholder="Enter password">
-              </div>
-              <button class="btn btn-primary w-100">Login</button>
-            </form>
-          </div>
+<?php endif; ?>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-4">
+      <div class="card shadow-lg">
+        <div class="card-body p-4">
+          <h4 class="text-center mb-3">PhilGEPS Tracker</h4>
+          <form method="POST" action="script/authenticate.php" autocomplete="off">
+            <div class="mb-3">
+              <label for="username" class="form-label">Email</label>
+              <input type="email" id="username" name="username" class="form-control" placeholder="Enter email" required>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+          </form>
         </div>
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

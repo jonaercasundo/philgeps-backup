@@ -10,8 +10,8 @@ require "config/db.php"; // your PDO connection
 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">Import From File</button><br><br>
 </div>
 <div class="d-flex mb-3">
-    <input class="form-control me-2" id="search" name="q" placeholder="Search items..." aria-label="Search">
-    <button class="btn btn-outline-primary" onclick="fetchData('school', ['school_id', 'school_name', 'address', 'contact_person', 'contact', 'municipality', 'division', 'region'])" type="button">Search</button>
+    <input class="form-control me-2" id="searchInput" name="q" placeholder="Search items..." aria-label="Search">
+    <button class="btn btn-outline-primary" id ="searchButton"type="button">Search</button>
 </div>
  </div>
 <div class="row mb-3">
@@ -127,76 +127,7 @@ require "config/db.php"; // your PDO connection
 </nav>
 
 </div>
-<!-- Add School Modal -->
-<div class="modal fade" id="addModal" tabindex="-1">
-  <div class="modal-dialog modal-md">
-    <div class="modal-content">
-      <div class="modal-header"><h5>Add School</h5></div>
-      <div class="modal-body">
-        <form method="POST" id="addForm">
-          <input type="hidden" value="<?=$_GET['id']?>" name="project_id" class="form-control">
-          <div class="mb-3"><label>School ID</label><input type="text" name="school_id" class="form-control"></div>
-          <div class="mb-3"><label>School Name</label><input type="text" name="school_name" class="form-control"></div>
-          <div class="mb-3"><label>Address</label><input type="text" name="address" class="form-control"></div>
-          <div class="mb-3"><label>Contact Person</label><input type="text" name="person" class="form-control"></div>
-          <div class="mb-3"><label>Contact</label><input type="text" name="contact" class="form-control"></div>
-          <div class="mb-3"><label>Municipality</label><input type="text" name="municipality" class="form-control"></div>
-          <div class="mb-3"><label>Division</label><input type="text" name="division" class="form-control"></div>
-          <div class="mb-3"><label>Region</label><input type="text" name="region" class="form-control"></div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="submit" class="btn btn-primary" onclick="addForm('schools','add_school.php')">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Import School Modal -->
-<div class="modal fade" id="importModal" tabindex="-1">
-  <div class="modal-dialog modal-md">
-    <div class="modal-content">
-      <div class="modal-header"><h5>Import Schools</h5></div>
-      <div class="modal-body">
-        <form>
-          <input type="hidden" value="<?=$_GET['id']?>" class="form-control">
-          <div class="mb-3"><label>CSV file</label><input type="file" class="form-control"></div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button class="btn btn-primary">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Edit School Modal -->
-<div class="modal fade" id="editModal" tabindex="-1">
-  <div class="modal-dialog modal-md">
-    <div class="modal-content">
-      <div class="modal-header"><h5>Edit School</h5></div>
-      <div class="modal-body">
-        <form method="POST" action="script/edit_school.php">
-          <input type="hidden" name="project_id" value="<?=$_GET['id']?>" class="form-control">
-          <div class="mb-3"><label>School ID</label><input required id="editid" name="id" type="text" class="form-control"></div>
-          <div class="mb-3"><label>School Name</label><input required id="editname" name="school" type="text" class="form-control"></div>
-          <div class="mb-3"><label>Address</label><input required id="editaddress" name="address" type="text" class="form-control"></div>
-          <div class="mb-3"><label>Contact Person</label><input required id="editperson" name="person" type="text" class="form-control"></div>
-          <div class="mb-3"><label>Contact</label><input required id="editcontact" name="contact" type="text" class="form-control"></div>
-          <div class="mb-3"><label>Municipality</label><input required id="editmunicipality" name="municipality" type="text" class="form-control"></div>
-          <div class="mb-3"><label>Division</label><input required id="editdivision" name="division" type="text" class="form-control"></div>
-          <div class="mb-3"><label>Region</label><input required id="editregion" name="region" type="text" class="form-control"></div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="submit" class="btn btn-primary" id="">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
+<?php include "partials/school_modals.php"?>
 <script src="assets/js/project_details.js"></script>
 
 <script>
@@ -221,87 +152,131 @@ document.getElementById("editregion").value = region;
 
 
 }
-//populate region filter
+// Populate region on page load
 document.addEventListener("DOMContentLoaded", function () {
-    // On page load, populate regions
     populateFilter("filterRegion", "SELECT DISTINCT region AS options FROM school ORDER BY region ASC");
-    hideLoading()
+    hideLoading();
 });
 
-//filter
-document.getElementById("filterButt").addEventListener("click", function() {
+// When region changes, populate division
+document.getElementById("filterRegion").addEventListener("change", function() {
+    const region = this.value;
+    const divisionSelect = document.getElementById("filterDivision");
+    const municipalitySelect = document.getElementById("filterMunicipality");
+
+    // Reset lower-level filters
+    divisionSelect.innerHTML = "<option value=''>Select Division</option>";
+    divisionSelect.disabled = !region;
+    municipalitySelect.innerHTML = "<option value=''>Select Municipality</option>";
+    municipalitySelect.disabled = true;
+
+    // Enable filter buttons
+    document.getElementById("filterButt").disabled = !region;
+    document.getElementById("rmvFilter").disabled = !region;
+
+    if(region){
+        populateFilter("filterDivision", "SELECT DISTINCT division AS options FROM school WHERE region='" + region + "' ORDER BY division ASC");
+    }
+});
+
+// When division changes, populate municipality
+document.getElementById("filterDivision").addEventListener("change", function() {
+    const division = this.value;
+    const municipalitySelect = document.getElementById("filterMunicipality");
+
+    // Reset municipality
+    municipalitySelect.innerHTML = "<option value=''>Select Municipality</option>";
+    municipalitySelect.disabled = !division;
+
+    if(division){
+        populateFilter("filterMunicipality", "SELECT DISTINCT municipality AS options FROM school WHERE division='" + division + "' ORDER BY municipality ASC");
+    }
+});
+
+// Remove filters button
+document.getElementById("rmvFilter").addEventListener("click", function(){
+    document.getElementById("filterRegion").value = "";
+    document.getElementById("filterDivision").value = "";
+    document.getElementById("filterMunicipality").value = "";
+    document.getElementById("filterDivision").disabled = true;
+    document.getElementById("filterMunicipality").disabled = true;
+
+    updateTable(1);
+});
+
+
+// Helper: get selected filters
+function getFilters() {
     let region = document.getElementById("filterRegion").value;
     let division = document.getElementById("filterDivision").value;
     let municipality = document.getElementById("filterMunicipality").value;
+    let search = document.getElementById("searchInput").value.trim();
+    let params = new URLSearchParams();
+    if(region) params.append("region", region);
+    if(division) params.append("division", division);
+    if(municipality) params.append("municipality", municipality);
+    if(search) params.append("search", search);
+    return params.toString();
+}
+
+// Update table via AJAX
+function updateTable(page = 1) {
     let tbody = document.getElementById("resultTable");
     tbody.innerHTML = "";
-    let pagination = document.getElementById("pagination");
-    pagination.innerHTML = "";
-
-    if(region != ""){
-      region = "region=" + region
-    }
-    if(division != ""){
-      division = "&division=" + division
-    }
-    if(municipality != ""){
-      municipality = "&municipality=" + municipality
-    }
     showLoading();
-
-     fetch("script/filterSchool.php", {
+    fetch("script/filterSchool.php", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body:  region + division + municipality
+        body: getFilters() + "&page=" + page + "&limit=10"
     })
     .then(res => res.json())
     .then(data => {
-        if (data.length > 0) {
-            data.forEach(row => {
-                tbody.innerHTML += `
-                                <tr>
-                                    <td id="id${row.school_id}s">${row.school_id}</td>
-                                    <td id="name${row.school_id}s">${row.school_name}</td>
-                                    <td>
-                                    <span id="address${row.school_id}s">${row.address}</span>, 
-                                    <span id="municipality${row.school_id}s">${row.municipality}</span>, 
-                                    <span id="division${row.school_id}s">${row.division}</span>, 
-                                    <span id="region${row.school_id}s">${row.region}</span>
-                                    </span></td>
-                                    <td id="person${row.school_id}s">${row.contact_person}</td>
-                                    <td id="contact${row.school_id}s">${row.contact}</td>
-                                    <td>
-                                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(${row.school_id})">Edit School</button>
-                                    <a href="delete_lot.php?id=" class="btn btn-danger btn-sm"
-                                    onclick="return confirm('Are you sure you want to delete this School?')">Delete</a></td>
-                                </tr>
-                            `;
-            });
+        if(data.rows && data.rows.length){
+            tbody.innerHTML = data.rows.map(row => `
+                <tr>
+                    <td id='id${truncateText(row.school_id)}s'>${truncateText(row.school_id)}</td>
+                    <td id='name${truncateText(row.school_id)}s'>${row.school_name}</td>
+                    <td>
+                    <span id="address${truncateText(row.school_id)}s">${row.address}</span>, 
+                    <span id="municipality${truncateText(row.school_id)}s">${row.municipality}</span>, 
+                    <span id="division${truncateText(row.school_id)}s">${row.division}</span>, 
+                    <span id="region${truncateText(row.school_id)}s">${row.region}</span>
+                    </td>
+                    <td id='person${truncateText(row.school_id)}s'>${row.contact_person}</td>
+                    <td id='contact${truncateText(row.school_id)}s'>${row.contact}</td>
+                    <td>
+                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(${row.school_id})">Edit School</button>
+                        <a href="delete_lot.php?id=${row.school_id}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this School?')">Delete</a>
+                    </td>
+                </tr>`).join("");
         }
+        renderPagination(data, page);
     })
-    .catch(err => console.error("Error:", err))
-    .finally(() => {
-        hideLoading();
-    });
-    });
-    //populate filters
-    document.getElementById("filterRegion").addEventListener("change", function() {
-    let region = document.getElementById("filterRegion").value;
-    if(region != ""){
-    document.getElementById("filterDivision").disabled = false;
-    document.getElementById("filterButt").disabled = false;
-    document.getElementById("rmvFilter").disabled = false;
-    }else{
-    document.getElementById("rmvFilter").click()
-    document.getElementById("filterButt").disabled = true;
-    document.getElementById("rmvFilter").disabled = true;
-    }
-    populateFilter("filterDivision", "SELECT DISTINCT division AS options FROM school WHERE region = '" + region + "' ORDER BY division ASC" );
-});
-document.getElementById("filterDivision").addEventListener("change", function() {
-    document.getElementById("filterMunicipality").disabled = false;
-    let division = document.getElementById("filterDivision").value;
-    populateFilter("filterMunicipality", "SELECT DISTINCT municipality AS options FROM school WHERE division = '" + division + "' ORDER BY municipality ASC" );
-});
+    .finally(() => hideLoading());
+}
+
+// Pagination rendering
+function renderPagination(data, currentPage) {
+    let pagination = document.getElementById("pagination");
+    pagination.innerHTML = "";
+    if(!data.total_pages || data.total_pages <= 1) return;
+
+    const createPage = (i, text = i) => `
+        <li class="page-item ${i === currentPage ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="updateTable(${i})">${text}</a>
+        </li>`;
+
+    pagination.innerHTML += createPage(currentPage-1, "«");
+    let start = Math.max(1, currentPage-4);
+    let end = Math.min(data.total_pages, start+7);
+    for(let i=start; i<=end; i++) pagination.innerHTML += createPage(i);
+    pagination.innerHTML += createPage(currentPage+1, "»");
+}
+
+// Event listeners
+document.getElementById("filterButt").addEventListener("click", () => updateTable(1));
+document.getElementById("searchButton").addEventListener("click", () => updateTable(1));
+document.getElementById("searchInput").addEventListener("keypress", e => { if(e.key==="Enter") updateTable(1); });
+
 </script>
 <?php require "template/footer.php"; ?>
