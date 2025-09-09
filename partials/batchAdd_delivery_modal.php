@@ -6,7 +6,7 @@
         <form method="POST" action="script/save_batch_deliveries.php" id="batchDeliveryAdd">
           <div class="mb-3">
             <label>Project</label>
-            <select name="project" class="form-select" id="batchProject" onchange="checkAgency(this, 'Batchlot')" required>
+            <select name="project" class="form-select" id="batchProject" onchange="checkAgency(this, 'Batchdeped')" required>
               <option value="#">Select Project</option>
               <?php 
               foreach($projects as $project){

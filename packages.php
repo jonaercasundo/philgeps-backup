@@ -196,7 +196,7 @@ try {
     <h2 class="mb-3">Package List</h2>
 <div class="d-flex mb-3 justify-content-between">
   <div class="d-flex mb-3">
-    <a href="#" data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Package</a>
+    <button data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Package</button>
   </div>
 
   <div class="d-flex mb-3">
@@ -393,5 +393,5 @@ function populateKeystage(){
 }
 </script>
 
-<script src="assets/js/project_details.js">
+<script src="assets/js/project_details.js"></script>
 <?php require "template/footer.php"; ?>

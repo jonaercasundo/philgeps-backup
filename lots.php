@@ -25,7 +25,7 @@ try {
     <h2 class="mb-3">Lot List</h2>
 <div class="d-flex mb-3 justify-content-between">
   <div class="d-flex mb-3">
-    <a href="#" data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Lot</a>
+    <button data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Lot</button>
   </div>
   <div class="d-flex mb-3">
     <input class="form-control me-2" type="search" name="q" placeholder="Search items..." aria-label="Search">
@@ -117,5 +117,5 @@ try {
     </div>
   </div>
 </div>
-<script src="assets/js/project_details.js">
+<script src="assets/js/project_details.js"></script>
 <?php require "template/footer.php"; ?>

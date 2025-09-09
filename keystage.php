@@ -156,5 +156,5 @@ try {
             document.getElementById("editdesc").value = desc;
 }
     </script>
-<script src="assets/js/project_details.js">
+<script src="assets/js/project_details.js"></script>
 <?php require "template/footer.php"; ?>

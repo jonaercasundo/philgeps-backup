@@ -1,34 +1,35 @@
 // populate addbatch and add modal select
-function checkAgency(agency){
-    let selectedOption = agency.options[agency.selectedIndex];
-    let extra = selectedOption.getAttribute("data-extra");
-    let projects = document.getElementsByClassName("deped");
-    
-    switch(extra){
-      case 'Deped':  
-        for (let project of projects) {project.classList.remove("visually-hidden")};
+function checkAgency(selectEl, targetClass) {
+  let selectedOption = selectEl.options[selectEl.selectedIndex];
+  let extra = selectedOption.getAttribute("data-extra");
+  let projects = document.getElementsByClassName(targetClass);
 
-         // Call backend to get project data
-       fetch("script/get_project.php?projectid=" + encodeURIComponent(selectedOption.value))
-      .then(res => res.json())
-      .then(data => {
-        populateSelect("lotSelect", data.lots);
-
-        if (!data.lots || data.lots.length === 0) {
-          window.location.href = window.location.pathname + "?toast=No Lots Added to Project&type=danger";
-        }
-      })
-      .catch(err => console.error("Error:", err));
-
-
-
-      break;
-      default: 
-      for (let project of projects) {project.classList.add("visually-hidden")};
-        break;
+  if (extra === "Deped") {
+    for (let project of projects) {
+      project.classList.remove("visually-hidden");
     }
 
+    // Fetch project lots only if single modal
+    if (targetClass === "deped") {
+      fetch("script/get_project.php?projectid=" + encodeURIComponent(selectedOption.value))
+        .then(res => res.json())
+        .then(data => {
+          populateSelect("lotSelect", data.lots);
+          if (!data.lots || data.lots.length === 0) {
+            window.location.href =
+              window.location.pathname +
+              "?toast=No Lots Added to Project&type=danger";
+          }
+        })
+        .catch(err => console.error("Error:", err));
+    }
+  } else {
+    for (let project of projects) {
+      project.classList.add("visually-hidden");
+    }
   }
+}
+
 
   //to search school WHERE project_id
 document.getElementById("schoolSearch").addEventListener("keyup", function() {

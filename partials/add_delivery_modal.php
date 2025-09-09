@@ -5,7 +5,7 @@
       <div class="modal-body">
         <form method="POST" id="addDelivery" action="script/save_deliveries.php" enctype="multipart/form-data">
           <div class="mb-3"><label>Project</label>
-          <select name="project" class="form-select" id="project" onchange ="checkAgency(this, 'lotSelect')" required>
+          <select name="project" class="form-select" id="project" onchange ="checkAgency(this, 'deped')" required>
             <option value="#">Select Project</option>
             <?php 
             foreach($projects as $project){

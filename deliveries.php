@@ -110,5 +110,4 @@ try {
 <?php include "partials/batchAdd_delivery_modal.php"; ?>
 <script src="assets/js/deliveriesModalSelect.js"></script>
 <script src="assets/js/deliveriesFilter.js"></script>
-<script src="assets/js/ajax.js"></script>
 <?php require "template/footer.php"; ?>
