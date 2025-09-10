@@ -14,10 +14,26 @@ try {
 
     // Fetch deliveries with project name
     $stmt = $pdo->prepare("
-        SELECT d.*, p.project_name
+        SELECT 
+            s.school_id,
+            s.school_name,
+            s.address,
+            k.keystage_num,
+            k.description AS keystage_description,
+            d.dr_no,
+            d.delivery_id,
+            d.package_type,
+            d.delivery_date,
+            d.status,
+            p.project_name
         FROM deliveries d
-        JOIN projects p ON p.project_id = d.project_id
-        ORDER BY d.delivery_id ASC
+        JOIN school s 
+            ON d.school_id = s.school_id
+        JOIN projects p 
+            ON d.project_id = p.project_id
+        LEFT JOIN keystage k 
+            ON d.keystage_id = k.keystage_id
+        ORDER BY d.status, d.delivery_date
         LIMIT :limit OFFSET :offset
     ");
     $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
@@ -75,9 +91,9 @@ try {
         <?php foreach($deliveries as $d): ?>
         <tr>
             <td><?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td>
-            <td><?= htmlspecialchars($d['school']) ?></td>
+            <td><?= htmlspecialchars($d['school_id']). ' '. htmlspecialchars($d['school_name']) ?></td>
             <td><?= htmlspecialchars($d['address']) ?></td>
-            <td><?= htmlspecialchars($d['remarks']) ?></td>
+            <td><?= htmlspecialchars($d['package_type']) . ' Keystage ' . htmlspecialchars($d['keystage_num']) . ' ' . htmlspecialchars($d['keystage_description']) ?></td>
             <td><?= htmlspecialchars($d['dr_no']) ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
             <td><?= htmlspecialchars($d['status']) ?></td>
@@ -85,9 +101,9 @@ try {
                 <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                         data-id="<?= $d['delivery_id'] ?>"
                         data-project="<?= htmlspecialchars($d['project_name']) ?>"
-                        data-school="<?= htmlspecialchars($d['school']) ?>"
+                        data-school="<?= htmlspecialchars($d['school_id']). ' '. htmlspecialchars($d['school_name'])  ?>"
                         data-address="<?= htmlspecialchars($d['address']) ?>"
-                        data-remarks="<?= htmlspecialchars($d['remarks']) ?>"
+                        data-remarks="<?= htmlspecialchars($d['package_type']) . ' Keystage ' . htmlspecialchars($d['keystage_num']) . ' ' . htmlspecialchars($d['keystage_description'])?>"
                         data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
