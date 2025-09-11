@@ -8,7 +8,8 @@ try {
             SELECT 
         l.lot_id, 
         l.lot_name,  
-        p.project_name
+        p.project_name,
+        p.keystage
     FROM lot l
     LEFT JOIN projects p 
         ON l.project_id = p.project_id
@@ -16,6 +17,11 @@ try {
     ORDER BY l.lot_id ASC;
     ");
     $lots = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+     $stmt = $pdo->query("
+            SELECT keystage FROM projects WHERE project_id = $project_id
+    ");
+    $keystageProj = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     die("Error: " . $e->getMessage());
 }
@@ -37,7 +43,7 @@ try {
         <thead class="table-dark">
             <tr>
                 <th>Lot Number</th>
-                <th>Keystage</th>
+                <?php if($keystageProj['keystage']==1){echo "<th>Keystage</th>";}else{echo "<th>Carton</th>";} ?>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -46,21 +52,39 @@ try {
             <?php foreach ($lots as $lot): ?>
                 <tr>
                     <td><?= htmlspecialchars($lot['lot_name']) ?></td>
-                    <td>
-                        <?php
-                            $stmt = $pdo->query("SELECT * FROM keystage WHERE lot_id = " . (int)$lot['lot_id']);
-                            $keystage = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                            if (empty($keystage)) {
-                                echo "none";
-                            } else {
-                                foreach ($keystage as $ks) {
-                                    echo "Keystage ". htmlspecialchars($ks['keystage_num']) . " - " .htmlspecialchars($ks['description'])."<br>";
+                      <!-- Keystage Column -->
+                      <?php if($keystageProj['keystage']==1){
+                      echo "<td>";
+                              $stmt = $pdo->query("SELECT * FROM keystage WHERE lot_id = " . (int)$lot['lot_id']);
+                              $keystage = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                              if (empty($keystage)) {
+                                  echo "none";
+                              } else {
+                                  foreach ($keystage as $ks) {
+                                      echo "Keystage ". htmlspecialchars($ks['keystage_num']) . " - " .htmlspecialchars($ks['description'])."<br>";
+                                  }
+                              }
+                            echo "</td><td>";
+                            echo "<a href=\"keystage.php?id=$project_id&lot_id={$lot['lot_id']}\" class=\"btn btn-primary btn-sm\">Keystage</a>";}
+                            //End of Keystage
+                            else{
+                              $stmt = $pdo->query("SELECT COUNT(package_id) AS carton_count FROM package WHERE lot_id = " . (int)$lot['lot_id']);
+                              $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                echo "<td>";
+                                if (empty($packages)) {
+                                    echo "none";
+                                } else {
+                                    foreach ($packages as $pkg) {
+                                        echo htmlspecialchars($pkg['carton_count']);
+                                    }
                                 }
-                            }
-                            ?>
-                        </td><td>
-                        <a href="keystage.php?id=<?=$project_id?>&lot_id=<?= $lot['lot_id'] ?>" class="btn btn-primary btn-sm">Keystage</a>
+                                echo "</td><td>";
+                                echo "<a href=\"packages.php?id=$project_id&lot_id={$lot['lot_id']}\" class=\"btn btn-primary btn-sm\">Packages</a>";
+                            } ?>
+
                         <a href="edit_lot.php?id=<?= $lot['lot_id'] ?>" class="btn btn-warning btn-sm">Edit</a>
                         <a href="delete_lot.php?id=<?= $lot['lot_id'] ?>" class="btn btn-danger btn-sm"
                            onclick="return confirm('Are you sure you want to delete this lot?')">Delete</a>

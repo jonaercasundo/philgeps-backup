@@ -3,10 +3,17 @@ require "template/header.php";
 require "config/db.php"; // your PDO connection
 // Get params
 $keystage_id = isset($_GET['keystage_id']) ? (int)$_GET['keystage_id'] : null;
+$lot_id = isset($_GET['lot_id']) ? (int)$_GET['lot_id'] : null;
 $project_id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+$ref_id = $keystage_id;
+$ref_column="keystage_id";
+if (!$keystage_id) {
+    $ref_id = $lot_id;
+    $ref_column="lot_id";
+}
 
 try {
-    if ($keystage_id) {
+    if ($ref_id) {
         $stmt = $pdo->prepare("
             SELECT 
                 p.package_id,
@@ -18,11 +25,11 @@ try {
             FROM package p
             LEFT JOIN package_content pc ON p.package_id = pc.package_id
             LEFT JOIN item i ON pc.item_id = i.item_id
-            WHERE p.keystage_id = ?
-            GROUP BY p.package_id, p.package_num, p.keystage_id, p.length, p.width, p.height
+            WHERE p.$ref_column = ?
+            GROUP BY p.package_id, p.package_num, p.$ref_column, p.length, p.width, p.height
             ORDER BY p.package_num ASC
         ");
-        $stmt->execute([$keystage_id]);
+        $stmt->execute([$ref_id]);
 
     } elseif ($project_id) {
         $stmt = $pdo->prepare("

@@ -96,7 +96,6 @@ try {
                     <?php
                     $fields = [
                         ['label'=>'PhilGEPS Ref No','name'=>'ref_no','type'=>'text'],
-                        ['label'=>'Agency','name'=>'agency','type'=>'text'],
                         ['label'=>'Project Name','name'=>'project_name','type'=>'text'],
                         ['label'=>'Contract Amount','name'=>'contract_amount','type'=>'number']
                     ];
@@ -107,6 +106,18 @@ try {
                         <input type="<?= $f['type'] ?>" name="<?= $f['name'] ?>" class="form-control" required>
                     </div>
                     <?php endforeach; ?>
+                    <div class="mb-3">
+                        <label for="agency">Agency</label>
+                        <select name="agency" class="form-control" onchange="changeAgency(this.value)" required>
+                            <option>Select Agency</option>
+                            <option value="Deped">Deped</option>
+                            <option value="Dpwh">Dpwh</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 visually-hidden" id="includeKeystage">
+                        <label>Include Keystage</label>
+                        <input type="checkbox" name="keystage" class="checkbox" value="1"><br><br>
+                    </div>
                     <div class="mb-3 row">
                         <div class="col">
                             <label>Start Date</label>
@@ -141,6 +152,15 @@ try {
 </div>
 
 <script>
+
+function changeAgency(agency) {
+    if(agency === "Deped") {
+        document.getElementById("includeKeystage").classList.remove("visually-hidden");
+    } else{
+        document.getElementById("includeKeystage").classList.add("visually-hidden");
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     // Populate filter selects
     const filters = {

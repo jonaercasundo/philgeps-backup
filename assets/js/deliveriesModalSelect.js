@@ -10,10 +10,11 @@ function checkAgency(selectEl, targetClass) {
     }
 
     // Fetch project lots only if single modal
-    if (targetClass === "deped") {
+    if (targetClass === "deped" || targetClass === "Batchdeped") {
       fetch("script/get_project.php?projectid=" + encodeURIComponent(selectedOption.value))
         .then(res => res.json())
         .then(data => {
+          populateSelect("Batchlot", data.lots);
           populateSelect("lotSelect", data.lots);
           if (!data.lots || data.lots.length === 0) {
             window.location.href =

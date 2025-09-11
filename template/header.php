@@ -42,11 +42,20 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 // Project detail navigation, only if 'id' is set
 if (isset($_GET['id'])):
     $id = (int)$_GET['id'];
+    include 'config/db.php';
+    $stmt = $pdo->query("
+        SELECT keystage from projects WHERE project_id = $id
+    ");
+    $keystage = $stmt->fetch(PDO::FETCH_ASSOC);
     $projectNav = [
         "project_details.php" => "Overview",
         "schools.php" => "Schools",
-        "lots.php" => "Lots",
-        "keystage.php" => "Keystage",
+        "lots.php" => "Lots"
+    ];
+    if ($keystage && $keystage['keystage'] == 1) {
+        $projectNav["keystage.php"] = "Keystage";
+    }
+    $projectNav += [
         "packages.php" => "Packages",
         "items.php" => "Items",
         "project_reports.php" => "Reports"
