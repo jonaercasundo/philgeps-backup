@@ -46,8 +46,7 @@ try {
             SUM(d.status = 'Accepted')  AS accepted
         FROM deliveries d
         LEFT JOIN keystage k ON d.keystage_id = k.keystage_id
-        LEFT JOIN package p  ON d.package_id = p.package_id
-        JOIN lot l ON l.lot_id = COALESCE(p.lot_id, k.lot_id)
+        JOIN lot l ON l.lot_id = COALESCE(l.lot_id, k.lot_id)
         WHERE d.project_id = $reportId
         GROUP BY l.lot_name
         ORDER BY l.lot_name

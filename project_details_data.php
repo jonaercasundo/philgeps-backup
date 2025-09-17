@@ -152,11 +152,31 @@ $statusColors = [
                 <?php if (in_array($doc, $uploadedTypes)): ?>
                     <span class="badge bg-success">Uploaded</span>
                 <?php else: ?>
-                    <span class="badge bg-secondary">Missing</span>
+                    <button class="badge bg-danger" data-bs-toggle="modal" data-bs-target="#addModal" onclick="uploadFile('<?= $doc ?>')">Missing</button>
                 <?php endif; ?>
             </li>
         <?php endforeach; ?>
     </ul>
+
+<!-- Add File Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header"><h5 id="addTitle">Error reload the page</h5></div>
+      <div class="modal-body">
+        <form enctype="multipart/form-data" id="addForm">
+          <input type="hidden" name="project_id" value="<?=$_GET['id']?>" class="form-control">
+          <input type="hidden" id ="document_type" name="doc_type" class="form-control">
+          <div class="mb-3"><label>Upload File</label><input require id="editid" name="file" type="file" class="form-control"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-primary" onclick="addForm('project_details.php','add_document.php')">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
 
     <!-- Uploaded Documents -->
     <h4>All Uploaded Documents</h4>

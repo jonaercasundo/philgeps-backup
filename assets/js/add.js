@@ -29,3 +29,8 @@ fetch("script/"+url, {
         hideLoading();
     });
 }
+
+function uploadFile(doctype){
+        document.getElementById('addTitle').innerHTML ="Upload "+ doctype+" File";
+        document.getElementById('document_type').value = doctype;
+    };

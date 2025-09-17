@@ -95,17 +95,18 @@ try {
                 <form id="addForm" enctype="multipart/form-data">
                     <?php
                     $fields = [
-                        ['label'=>'PhilGEPS Ref No','name'=>'ref_no','type'=>'text'],
-                        ['label'=>'Project Name','name'=>'project_name','type'=>'text'],
-                        ['label'=>'Contract Amount','name'=>'contract_amount','type'=>'number']
+                        ['label'=>'PhilGEPS Ref No','name'=>'ref_no','type'=>'text', 'id'=>'ref_no'],
+                        ['label'=>'Project Name','name'=>'project_name','type'=>'text', 'id' =>'project_name'],
+                        ['label'=>'Contract Amount','name'=>'contract_amount','type'=>'text', 'id'=>'contract_formatter']
                     ];
                     foreach($fields as $f):
                     ?>
                     <div class="mb-3">
                         <label><?= $f['label'] ?></label>
-                        <input type="<?= $f['type'] ?>" name="<?= $f['name'] ?>" class="form-control" required>
+                        <input type="<?= $f['type'] ?>" name="<?= $f['name'] ?>" id="<?= $f['id'] ?>"class="form-control" required>
                     </div>
                     <?php endforeach; ?>
+                    <input type="hidden" name="rawNumber" id="rawNumber">
                     <div class="mb-3">
                         <label for="agency">Agency</label>
                         <select name="agency" class="form-control" onchange="changeAgency(this.value)" required>
@@ -128,19 +129,6 @@ try {
                             <input type="date" name="end_date" class="form-control" required>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label>Document Type</label>
-                        <select name="doc_type" class="form-select" required>
-                            <option value="Bidding Document">Bidding Document</option>
-                            <option value="Contract">Contract</option>
-                            <option value="Purchase Order">Purchase Order</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label>Upload Documents</label>
-                        <input type="file" name="documents[]" multiple class="form-control" required>
-                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -152,7 +140,25 @@ try {
 </div>
 
 <script>
+const rawNumber   = document.getElementById("rawNumber");
+document.getElementById("contract_formatter").addEventListener("input", function (e) {
+ let value = e.target.value.replace(/,/g, ""); // strip commas
 
+    // only allow digits + decimal point
+    if (!/^\d*\.?\d*$/.test(value)) {
+        e.target.value = e.target.value.slice(0, -1); 
+        return;
+    }
+
+    if (value) {
+        // split int & decimal
+        let parts = value.split(".");
+        parts[0] = Number(parts[0]).toLocaleString(); 
+        e.target.value = parts.join(".");
+    }
+
+    rawNumber.value = value; // store raw value in hidden input
+});
 function changeAgency(agency) {
     if(agency === "Deped") {
         document.getElementById("includeKeystage").classList.remove("visually-hidden");

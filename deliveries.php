@@ -84,6 +84,7 @@ try {
     <div>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeliveryModal">Add Delivery</button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#batchDeliveryModal">Batch Delivery</button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importDeliveryModal">Import From File Delivery</button>
     </div>
 </div>
 
@@ -187,6 +188,7 @@ try {
 <!-- Modals -->
 <?php include "partials/add_delivery_modal.php"; ?>
 <?php include "partials/edit_delivery_modal.php"; ?>
+<?php include "partials/import_delivery_modal.php"; ?>
 <?php include "partials/batchAdd_delivery_modal.php"; ?>
 <script src="assets/js/deliveriesModalSelect.js"></script>
 <script src="assets/js/deliveriesFilter.js"></script>

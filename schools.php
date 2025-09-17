@@ -7,7 +7,7 @@ require "config/db.php"; // your PDO connection
  <div class="d-flex mb-3 justify-content-between">
 <div class="d-flex mb-3">
 <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addModal">Add School</button><br><br>
-<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">Import From File</button><br><br>
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">Import Schools</button><br><br>
 </div>
 <div class="d-flex mb-3">
     <input class="form-control me-2" id="searchInput" name="q" placeholder="Search items..." aria-label="Search">
