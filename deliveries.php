@@ -3,7 +3,7 @@ require "template/header.php";
 require "config/db.php";
 
 try {
-    $limit = 10;
+    $limit = 50;
     $page = max(1, intval($_GET['page'] ?? 1));
     $offset = ($page - 1) * $limit;
 
@@ -30,33 +30,35 @@ try {
     JOIN school s   ON d.school_id = s.school_id
 
     LEFT JOIN (
+    SELECT 
+        x.delivery_id,
+        GROUP_CONCAT(
+            CONCAT(
+                'Package ', x.rn, ' out of ', x.total_packages, '<br>',
+                x.items
+            )
+            SEPARATOR '<br><br>'
+        ) AS items_contents
+    FROM (
         SELECT 
-            x.delivery_id,
-            GROUP_CONCAT(
-                CONCAT(
-                    'Package ', x.rn, ' out of ', x.total_packages, '<br>',
-                    x.items
-                )
-                SEPARATOR '<br><br>'
-            ) AS items_contents
-        FROM (
-            SELECT 
-                d.delivery_id,
-                p.package_id,
-                ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
-                COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
-                GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items
-            FROM deliveries d
-            -- 🔹 Join packages depending on whether delivery uses keystage_id or lot_id
-            LEFT JOIN package p 
-                ON ( (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
-                    OR (d.lot_id IS NOT NULL AND d.lot_id = p.lot_id) )
-            JOIN package_content pc ON pc.package_id = p.package_id
-            JOIN item i ON pc.item_id = i.item_id
-            GROUP BY d.delivery_id, p.package_id
-        ) x
-        GROUP BY x.delivery_id
-    ) pkg_items ON pkg_items.delivery_id = d.delivery_id
+            d.delivery_id,
+            p.package_id,
+            ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
+            COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
+            GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ') — ', COALESCE(dp.status,'Pending')) SEPARATOR '<br>') AS items
+        FROM deliveries d
+        LEFT JOIN package p 
+            ON ((d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
+             OR (d.lot_id IS NOT NULL AND d.lot_id = p.lot_id))
+        JOIN package_content pc ON pc.package_id = p.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        LEFT JOIN package_status dp 
+            ON dp.delivery_id = d.delivery_id 
+           AND dp.package_id = p.package_id
+        GROUP BY d.delivery_id, p.package_id
+    ) x
+    GROUP BY x.delivery_id
+) pkg_items ON pkg_items.delivery_id = d.delivery_id
 
     ORDER BY d.status, d.delivery_date
     LIMIT :limit OFFSET :offset
@@ -90,15 +92,21 @@ try {
 
 <!-- Filters -->
 <div class="row mb-3">
-    <div class="col-md-3"><label>Year</label><select class="form-select filter" id="year"></select></div>
-    <div class="col-md-3"><label>Project</label><select class="form-select filter" id="filterProjects" disabled></select></div>
-    <div class="col-md-3"><label>Status</label><select class="form-select filter" id="filterStatus" disabled></select></div>
-    <div class="col-md-3 d-flex align-items-end">
-        <button class="btn btn-primary w-100 me-2" id="filterButt">Filter</button>
-        <button class="btn btn-primary w-100" id="rmvFilter">Remove Filter</button>
-    </div>
+    <div class="col-md-4"><label>Year</label><select class="form-select filter" id="year"></select></div>
+    <div class="col-md-4"><label>Project</label><select class="form-select filter" id="filterProjects" disabled></select></div>
+    <div class="col-md-4"><label>Status</label><select class="form-select filter" id="filterStatus" disabled></select></div>
 </div>
 
+<div id="depedDeliveries" class="row mb-3">
+    <div class="col-md-6"><label>Lot</label><select class="form-select filter" id="importlot"></select></div>
+    <div class="col-md-6"><label>Keystage</label><select class="form-select filter" id="importkeystage" disabled></select></div>
+</div>
+
+<div id="depedDeliveries" class="row mb-3">
+    <div class="col-md-4"><label>Region</label><select class="form-select filter" id="filterRegion" ></select></div>
+    <div class="col-md-4"><label>Division</label><select class="form-select filter" id="filterDivision" disabled></select></div>
+    <div class="col-md-4"><label>Municipality</label><select class="form-select filter" id="filterMunicipality" disabled></select></div>
+</div>
 <!-- Search -->
 <div class="d-flex mb-3">
     <input id="searchInput" class="form-control me-2" placeholder="Search items...">
@@ -109,20 +117,18 @@ try {
 <table class="table table-bordered shadow-sm">
     <thead class="table-dark">
         <tr>
-           <th>Project</th>
             <th>School</th>
             <th>Address</th>
             <th>Items</th>
             <th>DR No</th>
             <th>Date</th>
-            <th>Status</th>
             <th>Actions</th>
         </tr>
     </thead>
    <tbody id="resultTable">
         <?php foreach($deliveries as $d): ?>
         <tr>
-            <td><?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td>
+            <!--td><!-?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td-->
             <td><?= htmlspecialchars($d['school_id']). ' ' . htmlspecialchars($d['school_name']) ?></td>
             <td><?= htmlspecialchars($d['address']) ?></td>
             <td>
@@ -134,7 +140,6 @@ try {
             </td>
             <td><?= htmlspecialchars($d['dr_no']) ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
-            <td><?= htmlspecialchars($d['status']) ?></td>
             <td>
                 <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                         data-id="<?= $d['delivery_id'] ?>"
@@ -146,7 +151,7 @@ try {
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
                 >Edit</button>
-                <a class="btn btn-sm btn-success" href="generate_qr.php?id=<?= $d['delivery_id'] ?>" target="_blank">QR</a>
+                <a class="btn btn-sm btn-success" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank">QR</a>
             </td>
         </tr>
         <?php endforeach; ?>
