@@ -78,6 +78,7 @@ try {
                       $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                       echo "<td>";
+
                       if (empty($packages)) {
                           echo "none";
                       } else {
@@ -105,25 +106,9 @@ try {
     </table>
 </div>
 
-<!-- Add Lot Modal -->
-<div class="modal fade" id="addModal" tabindex="-1">
-  <div class="modal-dialog modal-md">
-    <div class="modal-content">
-      <div class="modal-header"><h5>Add Lot</h5></div>
-      <div class="modal-body">
-        <form method="POST" id="addForm">
-          <input type="hidden" value="<?=$_GET['id']?>" name="project_id" class="form-control">
-          <div class="mb-3"><label>Lot Number</label><input type="text" name="lot_no" class="form-control"></div>
-          <div class="mb-3"><label>Contract Number</label><input type="text" name="contract_no" class="form-control"></div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" onclick="addForm('lots','add_lots.php')">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
+<?php
+include "partials/lot_modals.php";
+?>
 
 <!-- Edit School Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
