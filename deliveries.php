@@ -3,7 +3,7 @@ require "template/header.php";
 require "config/db.php";
 
 try {
-    $limit = 50;
+    $limit = 10;
     $page = max(1, intval($_GET['page'] ?? 1));
     $offset = ($page - 1) * $limit;
 
