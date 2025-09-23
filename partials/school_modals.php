@@ -1,3 +1,6 @@
+<?php
+$project_id = $_GET['id'];
+?>
 <!-- school_modals.php -->
 
 <!-- Add School Modal -->
@@ -50,6 +53,32 @@
   </div>
 </div>
 
+<!-- Delete School Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Delete School</h5></div>
+      <div class="modal-body">
+        <!-- add id="deleteForm" -->
+        <form id="deleteForm" method="POST" action="script/delete.php">
+          <input type="hidden" name="source_page" value="schools.php?id=<?= htmlspecialchars($project_id) ?>">
+          <input type="hidden" id="delete_school" name="id">
+          <input type="hidden" name="table" value="schools_project">
+          <input type="hidden" name="condition" value="school_id">
+          <div class="mb-3">
+            <label>Input password to Continue</label>
+          <input type="password" name="deletePassword">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <!-- no need for form="" attribute -->
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('deleteForm').submit();">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Edit School Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">

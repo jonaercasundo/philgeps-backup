@@ -80,8 +80,7 @@ require "config/db.php"; // your PDO connection
             <td id="contact<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact']) ?></td>
             <td>
               <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= htmlspecialchars($project['school_id']) ?>)">Edit School</button>
-              <a href="delete_lot.php?id=<?= $lot['lot_id'] ?>" class="btn btn-danger btn-sm"
-              onclick="return confirm('Are you sure you want to delete this School?')">Delete</a></td>
+              <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;" class="btn btn-danger btn-sm">Delete</button></td>
           </tr>
         <?php }; ?>
     </tbody>
