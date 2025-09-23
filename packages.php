@@ -3,10 +3,17 @@ require "template/header.php";
 require "config/db.php"; // your PDO connection
 // Get params
 $keystage_id = isset($_GET['keystage_id']) ? (int)$_GET['keystage_id'] : null;
+$lot_id = isset($_GET['lot_id']) ? (int)$_GET['lot_id'] : null;
 $project_id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+$ref_id = $keystage_id;
+$ref_column="keystage_id";
+if (!$keystage_id) {
+    $ref_id = $lot_id;
+    $ref_column="lot_id";
+}
 
 try {
-    if ($keystage_id) {
+    if ($ref_id) {
         $stmt = $pdo->prepare("
             SELECT 
                 p.package_id,
@@ -18,11 +25,11 @@ try {
             FROM package p
             LEFT JOIN package_content pc ON p.package_id = pc.package_id
             LEFT JOIN item i ON pc.item_id = i.item_id
-            WHERE p.keystage_id = ?
-            GROUP BY p.package_id, p.package_num, p.keystage_id, p.length, p.width, p.height
+            WHERE p.$ref_column = ?
+            GROUP BY p.package_id, p.package_num, p.$ref_column, p.length, p.width, p.height
             ORDER BY p.package_num ASC
         ");
-        $stmt->execute([$keystage_id]);
+        $stmt->execute([$ref_id]);
 
     } elseif ($project_id) {
         $stmt = $pdo->prepare("
@@ -63,34 +70,54 @@ try {
         <h5 class="modal-title">Add Items</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
+      <div class="modal-body">
 
       <form id="addItemForm" method="POST" action="script/add_items.php">
         <div class="modal-body">
-
-          <!-- Select Lot -->
-          <div class="mb-3">
-            <label for="lot_id" class="form-label">Lot</label>
-            <select class="form-select" id="lot_id" name="lot_id" onchange="populateKeystage()" required>
-              <option value="">-- Select Lot --</option>
-              <?php
-              // Populate lots from DB
-              $stmt = $pdo->prepare("SELECT DISTINCT lot_id, lot_name FROM lot WHERE project_id = :pid");
-              $stmt->execute([':pid' => $project_id]);
-              foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $lot) {
-                  echo "<option value='" . htmlspecialchars($lot['lot_id']) . "'>"
-                      . htmlspecialchars($lot['lot_name'])
-                      . "</option>";
-              }
-              ?>
-            </select>
+        <?php if (isset($_GET['keystage_id'])): ?>
+    <input type="hidden" name="keystage_id" value="<?= htmlspecialchars($_GET['keystage_id']) ?>">
+      <?php else: ?>
+          <!-- Select Lot + Keystage -->
+          <div class="mb-3 d-flex">
+              <div class="w-50 me-2">
+                  <label for="lot_id" class="form-label">Lot</label>
+                  <select class="form-select" id="lot_id" name="lot_id" onchange="populateKeystage()" required>
+                      <option value="">-- Select Lot --</option>
+                      <?php
+                      $stmt = $pdo->prepare("SELECT DISTINCT lot_id, lot_name FROM lot WHERE project_id = :pid");
+                      $stmt->execute([':pid' => $project_id]);
+                      foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $lot) {
+                          echo "<option value='" . htmlspecialchars($lot['lot_id']) . "'>"
+                              . htmlspecialchars($lot['lot_name'])
+                              . "</option>";
+                      }
+                      ?>
+                  </select>
+              </div>
+              <div class="w-100 me-2">
+                  <label for="keystage_id" class="form-label">Keystage</label>
+                  <select class="form-select" id="keystage_id" name="keystage_id" required disabled>
+                      <option value="">-- Select Keystage --</option>
+                  </select>
+              </div>
           </div>
-            <!--Populate Keystage-->
-          <div class="mb-3">
-            <label for="lot_id" class="form-label">Keystage</label>
-            <select class="form-select" id="keystage_id" name="keystage_id" required disabled>
-              <option value="">-- Select Keystage --</option>
-              
-            </select>
+      <?php endif; ?>
+      
+          <div class="mb-3 d-flex">
+            <div class="w-100 me-2">
+              <label>Width</label>
+              <input type="number" class="form-control" name="addwidth" id="edit_width">
+            </div>
+            <div class="w-100 me-2">
+              <label>Height</label>
+              <input type="number" class="form-control" name="addheight" id="edit_height">
+            </div>
+            <div class="w-100 me-2">
+              <label>Length</label>
+              <input type="number" class="form-control" name="addlength" id="edit_length">
+            </div>
+          </div>
+
           </div>
 
           <!-- Dynamic Items -->
@@ -139,7 +166,9 @@ try {
 <div class="modal fade" id="editModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header"><h5>Edit Package</h5></div>
+      <div class="modal-header"><h5>Edit Package</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
       <div class="modal-body">
         <form id="editForm">
           <input type="hidden" name="package_id" id="edit_package_id">
@@ -248,31 +277,32 @@ try {
         </table>
         <script>
 
+           // Add More Items Button (for Add Modal)
             document.getElementById("addMoreItem").addEventListener("click", function () {
                 let container = document.getElementById("itemsContainer");
+
+                let options = allItems.map(i =>
+                    `<option value="${i.item_id}">${i.item_name}</option>`
+                ).join("");
+
                 let newRow = document.createElement("div");
                 newRow.classList.add("row", "g-2", "align-items-center", "item-row", "mb-2");
 
                 newRow.innerHTML = `
-                <div class="col-md-8">
-                    <select class="form-select" name="items[]">
-                    <option value="">-- Select Item --</option>
-                    <?php
-                    $stmt = $pdo->query("SELECT item_id, item_name FROM item ORDER BY item_name ASC");
-                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
-                        echo "<option value='" . htmlspecialchars($item['item_id']) . "'>"
-                            . htmlspecialchars($item['item_name'])
-                            . "</option>";
-                    }
-                    ?>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <input type="number" class="form-control" name="quantities[]" min="1" required>
-                </div>
+                    <div class="col-md-8">
+                        <select class="form-select" name="items[]">
+                            <option value="">-- Select Item --</option>
+                            ${options}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="number" class="form-control" name="quantities[]" min="1" required>
+                    </div>
                 `;
-    container.appendChild(newRow);
-});
+
+                container.appendChild(newRow);
+            });
+
 
         </script>
     <?php endif; ?>

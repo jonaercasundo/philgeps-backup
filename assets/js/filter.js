@@ -21,7 +21,7 @@ showLoading()
                     console.warn("Missing 'options' in row:", row);
                 }
                 let option = document.createElement("option");
-                if(element=="filterProjects"){
+                if(row.project_id){
                 option.value = row.project_id || "";
                 }else{
                 option.value = row.options || "";

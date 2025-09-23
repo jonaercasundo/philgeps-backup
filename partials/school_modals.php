@@ -32,21 +32,24 @@
     <div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">Import Schools</h5></div>
       <div class="modal-body">
-        <form method="POST" action="import_schools.php" enctype="multipart/form-data">
-          <input type="hidden" name="project_id" value="<?= htmlspecialchars($project_id) ?>">
+        <!-- add id="importForm" -->
+        <form id="importForm" method="POST" action="script/import_schools.php">
+          <input type="hidden" name="project_id" value="<?= htmlspecialchars($id) ?>">
           <div class="mb-3">
-            <label>CSV File</label>
-            <input type="file" name="file" class="form-control" accept=".csv" required>
+            <label>Paste School IDs</label>
+            <textarea name="school_ids" class="form-control" rows="6" required></textarea>
           </div>
         </form>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="submit" class="btn btn-primary" form="importForm">Import</button>
+        <!-- no need for form="" attribute -->
+        <button type="button" class="btn btn-primary" id="importBtn">Import</button>
       </div>
     </div>
   </div>
 </div>
+
 
 <!-- Edit School Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
@@ -55,7 +58,7 @@
       <div class="modal-header"><h5 class="modal-title">Edit School</h5></div>
       <div class="modal-body">
         <form method="POST" action="script/edit_school.php" id="editForm">
-          <input type="hidden" name="project_id" value="<?= htmlspecialchars($project_id) ?>">
+          <input type="hidden" name="project_id" value="<?= $id ?>">
           <div class="mb-3"><label>School ID</label><input required id="editid" name="id" type="text" class="form-control"></div>
           <div class="mb-3"><label>School Name</label><input required id="editname" name="school" type="text" class="form-control"></div>
           <div class="mb-3"><label>Address</label><input required id="editaddress" name="address" type="text" class="form-control"></div>
@@ -73,3 +76,17 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const importBtn = document.getElementById("importBtn");
+  const importForm = document.getElementById("importForm");
+
+  importBtn.addEventListener("click", () => {
+    // Optional: confirm before submitting
+    if (confirm("Are you sure you want to import these schools?")) {
+      importForm.submit();
+    }
+  });
+});
+</script>

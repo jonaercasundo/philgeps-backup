@@ -6,7 +6,8 @@ $project_id = isset($_GET['project_id']) ? intval($_GET['project_id']) : 0;
 if ($project_id > 0) {
     $stmt = $pdo->prepare("
         SELECT school_id, school_name, address 
-        FROM school 
+        FROM schools_project
+        JOIN school USING(school_id) 
         WHERE project_id = :project_id 
         ORDER BY school_name ASC
     ");

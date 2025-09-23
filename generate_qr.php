@@ -1,209 +1,212 @@
 <?php
+session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 require __DIR__ . '/vendor/autoload.php';
 require 'config/db.php';
-
-$id = isset($_GET['id']) ? intval($_GET['id']) : 1;
-$logoPath = __DIR__ . "/assets/uploads/logo/logo.webp";
-$logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-try {
-
-
-    $stmt = $pdo->prepare("
-    SELECT d.*, p.project_id, p.project_name, dp.keystage_id
-    FROM deliveries d 
-    JOIN projects p ON p.project_id = d.project_id 
-    JOIN delivery_packages dp ON dp.delivery_id = d.delivery_id 
-    WHERE d.delivery_id=$id;
-    ");
-    $stmt->execute();
-    $deliveries = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $stmt = $pdo->prepare("
-    SELECT p.*, pc.item_id, pc.qty, i.item_name
-    FROM package p
-    JOIN package_content pc ON pc.package_id = p.package_id
-    JOIN item i ON i.item_id = pc.item_id
-    WHERE keystage_id = ?");
-    $stmt->execute([$deliveries['keystage_id']]);
-    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    } catch (PDOException $e) {
-        die("DB Error: " . $e->getMessage());
-    }
 
 use Dompdf\Dompdf;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 
+$id = isset($_GET['id']) ? intval($_GET['id']) : 1;
+$logoPath = __DIR__ . "/assets/uploads/logo/logo.webp";
+$logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
 
-$url = "http://localhost/philgeps/scan.php?id=" . $id;
-
-$orderId = "ORD-" . str_pad($id, 5, "0", STR_PAD_LEFT);
-
-// Generate QR
-$qr = Builder::create()
-    ->writer(new PngWriter())
-    ->data($url)
-    ->size(150)
-    ->margin(0)
-    ->build();
-
-$qrBase64 = 'data:image/png;base64,' . base64_encode($qr->getString());
-
-// CSS + HTML
-$itemHolder = ""; // initialize as string
-
-foreach ($items as $item) {
-    $itemHolder .= "
-        <tr>
-        <td>".$item['item_name']."</td>
-        <td>".$item['qty']."</td>
-        </tr>
-    ";
+try {
+    // Fetch deliveries by dr_no
+    $stmt = $pdo->prepare("
+        SELECT d.*, p.project_name, k.keystage_num, k.description, 
+               s.school_name, s.address, l.contract_no, l.lot_name
+        FROM deliveries d 
+        JOIN school s ON s.school_id = d.school_id 
+        JOIN keystage k ON k.keystage_id = d.keystage_id 
+        JOIN lot l ON l.lot_id = k.lot_id
+        JOIN projects p ON p.project_id = d.project_id 
+        WHERE d.dr_no = :id
+    ");
+    $stmt->execute([':id' => $id]);
+    $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!$deliveries) {
+        die("No deliveries found for DR No $id");
+    }
+} catch (PDOException $e) {
+    die("DB Error: " . $e->getMessage());
 }
 
-$html = "
-<style>
-@page {
-  margin: 10mm;
-}
-body {
-    font-family: Arial, sans-serif;
-    font-size: 12px;
-}
-.label {
-    border: 2px solid #000;
-    padding: 12px;
-    width: 480px;
-}
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid #000;
-    padding-bottom: 8px;
-    margin-bottom: 8px;
-}
-.order-info {
-    font-size: 13px;
-    font-weight: bold;
-}
-.qr img {
-    border: 1px solid #000;
-    padding: 2px;
-}
-.section {
-    border: 1px solid #000;
-    margin-bottom: 8px;
-    padding: 6px;
-}
-.section-title {
-    background: #000;
-    color: #fff;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px 5px;
-    display: inline-block;
-    margin-bottom: 4px;
-}
-.packing-list {
-    padding-top: 6px;
-    font-size: 11px;
-}
-table.packing-list {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 12px;
-}
-table.packing-list th, 
-table.packing-list td {
-    border: 1px solid #000;
-    padding: 6px 8px;
-}
-table.packing-list th {
-    kground-color: #f2f2f2;
-    xt-align: left;
-}
-table.packing-list td {
-    cal-align: top;
+$html = "<style>
+@page { margin: 20mm; }
+body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
+.label { width: 100%; height:100%; }
+.footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; padding-top: 5px; }
+.header-table { padding-bottom: 8px; }
+.order-info, .project-text { font-size: 13px; font-weight: bold; }
+.packing-list { padding-top: 6px; font-size: 11px; }
+table.packing-list { border-collapse: collapse; width: 100%; font-size: 12px; }
+table.packing-list th, table.packing-list td { border: 1px solid #000; padding: 6px 8px; }
+.logoimg { max-width: 250px; height: 80px; }
+.qrbox img { width: 120px; height: auto; margin-bottom: 5px; }
+.qrbox small { display: block; font-size: 12px; font-weight: bold; }
+</style>";
+
+// Use first delivery for header info
+$first = $deliveries[0];
+
+// Collect packages + QR codes
+$allGroups = [];
+$allQrs = [];
+
+foreach ($deliveries as $delivery) {
+    // Fetch all packages under this keystage/lot
+    $stmt = $pdo->prepare("
+        SELECT p.package_id, pc.item_id, pc.qty, i.item_name
+        FROM package p
+        JOIN package_content pc ON pc.package_id = p.package_id
+        JOIN item i ON i.item_id = pc.item_id
+        WHERE (p.keystage_id = :keystage_id OR (p.keystage_id IS NULL AND p.lot_id = :lot_id))
+    ");
+    $stmt->execute([
+        ':keystage_id' => $delivery['keystage_id'],
+        ':lot_id'      => $delivery['lot_id']
+    ]);
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch package_status for package count and QR
+    $stmt = $pdo->prepare("SELECT * FROM package_status WHERE delivery_id = :delivery_id");
+    $stmt->execute([':delivery_id' => $delivery['delivery_id']]);
+    $package_status = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmt = $pdo->prepare("SELECT COUNT(package_id) AS package_count FROM package_status WHERE delivery_id = :delivery_id");
+    $stmt->execute([':delivery_id' => $delivery['delivery_id']]);
+    $package_count = $stmt->fetch(PDO::FETCH_ASSOC)['package_count'];
+
+    // Build grouped structure: keystage -> packages -> items
+    $group = [
+        'keystage' => $delivery['keystage_num']. ' '. $delivery['package_type'] . ' ' . $delivery['description'],
+        'packages' => []
+    ];
+
+    $int = 1;
+    foreach ($package_status as $package) {
+        // Items for this package only
+        $stmt = $pdo->prepare("
+            SELECT pc.qty, i.item_name
+            FROM package_content pc
+            JOIN item i ON i.item_id = pc.item_id
+            WHERE pc.package_id = :package_id
+        ");
+        $stmt->execute([':package_id' => $package['package_id']]);
+        $package_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $group['packages'][] = [
+            'package_num' => "Package $int of $package_count",
+            'items'       => $package_items
+        ];
+
+        // QR code
+        $url = "http://192.168.0.63/philgeps/scan.php?id=" . $package['package_status_id'];
+        $orderId = "Package $int of $package_count<br> ORD-" . str_pad($package['package_status_id'], 5, "0", STR_PAD_LEFT);
+
+        $qr = Builder::create()
+            ->writer(new PngWriter())
+            ->data($url)
+            ->size(150)
+            ->margin(0)
+            ->build();
+
+        $allQrs[] = [
+            'orderId' => $orderId,
+            'qr' => 'data:image/png;base64,' . base64_encode($qr->getString()),
+            'keystage' => 'Keystage '.$delivery['keystage_num'] ." ". strtok($delivery['description'], ' ')
+        ];
+
+        $int++;
+    }
+
+    $allGroups[] = $group;
 }
 
-.logo {
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    width: 100%;
-    background: #fff;
-    border-bottom: 2px solid #000;
+// Build packing list rows
+$itemHolder = "";
+foreach ($allGroups as $group) {
+    $itemHolder .= "<br>Keystage {$group['keystage']}
+                        <div class='packing-list'>
+                            <table class='packing-list'>
+                            ";
+    foreach ($group['packages'] as $pkg) {
+        $itemHolder .= "<tr>
+                            <td colspan='2' style='font-weight:bold;background:#f0f0f0'>
+                                <small>{$pkg['package_num']}</small>
+                            </td>
+                        </tr>";
+        foreach ($pkg['items'] as $item) {
+            $itemHolder .= "<tr>
+                                <td>{$item['item_name']}</td>
+                                    <td width='20px' style='text-align:center;'>".$item['qty'] * (int)preg_replace('/[^0-9]/', '', $first['package_type'])."</td>
+                                </tr>";
+        }
+    }
+    $itemHolder.= "</table>
+                </div>";
 }
 
-.logo .logoimg {
-    max-width: 250px; 
-    height: 80px;
-}
-
-.logo .qrimg {
-    width: 70px;
-    height: auto;
-    border: 2px solid #000;
-    margin-top:25px;
-    margin-left:112px;
-    padding: 5px;
-    border-radius: 6px;
-    justify-self: end; /* stick to right */
-}
-
-
-    
-</style>
-
+// --- PAGE 1: ARG ---
+$html .= "
 <div class='label'>
-
-    <div class='logo'>
-        <img class='logoimg' src='$logoBase64'>
-        <img class='qrimg' src='$qrBase64'>
-    </div><br>
-
-    <!-- HEADER -->
-    <div class='header'>
-        <div class='order-info'>
-            ".ucfirst($deliveries['project_name'])." <br><br>
-            Order ID: $orderId <br>
-            ".ucfirst($deliveries['remarks'])." <br><br>
-        </div>
-    </div>
-
-    <!-- BUYER -->
-    <div class='section'>
-        <div class='section-title'>BUYER</div><br>
-        ".$deliveries['school']."<br>
-        ".$deliveries['address']."<br>
-    </div>
-
-    <!-- SELLER -->
-    <div class='section'>
-        <div class='section-title'>SELLER</div><br>
-        Metro Mobilia Corporation<br>
-        15/F Asian Star Building, Asean Drive Corner, Singapura Lane<br>
-        Filinvest City, Alabang, Muntinlupa
-    </div>
-
-    <!-- PACKING LIST -->
-    <div class='packing-list'>
-      <b>Packing List</b><br>
-      <table class='packing-list''>
-      <tr>
-        <th>Item</th><th>Quantity</th>
-      </tr>
-        $itemHolder
-      </table>
+    <div style='text-align:center;'><img class='logoimg' src='$logoBase64'></div>
+    <div style='text-align:right;'><small>Date: {$first['delivery_date']}</small></div>
+    <table class='header-table' width='100%' cellspacing='0' cellpadding='4'>
+        <tr>
+            <td style='width:80px; font-size:13px; font-weight:bold;'>Project:</td>
+            <td style='font-size:13px; font-weight:bold;'>".ucfirst($first['project_name'])."</td>
+        </tr>
+    </table>
+    <h3 style='border-top:2px solid #000; padding-top:10px; text-align:center;'>ACKNOWLEDGEMENT OF RECEIPT OF GOODS</h3>
+    <p>
+        The undersigned hereby acknowledges the receipt of goods pursuant to Contract No. {$first['contract_no']} 
+        (LOT {$first['lot_name']}) between METRO MOBILIA CORPORATION and DEPARTMENT OF EDUCATION-CENTRAL OFFICE.<br><br>
+        School Destination: {$first['address']}<br>
+        School ID: {$first['school_id']}
+    </p>
+    
+        
+            $itemHolder
+        
+    <div class='footer'>
+        <table width='100%' cellspacing='0' cellpadding='4' style='text-align:center;'>
+            <tr>
+                <td>Printed Name Over Signature</td>
+                <td>{$_SESSION['name']}<br>Metro Mobilia Corporation</td>
+            </tr>
+        </table>
+        <small>Unit B 15th Floor Asian Star Building, Asean Drive Corner Singapura Lane, 
+        Filinvest Corporate City, Alabang, Muntinlupa City 1781, Philippines<br>
+        T: +632.8821.7261 | F: +632.8821.7097</small>
     </div>
 </div>
-";
+<div style='page-break-after:always;'></div>";
+
+// --- PAGE 2: QR Codes ---
+$html .= "<table width='100%' cellspacing='0' cellpadding='10'>";
+$col = 0;
+foreach($allQrs as $q) {
+    if ($col % 2 == 0) $html .= "<tr>";
+    $html .= "
+        <td align='center' style='border:1px solid #000; padding:10px;'>
+            <img src='{$q['qr']}'><br>
+            <small>{$q['orderId']}</small><br>
+            <small>{$q['keystage']}</small>
+        </td>
+    ";
+    if ($col % 2 == 1) $html .= "</tr>";
+    $col++;
+}
+if ($col % 2 != 0) $html .= "<td></td></tr>";
+$html .= "</table><div style='page-break-after:always;'></div>";
 
 // Generate PDF
 $dompdf = new Dompdf();
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'Portrait');
 $dompdf->render();
-$dompdf->stream("label_$orderId.pdf", ["Attachment" => false]);
+$dompdf->stream("deliveries_$id.pdf", ["Attachment" => false]);

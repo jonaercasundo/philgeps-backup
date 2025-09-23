@@ -7,7 +7,7 @@ require "config/db.php"; // your PDO connection
  <div class="d-flex mb-3 justify-content-between">
 <div class="d-flex mb-3">
 <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addModal">Add School</button><br><br>
-<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">Import From File</button><br><br>
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">Import Schools</button><br><br>
 </div>
 <div class="d-flex mb-3">
     <input class="form-control me-2" id="searchInput" name="q" placeholder="Search items..." aria-label="Search">
@@ -53,13 +53,13 @@ require "config/db.php"; // your PDO connection
             $page = isset($_GET['page']) && is_numeric($_GET['page']) ? intval($_GET['page']) : 1;
             $offset = ($page - 1) * $limit;
 
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM school WHERE project_id = $id");
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM schools_project WHERE project_id = $id");
             $stmt->execute();
             $total_rows = $stmt->fetchColumn();
             $total_pages = ceil($total_rows / $limit);
 
             // use prepared statements for security
-            $stmt = $pdo->prepare("SELECT * FROM school WHERE project_id = $id ORDER BY school_id ASC LIMIT $limit OFFSET $offset");
+            $stmt = $pdo->prepare("SELECT sp.*, s.* FROM schools_project AS sp JOIN school AS s ON sp.school_id = s.school_id WHERE sp.project_id = $id ORDER BY sp.school_id ASC LIMIT $limit OFFSET $offset");
             $stmt->execute();
             $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {

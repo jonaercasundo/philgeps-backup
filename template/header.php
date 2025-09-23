@@ -1,8 +1,9 @@
+<?php session_start()?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>PhilGEPS Tracker</title>
+  <title>MMC Project Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
@@ -24,7 +25,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <!-- Main Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
-    <a class="navbar-brand" href="dashboard.php">PhilGEPS Tracker</a>
+    <a class="navbar-brand" href="dashboard.php">MMC PROJECT Tracker</a>
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav me-auto">
         <?php foreach($mainNav as $file => $label): ?>
@@ -42,11 +43,20 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 // Project detail navigation, only if 'id' is set
 if (isset($_GET['id'])):
     $id = (int)$_GET['id'];
+    include 'config/db.php';
+    $stmt = $pdo->query("
+        SELECT keystage from projects WHERE project_id = $id
+    ");
+    $keystage = $stmt->fetch(PDO::FETCH_ASSOC);
     $projectNav = [
         "project_details.php" => "Overview",
         "schools.php" => "Schools",
-        "lots.php" => "Lots",
-        "keystage.php" => "Keystage",
+        "lots.php" => "Lots"
+    ];
+    if ($keystage && $keystage['keystage'] == 1) {
+        $projectNav["keystage.php"] = "Keystage";
+    }
+    $projectNav += [
         "packages.php" => "Packages",
         "items.php" => "Items",
         "project_reports.php" => "Reports"

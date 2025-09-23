@@ -14,6 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // ✅ Login successful
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
+        $_SESSION['name'] = $user['name'];
         header("Location: ../dashboard.php");
         exit;
     } else {

@@ -43,7 +43,6 @@
           <div class="mb-3 visually-hidden Batchdeped">
             <label>Lot</label>
             <select name="lot" class="form-control" id="Batchlot" onchange="getKeystage(this.value,'batchKeystageSelect')">
-              <option value="#">Select Keystage</option>
             </select>
           </div>
 
