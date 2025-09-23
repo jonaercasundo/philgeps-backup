@@ -1,3 +1,14 @@
+<?php session_start();
+require "config/db.php";
+
+if (isset($_SESSION['user_id']) || 
+    isset($_SESSION['username']) || 
+    isset($_SESSION['name'])) {
+    
+    header("Location: dashboard.php");
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
