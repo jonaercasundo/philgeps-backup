@@ -29,16 +29,16 @@ function updateTable(page = 1) {
             tbody.innerHTML = data.rows.map(row => `
                 <tr>
                     <td>${truncateText(row.project_name)}</td>
-                    <td>${row.school}</td>
+                    <td>${row.school_name}</td>
                     <td>${row.address}</td>
-                    <td>${row.remarks}</td>
+                    <td style="white-space: pre-line;">${row.items_contents}</td>
                     <td>${row.dr_no}</td>
                     <td>${row.delivery_date}</td>
                     <td>${row.status}</td>
                     <td>
                         <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
-                            data-id="${row.delivery_id}" data-project="${row.project_name}" data-school="${row.school}"
-                            data-address="${row.address}" data-remarks="${row.remarks}" data-drno="${row.dr_no}"
+                            data-id="${row.delivery_id}" data-project="${row.project_name}" data-school_name="${row.school_name}"
+                            data-address="${row.address}" data-item_name="${row.item_name}" data-drno="${row.dr_no}"
                             data-date="${row.delivery_date}" data-status="${row.status}">Edit</button>
                         <a class="btn btn-sm btn-success" href="generate_qr.php?id=${row.delivery_id}" target="_blank">QR</a>
                     </td>
