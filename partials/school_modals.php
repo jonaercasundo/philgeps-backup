@@ -3,32 +3,6 @@ $project_id = $_GET['id'];
 ?>
 <!-- school_modals.php -->
 
-<!-- Add School Modal -->
-<div class="modal fade" id="addModal" tabindex="-1">
-  <div class="modal-dialog modal-md">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Add School</h5></div>
-      <div class="modal-body">
-        <form method="POST" id="addForm">
-          <input type="hidden" name="project_id" value="<?= htmlspecialchars($project_id) ?>">
-          <div class="mb-3"><label>School ID</label><input type="text" name="school_id" class="form-control" required></div>
-          <div class="mb-3"><label>School Name</label><input type="text" name="school_name" class="form-control" required></div>
-          <div class="mb-3"><label>Address</label><input type="text" name="address" class="form-control" required></div>
-          <div class="mb-3"><label>Contact Person</label><input type="text" name="contact_person" class="form-control" required></div>
-          <div class="mb-3"><label>Contact</label><input type="text" name="contact" class="form-control" required></div>
-          <div class="mb-3"><label>Municipality</label><input type="text" name="municipality" class="form-control" required></div>
-          <div class="mb-3"><label>Division</label><input type="text" name="division" class="form-control" required></div>
-          <div class="mb-3"><label>Region</label><input type="text" name="region" class="form-control" required></div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" onclick="addForm('schools','add_school.php')">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Import School Modal -->
 <div class="modal fade" id="importModal" tabindex="-1">
   <div class="modal-dialog modal-md">

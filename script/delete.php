@@ -29,8 +29,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             header("Location: ../$page&toast=Deletion Complete&type=success");
             exit;
         } else {
-            $_SESSION['error'] = "Invalid username or password!";
-            header("Location: ../$page&toast=Invalid username or password!&type=danger");
+            $_SESSION['error'] = "Invalid password!";
+            header("Location: ../$page&toast=Invalid password!&type=danger");
             exit;
         }
         echo "$username, $password";
@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } catch (PDOException $e) {
         // Handle DB error
         $_SESSION['error'] = "Database error: " . $e->getMessage();
-        header("Location: ../$page&toast=Database error&type=danger");
+        header("Location: ../$page&toast=Delete Items Assigned to this First&type=danger");
         exit;
     }
 }

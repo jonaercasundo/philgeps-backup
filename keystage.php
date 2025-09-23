@@ -66,6 +66,8 @@ try {
 </div>
 </div>
 
+<?php include "partials/keystage_modals.php"?>
+
 <!-- Add Keystage Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
   <div class="modal-dialog modal-md">
@@ -137,8 +139,7 @@ try {
                         <td>
                         <a href="packages.php?id=<?=$project_id?>&keystage_id=<?= $ks['keystage_id'] ?>" class="btn btn-primary btn-sm">Packages</a>
                         <button data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= $ks['keystage_id'] ?>,<?= $ks['lot_id'] ?>)" class="btn btn-warning btn-sm">Edit</button>
-                        <a href="delete_lot.php?id=<?= $ks['keystage_id'] ?>" class="btn btn-danger btn-sm"
-                           onclick="return confirm('Are you sure you want to delete this lot?')">Delete</a>
+                        <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_keystage').value = <?= htmlspecialchars($ks['keystage_id']) ?>;" class="btn btn-danger btn-sm">Delete</button>
                     </td>
                     </tr>
                 <?php endforeach; ?>

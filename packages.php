@@ -60,7 +60,7 @@ try {
     die("DB Error: " . $e->getMessage());
 }
 ?>
-
+<?php include "partials/packages_modal.php"; ?>
 <!-- Add Item Modal -->
 <div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
@@ -268,8 +268,7 @@ try {
                             data-dimension="<?= htmlspecialchars($package['Dimension']) ?>">
                             Edit
                         </a>
-                        <a href="delete_lot.php?id=<?= $package['keystage_id'] ?>" class="btn btn-danger btn-sm"
-                           onclick="return confirm('Are you sure you want to delete this lot?')">Delete</a>
+                        <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_packages').value = <?= htmlspecialchars($package['package_id']) ?>;" class="btn btn-danger btn-sm">Delete</button>
                     </td>
                     </tr>
                 <?php endforeach; ?>
