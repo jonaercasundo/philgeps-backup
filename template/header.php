@@ -15,6 +15,7 @@ if (!isset($_SESSION['user_id']) ||
   <meta charset="UTF-8">
   <title>MMC Project Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
 
@@ -44,7 +45,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           </li>
         <?php endforeach; ?>
       </ul>
-      <a href="script/logout.php" class="btn btn-danger">🏃</a>
+      <a href="script/logout.php" class="btn btn-danger">
+        <i class="bi bi-box-arrow-right"></i>
+      </a>
+
     </div>
   </div>
 </nav>

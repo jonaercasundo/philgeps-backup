@@ -114,9 +114,10 @@ try {
 </div>
 
 <!-- Table -->
-<table class="table table-bordered shadow-sm">
+<table class="table table-bordered shadow-sm"  id="resultTable">
     <thead class="table-dark">
         <tr>
+           <th>Project</th>
             <th>School</th>
             <th>Address</th>
             <th>Items</th>
@@ -125,10 +126,10 @@ try {
             <th>Actions</th>
         </tr>
     </thead>
-   <tbody id="resultTable">
+   <tbody>
         <?php foreach($deliveries as $d): ?>
         <tr>
-            <!--td><!-?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td-->
+            <td><?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td>
             <td><?= htmlspecialchars($d['school_id']). ' ' . htmlspecialchars($d['school_name']) ?></td>
             <td><?= htmlspecialchars($d['address']) ?></td>
             <td>
