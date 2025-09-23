@@ -227,11 +227,6 @@ try {
   <div class="d-flex mb-3">
     <button data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Package</button>
   </div>
-
-  <div class="d-flex mb-3">
-    <input class="form-control me-2" type="search" name="q" placeholder="Search items..." aria-label="Search">
-    <button class="btn btn-outline-primary" type="submit">Search</button>
-</div>
 </div>
 
 
