@@ -22,11 +22,54 @@ if (!empty($_POST['status'])) {
     $params[':status'] = $_POST['status'];
 }
 
+// Lot
+if (!empty($_POST['lot_id'])) {
+    $where[] = "d.lot_id = :lot_id";
+    $params[':lot_id'] = $_POST['lot_id'];
+}
+
+// Keystage
+if (!empty($_POST['keystage_id'])) {    
+    $where[] = "d.keystage_id = :keystage_id";
+    $params[':keystage_id'] = $_POST['keystage_id'];
+}
+
+// Region
+if (!empty($_POST['region'])) {
+    $where[] = "s.region = :region";
+    $params[':region'] = $_POST['region'];
+}
+
+// Division
+if (!empty($_POST['division'])) {
+    $where[] = "s.division = :division";
+    $params[':division'] = $_POST['division'];
+}
+
+// Municipality
+if (!empty($_POST['municipality'])) {    
+    $where[] = "s.municipality = :municipality";
+    $params[':municipality'] = $_POST['municipality'];
+}
+
+
 // Search
 if (!empty($_POST['search'])) {
-    $where[] = "(p.project_name LIKE :search OR s.school_name LIKE :search OR s.address LIKE :search OR d.dr_no LIKE :search)";
+    $where[] = "(
+        p.project_name LIKE :search
+        OR s.school_name LIKE :search
+        OR s.address LIKE :search
+        OR d.dr_no LIKE :search
+        OR d.status LIKE :search
+        OR d.package_type LIKE :search
+        OR s.region LIKE :search
+        OR s.division LIKE :search
+        OR s.municipality LIKE :search
+        OR YEAR(d.delivery_date) LIKE :search
+    )";
     $params[':search'] = "%" . $_POST['search'] . "%";
 }
+
 
 // Pagination
 $page = isset($_POST['page']) ? (int)$_POST['page'] : 1;
@@ -35,9 +78,14 @@ $offset = ($page - 1) * $limit;
 
 $sql = "SELECT 
             d.delivery_id,
+            d.keystage_id,
+            d.lot_id,
             p.project_name,
             s.school_id,
             s.school_name,
+            s.region,
+            s.division,
+            s.municipality,
             s.address,
             d.package_type,
             d.dr_no,

@@ -4,14 +4,27 @@ function getFilters() {
     let year = document.getElementById("year").value;
     let project = document.getElementById("filterProjects").value;
     let status = document.getElementById("filterStatus").value;
+    let region = document.getElementById("filterRegion").value;
+    let division = document.getElementById("filterDivision").value;
+    let municipality = document.getElementById("filterMunicipality").value;
+    let lot = document.getElementById("importlot").value;
+    let keystage = document.getElementById("importkeystage").value;
     let search = document.getElementById("searchInput").value.trim();
+
     let params = new URLSearchParams();
     if(year) params.append("year", year);
     if(project) params.append("project_id", project);
     if(status) params.append("status", status);
+    if(region) params.append("region", region);
+    if(division) params.append("division", division);
+    if(municipality) params.append("municipality", municipality);
+    if(lot) params.append("lot_id", lot);
+    if(keystage) params.append("keystage_id", keystage);
     if(search) params.append("search", search);
+
     return params.toString();
 }
+
 
 // Update table via AJAX
 function updateTable(page = 1) {
@@ -26,23 +39,39 @@ function updateTable(page = 1) {
     .then(res => res.json())
     .then(data => {
         if(data.rows && data.rows.length){
-            tbody.innerHTML = data.rows.map(row => `
-                <tr>
-                    <td>${truncateText(row.project_name)}</td>
-                    <td>${row.school_name}</td>
-                    <td>${row.address}</td>
-                    <td style="white-space: pre-line;">${row.items_contents}</td>
-                    <td>${row.dr_no}</td>
-                    <td>${row.delivery_date}</td>
-                    <td>${row.status}</td>
-                    <td>
-                        <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
-                            data-id="${row.delivery_id}" data-project="${row.project_name}" data-school_name="${row.school_name}"
-                            data-address="${row.address}" data-item_name="${row.item_name}" data-drno="${row.dr_no}"
-                            data-date="${row.delivery_date}" data-status="${row.status}">Edit</button>
-                        <a class="btn btn-sm btn-success" href="generate_qr.php?id=${row.delivery_id}" target="_blank">QR</a>
-                    </td>
-                </tr>`).join("");
+            tbody.innerHTML = `
+                <thead class="table-dark">
+                    <tr>
+                        <th>School</th>
+                        <th>Address</th>
+                        <th>Items</th>
+                        <th>DR No</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+            `; 
+            tbody.innerHTML += data.rows.map(row => `
+                
+                <tbody>
+                    <tr>
+                        <td>${row.school_name}</td>
+                        <td>${row.address}</td>
+                        <td>${row.items_contents}</td>
+                        <td>${row.dr_no}</td>
+                        <td>${row.delivery_date}</td>
+                        <td>
+                            <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
+                                data-id="${row.delivery_id}" data-project="${row.project_name}" data-school_name="${row.school_name}"
+                                data-address="${row.address}" data-items_contents="${row.items_contents}" data-drno="${row.dr_no}"
+                                data-date="${row.delivery_date}" data-status="${row.status}">Edit</button>
+                            <a class="btn btn-sm btn-success" href="generate_qr.php?id=${row.delivery_id}" target="_blank">
+                                QR
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+                `).join("");
         }
         renderPagination(data, page);
     })
