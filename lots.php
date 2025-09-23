@@ -86,8 +86,7 @@ try {
                             } ?>
 
                         <a href="edit_lot.php?id=<?= $lot['lot_id'] ?>" class="btn btn-warning btn-sm">Edit</a>
-                        <a href="delete_lot.php?id=<?= $lot['lot_id'] ?>" class="btn btn-danger btn-sm"
-                           onclick="return confirm('Are you sure you want to delete this lot?')">Delete</a>
+                        <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_lot').value = <?= htmlspecialchars($lot['lot_id']) ?>;" class="btn btn-danger btn-sm">Delete</button></td>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -98,25 +97,9 @@ try {
     </table>
 </div>
 
-<!-- Add Lot Modal -->
-<div class="modal fade" id="addModal" tabindex="-1">
-  <div class="modal-dialog modal-md">
-    <div class="modal-content">
-      <div class="modal-header"><h5>Add Lot</h5></div>
-      <div class="modal-body">
-        <form method="POST" id="addForm">
-          <input type="hidden" value="<?=$_GET['id']?>" name="project_id" class="form-control">
-          <div class="mb-3"><label>Lot Number</label><input type="text" name="lot_no" class="form-control"></div>
-          <div class="mb-3"><label>Contract Number</label><input type="text" name="contract_no" class="form-control"></div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" onclick="addForm('lots','add_lots.php')">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
+<?php
+include "partials/lot_modals.php";
+?>
 
 <!-- Edit School Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
