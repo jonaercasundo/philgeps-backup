@@ -72,20 +72,19 @@ try {
     <div class="modal-content">
       <div class="modal-header"><h5>Add Keystage</h5></div>
       <div class="modal-body">
-        <form>
-          <input type="hidden" value="<?=$_GET['id']?>" class="form-control">
-          <div class="mb-3"><label>Lot Number</label><select class="form-control"><?php
+        <form method="POST" id="addForm">
+          <div class="mb-3"><label>Lot Number</label><select class="form-control" name="lot"><?php
            foreach ($lotsFilter as $lotFilter){
              echo "<option value='" . htmlspecialchars($lotFilter['lot_id'], ENT_QUOTES) . "'>" 
         . htmlspecialchars($lotFilter['lot_name'], ENT_QUOTES) 
         . "</option>";}?></select></div>
-          <div class="mb-3"><label>Keystage Number</label><input type="text" class="form-control"></div>
-          <div class="mb-3"><label>Description</label><input type="text" class="form-control"></div>
+          <div class="mb-3"><label>Keystage Number</label><input type="text" class="form-control" name="keystage_no"></div>
+          <div class="mb-3"><label>Description</label><input type="text" class="form-control" name="description"></div>
         </form>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button class="btn btn-primary">Save</button>
+        <button class="btn btn-primary" onclick="addForm('keystage','add_keystage.php')">Save</button>
       </div>
     </div>
   </div>

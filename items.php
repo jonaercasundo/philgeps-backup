@@ -81,14 +81,18 @@ try {
 ?>
 
 <div class="container mt-4">
-    <h2 class="mb-3">Lot List</h2>
+    <h2 class="mb-3">Item List</h2>
 
-    <div class="d-flex mb-3 justify-content-between">
-        <div class="d-flex mb-3">
-            <input class="form-control me-2" id="search" type="search" name="q" placeholder="Search items..." aria-label="Search">
-            <button class="btn btn-outline-primary" type="submit">Search</button>
-        </div>
+<div class="d-flex mb-3 justify-content-between">
+    <div class="d-flex mb-3">
+        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addModal">Add Item</button><br><br>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">Import Item</button><br><br>
     </div>
+    <div class="d-flex mb-3">
+        <input class="form-control me-2" id="searchInput" name="q" placeholder="Search items..." aria-label="Search">
+        <button class="btn btn-outline-primary" id ="searchButton"type="button">Search</button>
+    </div>
+</div>
 
     <?php if (empty($items)): ?>
         <p>No Items Found.</p>
@@ -140,6 +144,30 @@ try {
         </nav>
     <?php endif; ?>
 </div>
+
+<!-- Import Items Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Import Items</h5></div>
+      <div class="modal-body">
+        <form id="importForm" method="POST" action="script/import_items.php" enctype="multipart/form-data">
+          <input type="hidden" name="project_id" value="<?= htmlspecialchars($id) ?>">
+          <div class="mb-3">
+            <label>Upload Items</label>
+            <input type="file" name="file" id="file" class="form-control" accept=".csv,.xlsx,.xls" required><br>
+            <a href="assets/uploads/itemtemplate.csv" download="itemtemplate.csv">Download Items Template</a>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="importBtn" onclick="document.getElementById('importForm').submit();">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script src="assets/js/project_details.js"></script>
 <?php require "template/footer.php"; ?>

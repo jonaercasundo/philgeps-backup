@@ -8,23 +8,25 @@ $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPa
 
 try {
     $stmt = $pdo->prepare("
-    SELECT d.*, p.project_id, p.project_name, dp.keystage_id
-    FROM deliveries d 
+    SELECT d.*, p.project_id, p.project_name, d.keystage_id, s.school_name as school, s.address, ps.status
+    FROM package_status ps 
+    JOIN deliveries d ON d.delivery_id = ps.delivery_id
+    JOIN school s ON s.school_id = d.school_id 
     JOIN projects p ON p.project_id = d.project_id 
-    JOIN delivery_packages dp ON dp.delivery_id = d.delivery_id 
-    WHERE d.delivery_id=$id;
+    WHERE package_status_id=$id;
     ");
     $stmt->execute();
     $deliveries = $stmt->fetch(PDO::FETCH_ASSOC);
 
     $stmt = $pdo->prepare("
     SELECT p.*, pc.item_id, pc.qty, i.item_name
-    FROM package p
+    FROM package_status ps
+    JOIN package p ON p.package_id = ps.package_id
     JOIN package_content pc ON pc.package_id = p.package_id
     JOIN item i ON i.item_id = pc.item_id
-    WHERE keystage_id = ?
+    WHERE package_status_id= $id;
     ");
-    $stmt->execute([$deliveries['keystage_id']]);
+    $stmt->execute();
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -75,7 +77,7 @@ try {
       <img src="<?=$logoBase64?>" alt="Logo" style="max-height:60px;">
       <h4 class="mt-3"><?=$deliveries['project_name']?></h4>
       <h6 class="text-muted"><?=$deliveries['school']?></h6>
-      <h6 class="text-muted"><?=ucfirst($deliveries['remarks'])?></h6>
+      <h6 class="text-muted"><?=ucfirst($deliveries['dr_no'])?></h6>
       <p class="mb-0"><?=$deliveries['address']?></p>
     </div>
 

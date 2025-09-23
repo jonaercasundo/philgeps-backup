@@ -104,14 +104,15 @@ try {
     <div class="modal-content">
       <div class="modal-header"><h5>Add Lot</h5></div>
       <div class="modal-body">
-        <form>
-          <input type="hidden" value="<?=$_GET['id']?>" class="form-control">
-          <div class="mb-3"><label>Lot Number</label><input type="text" class="form-control"></div>
+        <form method="POST" id="addForm">
+          <input type="hidden" value="<?=$_GET['id']?>" name="project_id" class="form-control">
+          <div class="mb-3"><label>Lot Number</label><input type="text" name="lot_no" class="form-control"></div>
+          <div class="mb-3"><label>Contract Number</label><input type="text" name="contract_no" class="form-control"></div>
         </form>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-primary" onclick="addForm('lots','add_lots.php')">Save</button>
       </div>
     </div>
   </div>

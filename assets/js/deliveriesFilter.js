@@ -68,24 +68,65 @@ function renderPagination(data, currentPage) {
 }
 
 // Event listeners
-document.getElementById("filterButt").addEventListener("click", () => updateTable(1));
 document.getElementById("searchButton").addEventListener("click", () => updateTable(1));
 document.getElementById("searchInput").addEventListener("keypress", e => { if(e.key==="Enter") updateTable(1); });
 
-// Populate filters
-document.addEventListener("DOMContentLoaded", function () {
-    populateFilter("year", "SELECT DISTINCT YEAR(created_at) AS options FROM deliveries ORDER BY created_at ASC");
-    hideLoading();
-});
 
 document.addEventListener("DOMContentLoaded", function () {
     // Populate Year filter
     populateFilter("year", "SELECT DISTINCT YEAR(created_at) AS options FROM deliveries ORDER BY created_at ASC");
+    populateFilter("importproject",
+                `SELECT project_id, project_name AS options 
+                 FROM projects`);
     hideLoading();
 
     const yearSelect = document.getElementById("year");
     const projectSelect = document.getElementById("filterProjects");
     const statusSelect = document.getElementById("filterStatus");
+    const filterRegion = document.getElementById("filterRegion");
+    const filterDivision = document.getElementById("filterDivision");
+    const filterMunicipality = document.getElementById("filterMunicipality");
+    const importproject = document.getElementById("importproject");
+    const importlot = document.getElementById("importlot");
+    const importkeystage = document.getElementById("importkeystage");
+    const file_upload_import = document.getElementById("file_upload_import");
+    
+    // When Year changes → enable & populate Project
+    filterRegion.addEventListener("change", () => {
+        let region = filterRegion.value;
+        filterDivision.disabled = !year;
+        filterMunicipality.disabled = true;
+        if (region) {
+            populateFilter(
+                "filterDivision",
+                `SELECT DISTINCT s.division AS options 
+                 FROM schools_project sp 
+                 JOIN school s ON sp.school_id = s.school_id 
+                 WHERE s.region='${region}'`
+            );
+        } else {
+            projectSelect.innerHTML = ""; 
+            statusSelect.innerHTML = ""; 
+        }
+    });
+
+    // When Year changes → enable & populate Project
+    filterDivision.addEventListener("change", () => {
+        let division = filterDivision.value;
+        filterMunicipality.disabled = !year;
+        if (division) {
+            populateFilter(
+                "filterMunicipality",
+                `SELECT DISTINCT s.municipality AS options 
+                 FROM schools_project sp 
+                 JOIN school s ON sp.school_id = s.school_id 
+                 WHERE s.division='${division}'`
+            );
+        } else {
+            projectSelect.innerHTML = ""; 
+            statusSelect.innerHTML = ""; 
+        }
+    });
 
     // When Year changes → enable & populate Project
     yearSelect.addEventListener("change", () => {
@@ -112,14 +153,62 @@ document.addEventListener("DOMContentLoaded", function () {
         statusSelect.disabled = !project_id;
         if (project_id) {
             populateFilter(
+                "importlot",
+                `SELECT lot_id as project_id, CONCAT('Lot ', lot_name) as options FROM lot WHERE project_id='${project_id}'`
+            );
+            populateFilter(
                 "filterStatus",
                 `SELECT DISTINCT status AS options FROM deliveries WHERE project_id='${project_id}' ORDER BY status ASC`
+            );
+            populateFilter(
+                "filterRegion",
+                `SELECT DISTINCT s.region AS options FROM schools_project sp JOIN school s ON sp.school_id = s.school_id WHERE project_id='${project_id}'`
             );
         } else {
             statusSelect.innerHTML = "";
         }
     });
 
+
+    // When importproject changes → enable & populate importlot
+    importproject.addEventListener("change", () => {
+        let project = importproject.value;
+        importlot.disabled = !project;
+        importkeystage.disabled = true;
+        file_upload_import.disabled = true;
+        if (project) {
+            populateFilter(
+                "importlot",
+                `SELECT lot_id as project_id, lot_name as options
+                 FROM lot
+                 WHERE project_id='${project}'`
+            );
+        } else {
+            importlot.innerHTML = ""; 
+            importkeystage.innerHTML = ""; 
+        }
+    });
+
+    // When importlot changes → enable & populate importkeystage
+    importlot.addEventListener("change", () => {
+        let lot_id = importlot.value;
+        importkeystage.disabled = !lot_id;
+        file_upload_import.disabled = true;
+        if (lot_id) {
+            populateFilter(
+                "importkeystage",
+                `SELECT keystage_id as project_id, CONCAT('Keystage ', keystage_num,' ', description) AS options FROM keystage WHERE lot_id='${lot_id}'`
+            );
+        } else {
+            importkeystage.innerHTML = "";
+        }
+    });
+
+        // When importkeystage changes → enable Upload of File
+    importkeystage.addEventListener("change", () => {
+        let keystage_id = importkeystage.value;
+        file_upload_import.disabled = !keystage_id;
+    });
     // Filter & search triggers
     const filterButton = document.getElementById("filterButt");
     const searchButton = document.getElementById("searchButton");
