@@ -128,6 +128,18 @@ try {
     </thead>
    <tbody>
         <?php foreach($deliveries as $d): ?>
+         <?php
+            // Use a single query to check if any photo exists for the dr_no
+            $stmt_check = $pdo->prepare("
+                SELECT COUNT(dp.delivery_photo_id)
+                FROM deliveries d
+                JOIN package_status ps ON d.delivery_id = ps.delivery_id
+                JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
+                WHERE d.dr_no = :dr_no AND dp.status IN ('accepted', 'delivered')
+            ");
+            $stmt_check->execute([':dr_no' => $d['dr_no']]);
+            $has_photos = ($stmt_check->fetchColumn() > 0);
+        ?>
         <tr>
             <td><?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td>
             <td><?= htmlspecialchars($d['school_id']). ' ' . htmlspecialchars($d['school_name']) ?></td>
@@ -153,6 +165,9 @@ try {
                         data-status="<?= htmlspecialchars($d['status']) ?>"
                 >Edit</button>
                 <a class="btn btn-sm btn-success" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank">QR</a>
+                <?php if ($has_photos): ?>
+                    <a class="btn btn-sm btn-info" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank">View</a>
+                <?php endif; ?>
             </td>
         </tr>
         <?php endforeach; ?>

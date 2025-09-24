@@ -99,19 +99,20 @@ try {
     </div>
 
     <!-- Form -->
-    <form method="POST" action="check.php">
+    <form method="POST" action="check.php" enctype="multipart/form-data">
       <input type="hidden" value="<?=$id?>" name="id">
       <input type="hidden" value="<?=$deliveries['status'];?>" name="status">
-      <input type="hidden" name="dr_no" value="<?=$_GET['dr_no']?>">
-      
+      <input type="hidden" name="delivery_id" value="<?=$_GET['delivery_id']?>">
+
       <div class="mb-3">
-          <label for="photo_upload" class="form-label">Upload a Photo</label>
+          <label for="photo_upload" class="form-label">Upload Photos</label>
           <input 
               type="file" 
               class="form-control" 
               id="photo_upload" 
-              name="photo_upload" 
+              name="photo_upload[]" 
               accept="image/*"
+              multiple
               required
           >
       </div>

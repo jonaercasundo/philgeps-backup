@@ -143,6 +143,18 @@ $stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
 $stmt->execute();
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+foreach ($rows as &$row) {
+    $stmt_check = $pdo->prepare("
+        SELECT COUNT(dp.delivery_photo_id)
+        FROM deliveries d
+        JOIN package_status ps ON d.delivery_id = ps.delivery_id
+        JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
+        WHERE d.dr_no = :dr_no AND dp.status IN ('accepted', 'delivered')
+    ");
+    $stmt_check->execute([':dr_no' => $row['dr_no']]);
+    $row['has_photos'] = ($stmt_check->fetchColumn() > 0);
+}
+
 // Count for pagination
 $countSql = "SELECT COUNT(*) 
              FROM deliveries d 
