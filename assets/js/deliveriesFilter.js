@@ -65,7 +65,8 @@ function updateTable(page = 1) {
                                 data-id="${row.delivery_id}" data-project="${row.project_name}" data-school_name="${row.school_name}"
                                 data-address="${row.address}" data-items_contents="${row.items_contents}" data-drno="${row.dr_no}"
                                 data-date="${row.delivery_date}" data-status="${row.status}">Edit</button>
-                            <a class="btn btn-sm btn-success" href="generate_qr.php?id=${row.delivery_id}" target="_blank">
+                                
+                            <a class="btn btn-sm btn-success" href="generate_qr.php?id=${row.dr_no}" target="_blank">
                                 QR
                             </a>
                         </td>

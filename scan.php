@@ -102,33 +102,18 @@ try {
     <form method="POST" action="check.php">
       <input type="hidden" value="<?=$id?>" name="id">
       <input type="hidden" value="<?=$deliveries['status'];?>" name="status">
-      <div class="mb-3">
-        <label for="phone" class="form-label">Phone Number</label>
-        <input 
-          type="tel" 
-          class="form-control" 
-          id="phone" 
-          name="phone" 
-          placeholder="09XXXXXXXXX"
-          pattern="[0-9]{11}" 
-          maxlength="11" 
-          required 
-          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-        >
-        <div class="form-text">Enter 11-digit phone number starting with 09</div>
-      </div>
+      <input type="hidden" name="dr_no" value="<?=$_GET['dr_no']?>">
       
       <div class="mb-3">
-        <label for="email" class="form-label">Email</label>
-        <input 
-          type="email" 
-          class="form-control" 
-          id="email" 
-          name="email" 
-          placeholder="anyemail@gmail.com"
-          required 
-        >
-        <div class="form-text">Enter a valid email address</div>
+          <label for="photo_upload" class="form-label">Upload a Photo</label>
+          <input 
+              type="file" 
+              class="form-control" 
+              id="photo_upload" 
+              name="photo_upload" 
+              accept="image/*"
+              required
+          >
       </div>
 
       <!-- Captcha -->
