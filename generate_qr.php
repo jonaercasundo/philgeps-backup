@@ -104,7 +104,7 @@ foreach ($deliveries as $delivery) {
         ];
 
         // QR code
-        $url = "http://192.168.0.63/philgeps/scan.php?id=" . $package['package_status_id'];
+        $url = "http://192.168.0.63/philgeps/scan.php?id=" . $package['package_status_id']. "&delivery_id=" .$delivery['delivery_id'] ;
         $orderId = "Package $int of $package_count<br> ORD-" . str_pad($package['package_status_id'], 5, "0", STR_PAD_LEFT);
 
         $qr = Builder::create()
