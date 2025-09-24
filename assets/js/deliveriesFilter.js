@@ -61,15 +61,15 @@ function updateTable(page = 1) {
                         <td>${row.dr_no}</td>
                         <td>${row.delivery_date}</td>
                         <td>
-                            <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
+                            <button class="btn btn-sm btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                                 data-id="${row.delivery_id}" data-project="${row.project_name}" data-school_name="${row.school_name}"
                                 data-address="${row.address}" data-items_contents="${row.items_contents}" data-drno="${row.dr_no}"
                                 data-date="${row.delivery_date}" data-status="${row.status}">Edit</button>
 
-                            <a class="btn btn-sm btn-success" href="generate_qr.php?id=${row.dr_no}" target="_blank">
+                            <a class="btn btn-sm btn-success mb-1" href="generate_qr.php?id=${row.dr_no}" target="_blank">
                                 QR
                             </a>
-                              ${row.has_photos ? `<a class="btn btn-sm btn-info" href="deliveries_details.php?id=${row.dr_no}" target="_blank">View</a>` : ''}
+                              ${row.has_photos ? `<a class="btn btn-sm btn-info mb-1" href="deliveries_details.php?id=${row.dr_no}" target="_blank">View</a>` : ''}
                         </td>
                     </tr>
                 </tbody>

@@ -129,7 +129,7 @@ try {
    <tbody>
         <?php foreach($deliveries as $d): ?>
          <?php
-            // Use a single query to check if any photo exists for the dr_no
+            //check if any photo exists for the dr_no
             $stmt_check = $pdo->prepare("
                 SELECT COUNT(dp.delivery_photo_id)
                 FROM deliveries d

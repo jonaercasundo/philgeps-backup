@@ -82,45 +82,75 @@ foreach ($deliveries as $delivery) {
             return $photo['status'] === 'delivered';
         });
 
-        // Determine which photos to display based on priority (Delivered > Accepted)
-        $photos_to_display = [];
+        // Determine the status text for the header
         $status_text = '';
-
         if (!empty($delivered_photos)) {
-            $photos_to_display = $delivered_photos;
             $status_text = 'Delivered';
         } elseif (!empty($accepted_photos)) {
-            $photos_to_display = $accepted_photos;
             $status_text = 'Accepted';
+        } else {
+            $status_text = 'Not yet processed';
         }
 
-        if (empty($photos_to_display)) {
-            echo "<tr><td colspan='2' style='text-align:center;'>The package is not yet accepted.</td></tr>";
-        } else {
-            echo "
-            <tr>
-                <td colspan='2' style='font-weight:bold;background:#f0f0f0'>
-                    <small>Package " . htmlspecialchars($int) . " of " . htmlspecialchars($package_count) . " : " . $status_text . "</small>
-                </td>
-            </tr>";
-            echo "<tr>
-                <td colspan='2' style='vertical-align: top;'>
-                    <div class='photo-container'>";
-            foreach ($photos_to_display as $photo) {
+        // Display package header row with status
+        echo "
+        <tr>
+            <td colspan='2' style='font-weight:bold;background:#f0f0f0'>
+                <small>Package " . htmlspecialchars($int) . " of " . htmlspecialchars($package_count) . " : " . $status_text . "</small>
+            </td>
+        </tr>";
+
+        // Display the photo content row with two columns
+        echo "
+        <tr>
+            <td style='vertical-align: top; width: 50%;'>
+                <div style='font-weight:bold; text-align:center;'>Accepted Photos</div>
+                <hr>
+                <div class='photo-container'>";
+        
+        // Display accepted photos
+        if (!empty($accepted_photos)) {
+            foreach ($accepted_photos as $photo) {
                 $photoPath = __DIR__ . "/" . $photo['delivery_photo'];
                 if (file_exists($photoPath)) {
                     $photoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($photoPath));
                     echo "
                     <div class='photo-box'>
-                        <img src='$photoBase64' alt='" . $status_text . " Photo'>
+                        <img src='$photoBase64' alt='Accepted Photo'>
                     </div>";
                 }
             }
-            echo "
-                    </div>
-                </td>
-            </tr>";
+        } else {
+            echo "<p style='text-align:center; color:#888;'>No accepted photos available.</p>";
         }
+        echo "
+                </div>
+            </td>
+            <td style='vertical-align: top; width: 50%;'>
+                <div style='font-weight:bold; text-align:center;'>Delivered Photos</div>
+                <hr>
+                <div class='photo-container'>";
+        
+        // Display delivered photos
+        if (!empty($delivered_photos)) {
+            foreach ($delivered_photos as $photo) {
+                $photoPath = __DIR__ . "/" . $photo['delivery_photo'];
+                if (file_exists($photoPath)) {
+                    $photoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($photoPath));
+                    echo "
+                    <div class='photo-box'>
+                        <img src='$photoBase64' alt='Delivered Photo'>
+                    </div>";
+                }
+            }
+        } else {
+            echo "<p style='text-align:center; color:#888;'>No delivered photos available.</p>";
+        }
+        echo "
+                </div>
+            </td>
+        </tr>";
+        
         $int++;
     }
     echo "
