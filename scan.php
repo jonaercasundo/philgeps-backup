@@ -8,7 +8,7 @@ $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPa
 
 try {
     $stmt = $pdo->prepare("
-    SELECT d.*, p.project_id, p.project_name, d.keystage_id, s.school_name as school, s.address, ps.status
+    SELECT d.*, p.project_id, p.project_name, d.keystage_id, s.school_name as school, s.address, ps.status AS package_status
     FROM package_status ps 
     JOIN deliveries d ON d.delivery_id = ps.delivery_id
     JOIN school s ON s.school_id = d.school_id 
@@ -104,7 +104,7 @@ try {
       <input type="hidden" value="<?=$deliveries['status'];?>" name="status">
       <input type="hidden" name="delivery_id" value="<?=$_GET['delivery_id']?>">
 
-      <div class="mb-3">
+      <div class="mb-3 <?php if($deliveries['package_status'] == "pending"){echo "visually-hidden";}; ?>">
           <label for="photo_upload" class="form-label">Upload Photos</label>
           <input 
               type="file" 
@@ -114,6 +114,8 @@ try {
               accept="image/*"
               multiple
               required
+              
+              <?php if($deliveries['package_status'] == "pending"){echo "disabled";}; ?>
           >
       </div>
 
