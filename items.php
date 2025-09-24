@@ -39,12 +39,8 @@ try {
         // Count total rows
         $countStmt = $pdo->prepare("
             SELECT COUNT(*) 
-            FROM item i
-            INNER JOIN package_content pc ON i.item_id = pc.item_id
-            INNER JOIN package p ON pc.package_id = p.package_id
-            INNER JOIN keystage k ON p.keystage_id = k.keystage_id
-            INNER JOIN lot l ON k.lot_id = l.lot_id
-            WHERE l.project_id = ?
+            FROM item 
+            WHERE project_id = ?
         ");
         $countStmt->execute([$project_id]);
         $totalRows = $countStmt->fetchColumn();
@@ -52,19 +48,11 @@ try {
         // Get data with limit
         $stmt = $pdo->prepare("
             SELECT 
-                i.item_id, 
-                i.item_name, 
-                i.unit,
-                p.package_num,
-                k.keystage_num,
-                l.lot_name
-            FROM item i
-            INNER JOIN package_content pc ON i.item_id = pc.item_id
-            INNER JOIN package p ON pc.package_id = p.package_id
-            INNER JOIN keystage k ON p.keystage_id = k.keystage_id
-            INNER JOIN lot l ON k.lot_id = l.lot_id
-            WHERE l.project_id = ?
-            ORDER BY l.lot_name, k.keystage_num, p.package_num, i.item_name
+                item_id, 
+                item_name, 
+                unit
+            FROM item 
+            WHERE project_id = ?
             LIMIT $limit OFFSET $offset
         ");
         $stmt->execute([$project_id]);

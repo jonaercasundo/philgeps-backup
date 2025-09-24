@@ -39,6 +39,9 @@ try {
                 GROUP_CONCAT(CONCAT(i.item_name) SEPARATOR '<br>') AS Content,
                 GROUP_CONCAT(CONCAT(pc.qty) SEPARATOR '<br>') AS qty,
                 p.keystage_id,
+                p.width,
+                p.height,
+                p.length,
                 CONCAT(p.width,'x',p.height,'x',p.length) AS Dimension
             FROM package p
             LEFT JOIN package_content pc ON p.package_id = pc.package_id
@@ -106,25 +109,28 @@ try {
           <div class="mb-3 d-flex">
             <div class="w-100 me-2">
               <label>Width</label>
-              <input type="number" class="form-control" name="addwidth" id="edit_width">
+              <input type="decimal" class="form-control" name="addwidth">
             </div>
             <div class="w-100 me-2">
               <label>Height</label>
-              <input type="number" class="form-control" name="addheight" id="edit_height">
+              <input type="decimal" class="form-control" name="addheight">
             </div>
             <div class="w-100 me-2">
               <label>Length</label>
-              <input type="number" class="form-control" name="addlength" id="edit_length">
+              <input type="decimal" class="form-control" name="addlength">
             </div>
           </div>
-
           </div>
-
+          <button onclick="document.getElementById('myTable').classList.toggle('visually-hidden')" class="btn btn-success mb-3">Import</button>
+          <table border="1" id="myTable" class="visually-hidden" onchange="">
+            <tr>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+            </tr>
+          </table><br><br>
           <!-- Dynamic Items -->
           <div id="itemsContainer">
-            <div class="row g-2 align-items-center item-row mb-2">
-              <div class="col-md-8">
-                <label class="form-label">Item</label>
+            <div class="d-flex mb-2">
                 <select class="form-select" name="items[]">
                   <option value="">-- Select Item --</option>
                   <?php
@@ -136,11 +142,8 @@ try {
                   }
                   ?>
                 </select>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Quantity</label>
                 <input type="number" class="form-control" name="quantities[]" min="1" required>
-              </div>
+                <button type="button" class="btn btn-danger btn-sm removeItemBtn">x</button>
             </div>
           </div>
 
@@ -159,7 +162,6 @@ try {
     </div>
   </div>
 </div>
-
 
 
 <!-- Edit Package Modal -->
@@ -191,18 +193,17 @@ try {
           <div class="mb-3 d-flex">
             <div class="w-100 me-2">
               <label>Width</label>
-              <input type="number" class="form-control" name="width" id="edit_width">
+              <input type="decimal" class="form-control" name="width" id="edit_width">
             </div>
             <div class="w-100 me-2">
               <label>Height</label>
-              <input type="number" class="form-control" name="height" id="edit_height">
+              <input type="decimal" class="form-control" name="height" id="edit_height">
             </div>
             <div class="w-100 me-2">
               <label>Length</label>
-              <input type="number" class="form-control" name="length" id="edit_length">
+              <input type="decimal" class="form-control" name="length" id="edit_length">
             </div>
           </div>
-
           <div class="mb-3">
             <label>Items in Package</label>
             <div id="edit_items"></div>
@@ -260,7 +261,9 @@ try {
                             data-bs-target="#editModal"
                             data-id="<?= $package['package_id'] ?>"
                             data-num="<?= htmlspecialchars($package['package_num']) ?>"
-                            data-dimension="<?= htmlspecialchars($package['Dimension']) ?>">
+                            data-width="<?= htmlspecialchars($package['width']) ?>"
+                            data-length="<?= htmlspecialchars($package['length']) ?>"
+                            data-height="<?= htmlspecialchars($package['height']) ?>">
                             Edit
                         </a>
                         <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_packages').value = <?= htmlspecialchars($package['package_id']) ?>;" class="btn btn-danger btn-sm">Delete</button>
@@ -270,6 +273,29 @@ try {
             </tbody>
         </table>
         <script>
+
+        document.getElementById("addItemForm").addEventListener("submit", function(e) {
+            e.preventDefault(); // stop normal form submit
+            
+            let formData = new FormData(this);
+
+            fetch("script/add_items.php", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // show toast and refresh items if needed
+                    alert("✅ Package added!");
+                    location.reload(); // or close modal
+                } else {
+                    alert("❌ Error: " + data.message);
+                }
+            })
+            .catch(err => alert("Server error: " + err));
+        });
+
 
            // Add More Items Button (for Add Modal)
             document.getElementById("addMoreItem").addEventListener("click", function () {
@@ -283,14 +309,13 @@ try {
                 newRow.classList.add("row", "g-2", "align-items-center", "item-row", "mb-2");
 
                 newRow.innerHTML = `
-                    <div class="col-md-8">
+                    <div class="d-flex mb-2 itemRow">
                         <select class="form-select" name="items[]">
                             <option value="">-- Select Item --</option>
                             ${options}
                         </select>
-                    </div>
-                    <div class="col-md-4">
                         <input type="number" class="form-control" name="quantities[]" min="1" required>
+                        <button type="button" class="btn btn-danger btn-sm removeItemBtn">x</button>
                     </div>
                 `;
 
@@ -414,6 +439,56 @@ function populateKeystage(){
         hideLoading();
     });
    
+}
+
+// Trigger whenever table changes (typing or pasting)
+document.getElementById("myTable").addEventListener("input", syncTableToForm);
+
+function syncTableToForm() {
+  let rows = document.querySelectorAll("#myTable tbody tr");
+  let container = document.getElementById("itemsContainer");
+  container.innerHTML = ""; // reset
+
+  rows.forEach(row => {
+    let cells = row.querySelectorAll("td");
+    if (cells.length < 1) return;
+
+    let itemText = cells[0].innerText.trim();
+    let qtyText  = cells[1].innerText.trim();
+
+    // Match item by exact name
+    let selectedItem = allItems.find(i => normalize(i.item_name) === normalize(itemText));
+
+    let options = allItems.map(i =>
+      `<option value="${i.item_id}" ${selectedItem && i.item_id === selectedItem.item_id ? "selected" : ""}>
+        ${i.item_name}
+      </option>`
+    ).join("");
+
+    let newRow = document.createElement("div");
+    newRow.classList.add("row", "g-2", "align-items-center", "item-row", "mb-2");
+
+    newRow.innerHTML = `
+      <div class="d-flex mb-2 itemRow">
+        <select class="form-select" name="items[]">
+          <option value="">-- Select Item --</option>
+          ${options}
+        </select>
+        <input type="number" class="form-control" name="quantities[]" value="${qtyText || 1}" min="1" required>
+        <button type="button" class="btn btn-danger btn-sm removeItemBtn">x</button>
+      </div>
+    `;
+
+    container.appendChild(newRow);
+  });
+}
+
+// Helper function to normalize strings (remove symbols, trim, lowercase)
+function normalize(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^\w\s]/gi, "") // remove non-alphanumeric/symbols (keeps letters, numbers, spaces, _)
+    .trim();
 }
 </script>
 

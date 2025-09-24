@@ -46,8 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$package_id, $item_id, $qty]);
             }
         }
-
-        $pdo->commit();
+    $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Package added successfully']);
     } catch (PDOException $e) {
         $pdo->rollBack();
