@@ -4,11 +4,17 @@ require "../config/db.php";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lot_id       = $_POST['lot_id'] ?? null;
     $keystage_id  = $_POST['keystage_id'] ?? null;
-    $items        = $_POST['items'] ?? [];
-    $quantities   = $_POST['quantities'] ?? [];
-    $dimensions   = $_POST['dimention'] ?? []; // from syncTableToForm
 
-    if (!$lot_id || !$keystage_id) {
+    // force NULL if empty
+    if (empty($keystage_id)) {
+        $keystage_id = null;
+    }
+
+    $items      = $_POST['items'] ?? [];
+    $quantities = $_POST['quantities'] ?? [];
+    $dimensions = $_POST['dimention'] ?? [];
+
+    if (!$lot_id && !$keystage_id) {
         echo json_encode(['success' => false, 'message' => 'Missing Lot or Keystage']);
         exit;
     }
@@ -17,26 +23,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
 
         $packages = [];
-        $lastDim = "0x0x0"; // fallback dimension
+        $lastDim = "0x0x0";
+
         // fetch project_id from lot_id
         $stmt = $pdo->prepare("SELECT project_id FROM lot WHERE lot_id = ?");
         $stmt->execute([$lot_id]);
         $project_id = $stmt->fetchColumn();
+
         foreach ($items as $i => $item_id) {
             $qty = $quantities[$i] ?? 0;
             $dimStr = trim($dimensions[$i] ?? "");
 
-            // ✅ If dimension is blank (merged cells), reuse last dimension
             if ($dimStr === "" && $lastDim !== null) {
                 $dimStr = $lastDim;
             }
 
-            // ✅ Normalize dimension format: remove spaces, unify "x"
             $dimStr = strtolower($dimStr);
-            $dimStr = preg_replace('/\s*[x×]\s*/i', 'x', $dimStr); // normalize separators
-            $dimStr = preg_replace('/\s+/', '', $dimStr);          // remove stray spaces
+            $dimStr = preg_replace('/\s*[x×]\s*/i', 'x', $dimStr);
+            $dimStr = preg_replace('/\s+/', '', $dimStr);
 
-            // ✅ Extract numbers
             if (preg_match('/([\d\.]+)x([\d\.]+)x([\d\.]+)/', $dimStr, $m)) {
                 $h = (float)$m[1];
                 $w = (float)$m[2];
@@ -47,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $dimKey = "0x0x0";
             }
 
-            $lastDim = $dimKey; // save for next row
+            $lastDim = $dimKey;
 
             if (!isset($packages[$dimKey])) {
                 $packages[$dimKey] = [
@@ -63,22 +68,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // ✅ Insert each grouped package
+        // Insert grouped packages
         foreach ($packages as $pkg) {
-            // next package number
-            $stmt = $pdo->prepare("SELECT COALESCE(MAX(package_num), 0) + 1 
-                                   FROM package WHERE keystage_id = ?");
-            $stmt->execute([$keystage_id]);
-            $nextNum = $stmt->fetchColumn();
+            if ($keystage_id === null) {
+                // next package number per lot
+                $stmt = $pdo->prepare("SELECT COALESCE(MAX(package_num), 0) + 1 
+                                       FROM package WHERE lot_id = ?");
+                $stmt->execute([$lot_id]);
+                $nextNum = $stmt->fetchColumn();
 
-            // insert package
-            $stmt = $pdo->prepare("INSERT INTO package 
-                (package_num, lot_id, keystage_id, width, height, length) 
-                VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([
-                $nextNum, $lot_id, $keystage_id,
-                $pkg['width'], $pkg['height'], $pkg['length']
-            ]);
+                $stmt = $pdo->prepare("INSERT INTO package 
+                    (package_num, lot_id, width, height, length) 
+                    VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $nextNum, $lot_id,
+                    $pkg['width'], $pkg['height'], $pkg['length']
+                ]);
+            } else {
+                // next package number per keystage
+                $stmt = $pdo->prepare("SELECT COALESCE(MAX(package_num), 0) + 1 
+                                       FROM package WHERE keystage_id = ?");
+                $stmt->execute([$keystage_id]);
+                $nextNum = $stmt->fetchColumn();
+
+                $stmt = $pdo->prepare("INSERT INTO package 
+                    (package_num, lot_id, keystage_id, width, height, length) 
+                    VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $nextNum, $lot_id, $keystage_id,
+                    $pkg['width'], $pkg['height'], $pkg['length']
+                ]);
+            }
+
             $package_id = $pdo->lastInsertId();
 
             // insert contents
@@ -90,11 +111,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Packages added successfully']);
-        header("Location: ../packages.php?id={$project_id}&keystage_id={$keystage_id}&lot_id={$lot_id}&toast=Succesfully Added Packages&type=success");
         exit;
     } catch (PDOException $e) {
         $pdo->rollBack();
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-                header("Location: ../packages.php?id={$project_id}&keystage_id={$keystage_id}&lot_id={$lot_id}&toast=".$e->getMessage()."&type=danger");
     }
 }
