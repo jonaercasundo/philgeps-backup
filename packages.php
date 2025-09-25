@@ -21,6 +21,9 @@ try {
                 GROUP_CONCAT(CONCAT(i.item_name) SEPARATOR '<br>') AS Content,
                 GROUP_CONCAT(CONCAT(pc.qty) SEPARATOR '<br>') AS qty,
                 p.keystage_id ,
+                p.width,
+                p.height,
+                p.length,
                 CONCAT(p.width,'x',p.height,'x',p.length) AS Dimension
             FROM package p
             LEFT JOIN package_content pc ON p.package_id = pc.package_id
@@ -79,6 +82,7 @@ try {
         <div class="modal-body">
         <?php if (isset($_GET['keystage_id'])): ?>
     <input type="hidden" name="keystage_id" value="<?= htmlspecialchars($_GET['keystage_id']) ?>">
+    <input type="hidden" name="lot_id" value="<?= htmlspecialchars($_GET['lot_id']) ?>">
       <?php else: ?>
           <!-- Select Lot + Keystage -->
           <div class="mb-3 d-flex">
@@ -105,28 +109,18 @@ try {
               </div>
           </div>
       <?php endif; ?>
-      
-          <div class="mb-3 d-flex">
-            <div class="w-100 me-2">
-              <label>Width</label>
-              <input type="decimal" class="form-control" name="addwidth">
-            </div>
-            <div class="w-100 me-2">
-              <label>Height</label>
-              <input type="decimal" class="form-control" name="addheight">
-            </div>
-            <div class="w-100 me-2">
-              <label>Length</label>
-              <input type="decimal" class="form-control" name="addlength">
-            </div>
           </div>
-          </div>
-          <button onclick="document.getElementById('myTable').classList.toggle('visually-hidden')" class="btn btn-success mb-3">Import</button>
-          <table border="1" id="myTable" class="visually-hidden" onchange="">
-            <tr>
-              <td contenteditable="true"></td>
-              <td contenteditable="true"></td>
-            </tr>
+          <table class="table table-bordered table-hover table-striped align-middle" id="myTable">
+            <thead class="table-dark">
+              <tr>
+                <th>Paste the table below</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr id="pasteHere">
+                <td contenteditable="true">Here!</td>
+              </tr>
+            </tbody>
           </table><br><br>
           <!-- Dynamic Items -->
           <div id="itemsContainer">
@@ -441,20 +435,31 @@ function populateKeystage(){
    
 }
 
+
 // Trigger whenever table changes (typing or pasting)
 document.getElementById("myTable").addEventListener("input", syncTableToForm);
 
 function syncTableToForm() {
-  let rows = document.querySelectorAll("#myTable tbody tr");
+  let rows = document.querySelectorAll("#myTable tr"); 
   let container = document.getElementById("itemsContainer");
   container.innerHTML = ""; // reset
 
-  rows.forEach(row => {
+  rows.forEach((row, index) => {
+    
+     if (index === 1) return; // skip the header row
+     console.log(index)
     let cells = row.querySelectorAll("td");
     if (cells.length < 1) return;
 
-    let itemText = cells[0].innerText.trim();
-    let qtyText  = cells[1].innerText.trim();
+    let itemText = (cells[0]?.innerText || "").trim();
+    let qtyText  = (cells[1]?.innerText || "").trim();
+    let dimText  = (cells[2]?.innerText || "").trim();
+
+    // Normalize dimension -> remove whitespace and force "x"
+    let normalizedDim = "";
+    if (dimText) {
+      normalizedDim = dimText.replace(/\s*/g, "").replace(/[X×]/gi, "x");
+    }
 
     // Match item by exact name
     let selectedItem = allItems.find(i => normalize(i.item_name) === normalize(itemText));
@@ -475,6 +480,7 @@ function syncTableToForm() {
           ${options}
         </select>
         <input type="number" class="form-control" name="quantities[]" value="${qtyText || 1}" min="1" required>
+        <input type="hidden" name="dimention[]" value="${normalizedDim}">
         <button type="button" class="btn btn-danger btn-sm removeItemBtn">x</button>
       </div>
     `;
@@ -482,6 +488,7 @@ function syncTableToForm() {
     container.appendChild(newRow);
   });
 }
+
 
 // Helper function to normalize strings (remove symbols, trim, lowercase)
 function normalize(str) {

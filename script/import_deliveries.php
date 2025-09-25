@@ -39,7 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                     preg_match("/KS(\d+)/i", $d, $ks);
                     // Capture everything after KS<num> until "&" or end of string
                     preg_match("/KS\s*\d+\s*([^\&]*)/i", $d, $desc);
-                    $description = isset($desc[1]) ? preg_replace('/\s+/', '', $desc[1]) : '';
+
+                    if (isset($desc[1])) {
+                        $description = trim($desc[1]);
+
+                        // Normalize dash and "to" → "to"
+                        $description = preg_replace('/\s*-\s*/', 'to', $description);   // G4-G6 → G4toG6
+                        $description = preg_replace('/\s*to\s*/i', 'to', $description); // G4 to G6 → G4toG6
+
+                        // Remove spaces
+                        $description = preg_replace('/\s+/', '', $description);
+                    } else {
+                        $description = '';
+                    }
 
                     $rows[] = [
                         'school_id'     => $school_id,
@@ -62,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
     $lots = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
     $stmt = $pdo->prepare("
-        SELECT k.keystage_id, CONCAT('KS', k.keystage_num, ' ', k.description) AS label
+        SELECT k.keystage_id,  CONCAT('LOT ',l.lot_name,' KS', k.keystage_num, ' ', k.description) AS label
         FROM keystage k
         JOIN lot l ON k.lot_id = l.lot_id
         WHERE l.project_id = :project_id
@@ -82,8 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
   <h3>Import Deliveries</h3>
   <form method="POST" enctype="multipart/form-data">
     <input type="hidden" name="project" value="<?= htmlspecialchars($project_id ?? '') ?>">
-    <input type="file" name="csv_file" accept=".csv" required>
-    <button class="btn btn-primary btn-sm" type="submit">Upload</button>
     <button type="button" class="btn btn-warning mb-2" onclick="toggleNeedsAction()">Show Only Rows Needing Dropdown</button>
   </form>
 
