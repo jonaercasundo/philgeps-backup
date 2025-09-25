@@ -98,8 +98,8 @@ try {
 </div>
 
 <div id="depedDeliveries" class="row mb-3">
-    <div class="col-md-6"><label>Lot</label><select class="form-select filter" id="importlot"></select></div>
-    <div class="col-md-6"><label>Keystage</label><select class="form-select filter" id="importkeystage" disabled></select></div>
+    <div class="col-md-6"><label>Lot</label><select class="form-select filter" id="filterlot"></select></div>
+    <div class="col-md-6"><label>Keystage</label><select class="form-select filter" id="filterkeystage" disabled></select></div>
 </div>
 
 <div id="depedDeliveries" class="row mb-3">
