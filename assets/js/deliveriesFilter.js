@@ -55,17 +55,17 @@ async function updateTable(page = 1) {
                             <td>${row.items_contents}</td>
                             <td>${row.dr_no}</td>
                             <td>${row.delivery_date}</td>
-                            <td>
+                            <td class="text-center">
                                 <button class="btn btn-sm btn-primary mb-1" 
                                     data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                                     data-id="${row.delivery_id}" data-project="${row.project_name}"
                                     data-school_name="${row.school_name}" data-address="${row.address}"
                                     data-items_contents="${row.items_contents}" data-drno="${row.dr_no}"
                                     data-date="${row.delivery_date}" data-status="${row.status}">
-                                    Edit
-                                </button>
-                                <a class="btn btn-sm btn-success mb-1" href="generate_qr.php?id=${row.dr_no}" target="_blank">QR</a>
-                                ${row.has_photos ? `<a class="btn btn-sm btn-info mb-1" href="deliveries_details.php?id=${row.dr_no}" target="_blank">View</a>` : ""}
+                                    <i class="bi bi-pencil-square fs-4"></i>
+                                </button> <br>
+                                <a class="btn btn-sm btn-success mb-1" href="generate_qr.php?id=${row.dr_no}" target="_blank"><i class="bi bi-qr-code fs-4"></i></a><br>
+                                ${row.has_photos ? `<a class="btn btn-sm btn-info mb-1" href="deliveries_details.php?id=${row.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
                             </td>
                         </tr>
                     `).join("")}
@@ -151,10 +151,83 @@ document.addEventListener("DOMContentLoaded", () => {
             populateFilter("importlot", `SELECT lot_id as project_id, CONCAT('Lot ', lot_name) as options FROM lot WHERE project_id='${project_id}'`);
             populateFilter("filterStatus", `SELECT DISTINCT status AS options FROM deliveries WHERE project_id='${project_id}' ORDER BY status ASC`);
             populateFilter("filterRegion", `SELECT DISTINCT s.region AS options FROM schools_project sp JOIN school s ON sp.school_id = s.school_id WHERE project_id='${project_id}'`);
+            handleProjectChange(project_id);
         } else {
             statusSelect.innerHTML = "";
         }
     });
+
+
+async function handleProjectChange(projectId) {
+    const depedDeliveriesDiv = document.getElementById("depedDeliveries");
+    const locationFiltersDiv = document.getElementById("locationFilters");
+
+    if (!projectId) {
+        if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+        if (locationFiltersDiv) locationFiltersDiv.classList.add("visually-hidden");
+        return;
+    }
+
+    try {
+        const response = await fetch(`script/get_project.php?projectid=${projectId}`);
+        const data = await response.json();
+
+        if (data.lots && data.lots.length > 0) {
+            const agency = data.lots[0].agency;
+            
+            if (!agency) {
+                if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                return;
+            }
+            
+            // Populate lot filter
+            const lotSelect = document.getElementById("importlot");
+            if (lotSelect) {
+                lotSelect.innerHTML = '<option value="">Select Lot</option>';
+                data.lots.forEach(lot => {
+                    lotSelect.innerHTML += `<option value="${lot.id}">${lot.name}</option>`;
+                });
+            }
+
+            // Show/hide filters based on agency
+            const agencyLower = agency.toLowerCase().trim();
+            
+            switch (agencyLower) {
+                case 'deped':
+                case 'department of education':
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.remove("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+                    
+                case 'dswd':
+                case 'department of social welfare and development':
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+                    
+                default:
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+            }
+            
+            // Reset keystage filter
+            const keystageSelect = document.getElementById("importkeystage");
+            if (keystageSelect) {
+                keystageSelect.innerHTML = '<option value="">Select Keystage</option>';
+                keystageSelect.disabled = true;
+            }
+        } else {
+            if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+            if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+        }
+    } catch (error) {
+        console.error('Error fetching project details:', error);
+        if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+        if (locationFiltersDiv) locationFiltersDiv.classList.add("visually-hidden");
+    }
+}
 
     // Import project → Lot → Keystage → File Upload
     bindDependentFilter("importproject", "importlot", project => `

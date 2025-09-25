@@ -96,14 +96,16 @@ try {
     <div class="col-md-4"><label>Project</label><select class="form-select filter" id="filterProjects" disabled></select></div>
     <div class="col-md-4"><label>Status</label><select class="form-select filter" id="filterStatus" disabled></select></div>
 </div>
-
-<div id="depedDeliveries" class="row mb-3">
-    <div class="col-md-6"><label>Lot</label><select class="form-select filter" id="filterlot"></select></div>
-    <div class="col-md-6"><label>Keystage</label><select class="form-select filter" id="filterkeystage" disabled></select></div>
+<!-- THis BELOW IS THE ONLY FILTER YOU SHOULD ADD TO SWITCH STATEMENT -->
+<!-- DepEd specific filters -->
+<div id="depedDeliveries" class="visually-hidden row mb-3">
+    <div class="col-md-6"><label>Lot</label><select class="form-select filter" id="importlot"></select></div>
+    <div class="col-md-6"><label>Keystage</label><select class="form-select filter" id="importkeystage" disabled></select></div>
 </div>
 
-<div id="depedDeliveries" class="row mb-3">
-    <div class="col-md-4"><label>Region</label><select class="form-select filter" id="filterRegion" ></select></div>
+<!-- Location filters -->
+<div id="locationFilters" class="visually-hidden row mb-3">
+    <div class="col-md-4"><label>Region</label><select class="form-select filter" id="filterRegion"></select></div>
     <div class="col-md-4"><label>Division</label><select class="form-select filter" id="filterDivision" disabled></select></div>
     <div class="col-md-4"><label>Municipality</label><select class="form-select filter" id="filterMunicipality" disabled></select></div>
 </div>
@@ -153,7 +155,7 @@ try {
             </td>
             <td><?= htmlspecialchars($d['dr_no']) ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
-            <td>
+            <td class="text-center">
                 <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                         data-id="<?= $d['delivery_id'] ?>"
                         data-project="<?= htmlspecialchars($d['project_name']) ?>"
@@ -163,10 +165,10 @@ try {
                         data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
-                >Edit</button>
-                <a class="btn btn-sm btn-success" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank">QR</a>
-                <?php if ($has_photos): ?>
-                    <a class="btn btn-sm btn-info" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank">View</a>
+                ><i class="bi bi-pencil-square fs-4"></i></button> <br>
+                <a class="btn btn-success mb-1" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
+                <?php if ($has_photos): ?> <br>
+                    <a class="btn btn-info" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
                 <?php endif; ?>
             </td>
         </tr>

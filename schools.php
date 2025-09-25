@@ -77,9 +77,9 @@ require "config/db.php"; // your PDO connection
             </span></td>
             <td id="person<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact_person']) ?></td>
             <td id="contact<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact']) ?></td>
-            <td>
-              <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= htmlspecialchars($project['school_id']) ?>)">Edit School</button>
-              <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;" class="btn btn-danger btn-sm">Delete</button></td>
+            <td class="text-center">
+              <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= htmlspecialchars($project['school_id']) ?>)"><i class="bi bi-pencil-square fs-4"></i></button>
+              <button  class="btn btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;"><i class="bi bi-trash fs-4"></i></button></td>
           </tr>
         <?php }; ?>
     </tbody>
