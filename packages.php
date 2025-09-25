@@ -254,9 +254,9 @@ try {
                         <td><?= htmlspecialchars($package['keystage_id']) ?></td>
                         <td><?= htmlspecialchars($package['Dimension'])?></td>
                         <td>
-                        <a href="items.php?id=<?=$project_id?>&package_id=<?= $package['package_id'] ?>" class="btn btn-primary btn-sm">Packages</a>
+                        <a href="items.php?id=<?=$project_id?>&package_id=<?= $package['package_id'] ?>" class="btn btn-primary d-inline-flex align-items-center mb-1"><i class='bi bi-eye fs-4 me-1'></i>Packages</a>
                         <a href="#" 
-                            class="btn btn-warning btn-sm editBtn"
+                            class="btn btn-warning editBtn mb-1"
                             data-bs-toggle="modal" 
                             data-bs-target="#editModal"
                             data-id="<?= $package['package_id'] ?>"
@@ -264,9 +264,9 @@ try {
                             data-width="<?= htmlspecialchars($package['width']) ?>"
                             data-length="<?= htmlspecialchars($package['length']) ?>"
                             data-height="<?= htmlspecialchars($package['height']) ?>">
-                            Edit
+                            <i class="bi bi-pencil-square fs-4"></i>
                         </a>
-                        <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_packages').value = <?= htmlspecialchars($package['package_id']) ?>;" class="btn btn-danger btn-sm">Delete</button>
+                        <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_packages').value = <?= htmlspecialchars($package['package_id']) ?>;" class="btn btn-danger mb-1"><i class="bi bi-trash fs-4"></i></button>
                     </td>
                     </tr>
                 <?php endforeach; ?>

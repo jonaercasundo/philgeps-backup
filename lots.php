@@ -68,7 +68,7 @@ try {
                           }
                       }
                       echo "</td><td>";
-                      echo "<a href=\"keystage.php?id=$project_id&lot_id={$lot['lot_id']}\" class=\"btn btn-primary btn-sm\">Keystage</a>";
+                      echo "<a href=\"keystage.php?id=$project_id&lot_id={$lot['lot_id']}\" class=\"btn btn-primary d-inline-flex align-items-center\"><i class='bi bi-eye fs-4 me-1'></i>Keystage</a>";
                   } else {
                       $stmt = $pdo->query("SELECT COUNT(package_id) AS carton_count FROM package WHERE lot_id = " . (int)$lot['lot_id']);
                       $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -89,9 +89,9 @@ try {
                   <!-- Action buttons -->
                   <button data-bs-toggle="modal" data-bs-target="#editModal" 
                           class="btn btn-warning btn-sm" 
-                          onclick="updateEditLot(<?= htmlspecialchars($lot['lot_id']) ?>)">Edit</button>
+                          onclick="updateEditLot(<?= htmlspecialchars($lot['lot_id']) ?>)"><i class="bi bi-pencil-square fs-4"></i></button>
                   <a href="delete_lot.php?id=<?= $lot['lot_id'] ?>" class="btn btn-danger btn-sm"
-                    onclick="return confirm('Are you sure you want to delete this lot?')">Delete</a>
+                    onclick="return confirm('Are you sure you want to delete this lot?')"><i class="bi bi-trash fs-4"></i></a>
               </tr>
 
             <?php endforeach; ?>  

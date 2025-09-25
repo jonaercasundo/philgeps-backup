@@ -99,9 +99,9 @@ try {
                         <td><?= htmlspecialchars($item['item_name']) ?></td>
                         <td><?= htmlspecialchars($item['unit']) ?></td>
                         <td>
-                            <a href="edit_item.php?id=<?= $item['item_id'] ?>" class="btn btn-warning btn-sm">Edit</a>
-                            <a href="delete_item.php?id=<?= $item['item_id'] ?>" class="btn btn-danger btn-sm"
-                               onclick="return confirm('Are you sure you want to delete this item?')">Delete</a>
+                            <a href="edit_item.php?id=<?= $item['item_id'] ?>" class="btn btn-warning"><i class="bi bi-pencil-square fs-4"></i></a>
+                            <a href="delete_item.php?id=<?= $item['item_id'] ?>" class="btn btn-danger"
+                               onclick="return confirm('Are you sure you want to delete this item?')"><i class="bi bi-trash fs-4"></i></a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

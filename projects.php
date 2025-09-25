@@ -60,7 +60,7 @@ try {
             <td><?= htmlspecialchars($p['project_name']) ?></td>
             <td>₱<?= number_format($p['contract_amount'], 2) ?></td>
             <td><?= htmlspecialchars($p['status']) ?></td>
-            <td class="text-center"><a href="project_details.php?id=<?= $p['project_id'] ?>" class="btn btn-sm btn-info">
+            <td class="text-center"><a href="project_details.php?id=<?= $p['project_id'] ?>" class="btn btn-primary">
                 <i class="bi bi-eye fs-4"></i>
             </a></td>
         </tr>

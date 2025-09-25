@@ -56,7 +56,7 @@ async function updateTable(page = 1) {
                             <td>${row.dr_no}</td>
                             <td>${row.delivery_date}</td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-primary mb-1" 
+                                <button class="btn btn-warning mb-1" 
                                     data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                                     data-id="${row.delivery_id}" data-project="${row.project_name}"
                                     data-school_name="${row.school_name}" data-address="${row.address}"
@@ -64,8 +64,8 @@ async function updateTable(page = 1) {
                                     data-date="${row.delivery_date}" data-status="${row.status}">
                                     <i class="bi bi-pencil-square fs-4"></i>
                                 </button> <br>
-                                <a class="btn btn-sm btn-success mb-1" href="generate_qr.php?id=${row.dr_no}" target="_blank"><i class="bi bi-qr-code fs-4"></i></a><br>
-                                ${row.has_photos ? `<a class="btn btn-sm btn-info mb-1" href="deliveries_details.php?id=${row.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
+                                <a class="btn btn-secondary mb-1" href="generate_qr.php?id=${row.dr_no}" target="_blank"><i class="bi bi-qr-code fs-4"></i></a><br>
+                                ${row.has_photos ? `<a class="btn btn-primary mb-1" href="deliveries_details.php?id=${row.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
                             </td>
                         </tr>
                     `).join("")}

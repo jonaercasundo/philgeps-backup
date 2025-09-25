@@ -156,7 +156,7 @@ try {
             <td><?= htmlspecialchars($d['dr_no']) ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
             <td class="text-center">
-                <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
+                <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                         data-id="<?= $d['delivery_id'] ?>"
                         data-project="<?= htmlspecialchars($d['project_name']) ?>"
                         data-school="<?= htmlspecialchars($d['school_id']). ' '. htmlspecialchars($d['school_name']) ?>"
@@ -166,9 +166,9 @@ try {
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
                 ><i class="bi bi-pencil-square fs-4"></i></button> <br>
-                <a class="btn btn-success mb-1" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
+                <a class="btn btn-secondary mb-1" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
                 <?php if ($has_photos): ?> <br>
-                    <a class="btn btn-info" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
+                    <a class="btn btn-primary" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
                 <?php endif; ?>
             </td>
         </tr>
