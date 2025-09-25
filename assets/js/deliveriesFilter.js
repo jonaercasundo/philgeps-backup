@@ -7,8 +7,6 @@ function getFilters() {
         region: "filterRegion",
         division: "filterDivision",
         municipality: "filterMunicipality",
-        lot_id: "importlot",
-        keystage_id: "importkeystage",
         search: "searchInput"
     };
 
@@ -147,22 +145,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const statusSelect = document.getElementById("filterStatus");
         statusSelect.disabled = !project_id;
 
-        if (project_id) {
-            populateFilter("importlot", `SELECT lot_id as project_id, CONCAT('Lot ', lot_name) as options FROM lot WHERE project_id='${project_id}'`);
-            populateFilter("filterStatus", `SELECT DISTINCT status AS options FROM deliveries WHERE project_id='${project_id}' ORDER BY status ASC`);
-            populateFilter("filterRegion", `SELECT DISTINCT s.region AS options FROM schools_project sp JOIN school s ON sp.school_id = s.school_id WHERE project_id='${project_id}'`);
-        } else {
-            statusSelect.innerHTML = "";
-        }
     });
 
-    // Import project → Lot → Keystage → File Upload
-    bindDependentFilter("importproject", "importlot", project => `
-        SELECT lot_id as project_id, lot_name as options FROM lot WHERE project_id='${project}'`);
-    bindDependentFilter("importlot", "importkeystage", lot_id => `
-        SELECT keystage_id as project_id, CONCAT('Keystage ', keystage_num,' ', description) AS options 
-        FROM keystage WHERE lot_id='${lot_id}'`);
-    bindDependentFilter("importkeystage", "file_upload_import", () => "");
+    // Import project → File Upload
+    bindDependentFilter("importproject", "file_upload_import", () => "");
+    
 
     // Search & filter buttons
     const applyFilters = () => updateTable(1);
@@ -173,3 +160,4 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Enter") applyFilters();
     });
 });
+

@@ -13,27 +13,6 @@
             echo "<option value='0'>Select Project</option>"
             ?></select>
             </div>
-            <div id ="lotimport" class="mb-3">
-            <label for="lot" class="form-label">Select Lot</label><br>
-            <select type="text" name="lot" id="importlot" class="form-control" accept=".xlsx,.xls,.csv" disabled required>
-            <?php 
-            echo "<option value='0'>Select Lot</option>"
-            ?></select></div>
-            <div class="mb-3">
-            <label for="importpackage" class="form-label">Select Package Type</label><br>
-            <select type="text" name="package" id="importpackage" class="form-control" accept=".xlsx,.xls,.csv" required>
-            <?php 
-            for($i = 1; $i<7; $i++){
-            echo "<option value='C$i'>C$i</option>";
-            }
-            ?></select>
-            </div>
-            <div id ="keystageimport" class="mb-3">
-            <label for="keystage" class="form-label">Select Keystage</label><br>
-            <select type="text" name="keystage" id="importkeystage" class="form-control" accept=".xlsx,.xls,.csv" disabled required>
-            <?php 
-            echo "<option value='0'>Select Keystage</option>"
-            ?></select></div>
 
             <div id ="keystageimport" class="mb-3">
             <label for="file" class="form-label">Upload File (Excel/CSV)</label><br>
@@ -42,7 +21,7 @@
             <a href="assets/uploads/import_deliveries.template.csv" download="delivery_template">Download Delivery Template</a>
           </div>
           <small class="text-muted">
-            Format: School ID, DR_Number, Delivery_Date
+            Format: School ID, Delivery, DR_Number, Delivery_Date
           </small>
         </form>
       </div>

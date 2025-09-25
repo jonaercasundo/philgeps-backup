@@ -134,7 +134,7 @@ try {
                           <span id="desc<?= $ks['keystage_id'] ?>s"><?= htmlspecialchars($ks['description']) ?></span></td>
                         <td><?= htmlspecialchars($ks['carton_count']) ?></td>
                         <td>
-                        <a href="packages.php?id=<?=$project_id?>&keystage_id=<?= $ks['keystage_id'] ?>" class="btn btn-primary btn-sm">Packages</a>
+                        <a href="packages.php?id=<?=$project_id?>&keystage_id=<?= $ks['keystage_id'] ?>&lot_id=<?= $ks['lot_id']?>" class="btn btn-primary btn-sm">Packages</a>
                         <button data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= $ks['keystage_id'] ?>,<?= $ks['lot_id'] ?>)" class="btn btn-warning btn-sm">Edit</button>
                         <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_keystage').value = <?= htmlspecialchars($ks['keystage_id']) ?>;" class="btn btn-danger btn-sm">Delete</button>
                     </td>
