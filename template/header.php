@@ -25,8 +25,8 @@ $mainNav = [
     "dashboard.php" => "Dashboard",
     "projects.php" => "Projects",
     "deliveries.php" => "Deliveries",
-    "warehouse.php" => "Warehouse",
-    "logistics.php" => "Logistics",
+    "warehouse.php" => "<span class='text-decoration-line-through'>Warehouse</span>",
+    "logistics.php" => "<span class='text-decoration-line-through'>Logistics</span>",
     "billing.php" => "Billing",
     "reports.php" => "Reports",
     "users.php" => "Users"
