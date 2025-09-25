@@ -8,7 +8,7 @@ $response = [
 ];
 
 
-  $stmt = $pdo->query("SELECT lot_id as id, lot_name as name FROM lot WHERE project_id = $agency");
+  $stmt = $pdo->query("SELECT lot_id as id, lot_name, agency as name FROM lot WHERE project_id = $agency");
   $response["lots"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 header("Content-Type: application/json");
