@@ -6,7 +6,7 @@ $params = [];
 
 // Year
 if (!empty($_POST['year'])) {
-    $where[] = "YEAR(d.delivery_date) = :year";
+    $where[] = "YEAR(d.created_at) = :year";
     $params[':year'] = $_POST['year'];
 }
 

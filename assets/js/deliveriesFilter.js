@@ -145,10 +145,96 @@ document.addEventListener("DOMContentLoaded", () => {
         const statusSelect = document.getElementById("filterStatus");
         statusSelect.disabled = !project_id;
 
+        if (project_id) {
+            populateFilter("importlot", `SELECT lot_id as project_id, CONCAT('Lot ', lot_name) as options FROM lot WHERE project_id='${project_id}'`);
+            populateFilter("filterStatus", `SELECT DISTINCT status AS options FROM deliveries WHERE project_id='${project_id}' ORDER BY status ASC`);
+            populateFilter("filterRegion", `SELECT DISTINCT s.region AS options FROM schools_project sp JOIN school s ON sp.school_id = s.school_id WHERE project_id='${project_id}'`);
+            handleProjectChange(project_id);
+        } else {
+            statusSelect.innerHTML = "";
+        }
     });
 
-    // Import project → File Upload
-    bindDependentFilter("importproject", "file_upload_import", () => "");
+    async function handleProjectChange(projectId) {
+    const depedDeliveriesDiv = document.getElementById("depedDeliveries");
+    const locationFiltersDiv = document.getElementById("locationFilters");
+
+    if (!projectId) {
+        if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+        if (locationFiltersDiv) locationFiltersDiv.classList.add("visually-hidden");
+        return;
+    }
+
+    try {
+        const response = await fetch(`script/get_project.php?projectid=${projectId}`);
+        const data = await response.json();
+
+        if (data.lots && data.lots.length > 0) {
+            const agency = data.lots[0].agency;
+            
+            if (!agency) {
+                if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                return;
+            }
+            
+            // Populate lot filter
+            const lotSelect = document.getElementById("importlot");
+            if (lotSelect) {
+                lotSelect.innerHTML = '<option value="">Select Lot</option>';
+                data.lots.forEach(lot => {
+                    lotSelect.innerHTML += `<option value="${lot.id}">${lot.name}</option>`;
+                });
+            }
+
+            // Show/hide filters based on agency
+            const agencyLower = agency.toLowerCase().trim();
+            
+            switch (agencyLower) {
+                case 'deped':
+                case 'department of education':
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.remove("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+                    
+                case 'dswd':
+                case 'department of social welfare and development':
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+                    
+                default:
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+            }
+            
+            // Reset keystage filter
+            const keystageSelect = document.getElementById("importkeystage");
+            if (keystageSelect) {
+                keystageSelect.innerHTML = '<option value="">Select Keystage</option>';
+                keystageSelect.disabled = true;
+            }
+        } else {
+            if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+            if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+        }
+    } catch (error) {
+        console.error('Error fetching project details:', error);
+        if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+        if (locationFiltersDiv) locationFiltersDiv.classList.add("visually-hidden");
+    }
+}
+
+
+    
+    // Import project → Lot → Keystage → File Upload
+    bindDependentFilter("importproject", "importlot", project => `
+        SELECT lot_id as project_id, lot_name as options FROM lot WHERE project_id='${project}'`);
+    bindDependentFilter("importlot", "importkeystage", lot_id => `
+        SELECT keystage_id as project_id, CONCAT('Keystage ', keystage_num,' ', description) AS options 
+        FROM keystage WHERE lot_id='${lot_id}'`);
+    bindDependentFilter("importkeystage", "file_upload_import", () => "");
     
 
     // Search & filter buttons
