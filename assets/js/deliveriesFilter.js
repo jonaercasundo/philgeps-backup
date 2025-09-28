@@ -229,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     
     // Import project → Lot → Keystage → File Upload
-    bindDependentFilter("importproject", "importlot", project => `
+    bindDependentFilter("importproject", "file_upload_import", project => `
         SELECT lot_id as project_id, lot_name as options FROM lot WHERE project_id='${project}'`);
     bindDependentFilter("importlot", "importkeystage", lot_id => `
         SELECT keystage_id as project_id, CONCAT('Keystage ', keystage_num,' ', description) AS options 
