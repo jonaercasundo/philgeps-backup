@@ -117,19 +117,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
   <?php
     $needsLot = !in_array($r['lot_name'], $lots);
     $foundKs = null;
-        $stmt = $pdo->prepare("
-        SELECT keystage_id 
-        FROM keystage k
-        JOIN lot l ON k.lot_id = l.lot_id
-        WHERE l.project_id = :project_id
-        AND k.keystage_num = :num
-        AND k.description = :desc
-    ");
-    $stmt->execute([
-        'project_id' => $project_id,
-        'num'        => $r['keystage_num'],
-        'desc'       => $r['description'],
-    ]);
+       $stmt = $pdo->prepare("
+          SELECT k.keystage_id 
+          FROM keystage k
+          JOIN lot l ON k.lot_id = l.lot_id
+          WHERE l.project_id   = :project_id
+            AND k.keystage_num = :num
+            AND k.description  = :desc
+            AND k.lot_id       = :lot_id
+      ");
+      $stmt->execute([
+          'project_id' => $project_id,
+          'num'        => $r['keystage_num'],
+          'desc'       => $r['description'],
+          'lot_id'     => array_search($r['lot_name'], $lots) ?: null,
+      ]);
     $foundKs = $stmt->fetchColumn();
 
     $needsKeystage = !$foundKs;

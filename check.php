@@ -81,23 +81,43 @@ if ($_POST['captcha_answer'] == $_SESSION['captcha']) {
             }
         }
 
-        // Update the deliveries table with the new status and other details
-        $stmt = $pdo->prepare("UPDATE deliveries 
-                               SET status = :status,
-                                   delivered_date = :delivered_date
-                               WHERE delivery_id = :delivery_id");
-        $stmt->execute([
-            ':status' => $next_status,
-            ':delivered_date' => $delivered_date,
-            ':delivery_id' => $delivery_id
-        ]);
-
-        // Update the package_status table with the new status
-        $stmt = $pdo->prepare("UPDATE package_status SET status = :status WHERE package_status_id = :package_status_id");
+            // 1. Update the package_status table with the new status
+        $stmt = $pdo->prepare("UPDATE package_status 
+                            SET status = :status 
+                            WHERE package_status_id = :package_status_id");
         $stmt->execute([
             ':status' => $next_status,
             ':package_status_id' => $package_status_id
         ]);
+
+        // 2. Check if all package_status rows for this delivery are now equal to $next_status
+        $stmt_check = $pdo->prepare("
+            SELECT COUNT(*) AS total,
+                SUM(CASE WHEN status = :status THEN 1 ELSE 0 END) AS matched
+            FROM package_status
+            WHERE delivery_id = :delivery_id
+        ");
+        $stmt_check->execute([
+            ':status' => $next_status,
+            ':delivery_id' => $delivery_id
+        ]);
+        $row = $stmt_check->fetch(PDO::FETCH_ASSOC);
+
+        // 3. If all packages match the same status → update deliveries
+        if ($row && $row['total'] == $row['matched']) {
+            $stmt_update_delivery = $pdo->prepare("
+                UPDATE deliveries 
+                SET status = :status,
+                    delivered_date = :delivered_date
+                WHERE delivery_id = :delivery_id
+            ");
+            $stmt_update_delivery->execute([
+                ':status' => $next_status,
+                ':delivered_date' => $delivered_date,
+                ':delivery_id' => $delivery_id
+            ]);
+        }
+
 
         // Insert a new row for each uploaded photo into the delivery_photo table
         if (!empty($uploaded_photos)) {

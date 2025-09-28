@@ -65,7 +65,7 @@ if (!empty($_POST['search'])) {
         OR s.region LIKE :search
         OR s.division LIKE :search
         OR s.municipality LIKE :search
-        OR YEAR(d.delivery_date) LIKE :search
+        OR YEAR(d.created_at) LIKE :search
     )";
     $params[':search'] = "%" . $_POST['search'] . "%";
 }
@@ -78,14 +78,9 @@ $offset = ($page - 1) * $limit;
 
 $sql = "SELECT 
             d.delivery_id,
-            d.keystage_id,
-            d.lot_id,
             p.project_name,
             s.school_id,
             s.school_name,
-            s.region,
-            s.division,
-            s.municipality,
             s.address,
             d.package_type,
             d.dr_no,
@@ -95,13 +90,13 @@ $sql = "SELECT
         FROM deliveries d
         JOIN projects p ON d.project_id = p.project_id
         JOIN school s   ON d.school_id = s.school_id
-
         LEFT JOIN (
             SELECT 
                 x.delivery_id,
                 GROUP_CONCAT(
                     CONCAT(
-                        'Package ', x.rn, ' out of ', x.total_packages, '<br>',
+                        'Package ', x.rn, ' out of ', x.total_packages, 
+                        ' — ', COALESCE(x.pkg_status, 'Pending'), '<br>',
                         x.items
                     )
                     SEPARATOR '<br><br>'
@@ -111,23 +106,25 @@ $sql = "SELECT
                     d.delivery_id,
                     p.package_id,
                     ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
-                    COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
-                    GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ') — ', COALESCE(ps.status,'Pending')) SEPARATOR '<br><br>') AS items
+                    COUNT(p.package_id) OVER (PARTITION BY d.delivery_id) AS total_packages,
+                    GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items,
+                    MAX(dp.status) AS pkg_status
                 FROM deliveries d
                 LEFT JOIN package p 
-                   ON (
+                ON (
                     (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
                     OR (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
                 )
                 JOIN package_content pc ON pc.package_id = p.package_id
                 JOIN item i ON pc.item_id = i.item_id
-                LEFT JOIN package_status ps 
-                    ON ps.delivery_id = d.delivery_id 
-                   AND ps.package_id = p.package_id
+                LEFT JOIN package_status dp 
+                ON dp.delivery_id = d.delivery_id 
+                AND dp.package_id = p.package_id
                 GROUP BY d.delivery_id, p.package_id
             ) x
             GROUP BY x.delivery_id
-        ) pkg_items ON pkg_items.delivery_id = d.delivery_id";
+        ) pkg_items ON pkg_items.delivery_id = d.delivery_id
+        ";
 
 
 if ($where) {
