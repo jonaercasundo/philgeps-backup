@@ -287,7 +287,7 @@ try {
                     alert("❌ Error: " + data.message);
                 }
             })
-            .catch(err => alert("Server error: " + err));
+            .catch(err => console.log("Server error: " + err));
         });
 
 
