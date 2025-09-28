@@ -229,62 +229,6 @@ document.addEventListener('DOMContentLoaded', function() {
     createEmptyChart(document.getElementById('monthlyDeliveryTrendChart'), 'No monthly trend data available');
   }
 
-  // 3. Top Package Types (Bar)
-  if (topPackageTypes.length > 0) {
-    new Chart(document.getElementById('topPackageTypesChart'), {
-      type: 'bar',
-      data: {
-        labels: topPackageTypes.map(r => r.package_type),
-        datasets: [{
-          label: 'Count',
-          data: topPackageTypes.map(r => r.total),
-          backgroundColor: primaryColors.slice(0, topPackageTypes.length),
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
-      }
-    });
-  } else {
-    createEmptyChart(document.getElementById('topPackageTypesChart'), 'No package type data available');
-  }
-
-  // 4. Deliveries per Project (Horizontal Bar)
-  if (deliveriesPerProject.length > 0) {
-    new Chart(document.getElementById('deliveriesPerProjectChart'), {
-      type: 'bar',
-      data: {
-        labels: deliveriesPerProject.map(r => r.project_name),
-        datasets: [{
-          label: 'Deliveries',
-          data: deliveriesPerProject.map(r => r.total),
-          backgroundColor: 'rgba(40, 167, 69, 0.7)',
-          borderColor: 'rgba(40, 167, 69, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            beginAtZero: true
-          }
-        }
-      }
-    });
-  } else {
-    createEmptyChart(document.getElementById('deliveriesPerProjectChart'), 'No delivery data available');
-  }
-
   // 5. Activity Log Actions (Bar)
   if (activityLogActions.length > 0) {
     new Chart(document.getElementById('activityLogActionsChart'), {
@@ -311,35 +255,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   } else {
     createEmptyChart(document.getElementById('activityLogActionsChart'), 'No activity log data available');
-  }
-
-  // Project Progress (Bar)
-  if (projectProgress.length > 0) {
-    new Chart(document.getElementById('projectProgressChart'), {
-      type: 'bar',
-      data: {
-        labels: projectProgress.map(r => r.project_name),
-        datasets: [{
-          label: '% Progress',
-          data: projectProgress.map(r => r.progress),
-          backgroundColor: 'rgba(40,167,69,0.7)',
-          borderColor: 'rgba(40,167,69,1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100
-          }
-        }
-      }
-    });
-  } else {
-    createEmptyChart(document.getElementById('projectProgressChart'), 'No project progress data available');
   }
 
   // Places Delivered (Horizontal Bar) - by schools reached
@@ -371,86 +286,5 @@ document.addEventListener('DOMContentLoaded', function() {
     createEmptyChart(document.getElementById('placesDeliveredChart'), 'No places delivered data available');
   }
 
-  // Projects per Year (Bar)
-  if (projectsPerYear.length > 0) {
-    new Chart(document.getElementById('projectsPerYearChart'), {
-      type: 'bar',
-      data: {
-        labels: projectsPerYear.map(r => r.year),
-        datasets: [{
-          label: 'Projects',
-          data: projectsPerYear.map(r => r.total),
-          backgroundColor: 'rgba(54,162,235,0.7)',
-          borderColor: 'rgba(54,162,235,1)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
-      }
-    });
-  } else {
-    createEmptyChart(document.getElementById('projectsPerYearChart'), 'No yearly project data available');
-  }
 
-  // Projects by Agency (Pie)
-  if (projectsByAgency.length > 0) {
-    new Chart(document.getElementById('projectsByAgencyChart'), {
-      type: 'pie',
-      data: {
-        labels: projectsByAgency.map(r => r.agency),
-        datasets: [{
-          label: 'Projects',
-          data: projectsByAgency.map(r => r.total),
-          backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#17a2b8']
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom'
-          }
-        }
-      }
-    });
-  } else {
-    createEmptyChart(document.getElementById('projectsByAgencyChart'), 'No agency data available');
-  }
-
-  // Total Contract Amount per Year (Line)
-  if (amountPerYear.length > 0) {
-    new Chart(document.getElementById('amountPerYearChart'), {
-      type: 'line',
-      data: {
-        labels: amountPerYear.map(r => r.year),
-        datasets: [{
-          label: '₱ Total Amount',
-          data: amountPerYear.map(r => r.total),
-          borderColor: 'rgba(75,192,192,1)',
-          backgroundColor: 'rgba(75,192,192,0.2)',
-          fill: true,
-          tension: 0.3
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
-      }
-    });
-  } else {
-    createEmptyChart(document.getElementById('amountPerYearChart'), 'No contract amount data available');
-  }
 });
