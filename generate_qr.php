@@ -59,11 +59,19 @@ $allQrs = [];
 foreach ($deliveries as $delivery) {
     // Fetch all packages under this keystage/lot
     $stmt = $pdo->prepare("
-        SELECT p.package_id, pc.item_id, pc.qty, i.item_name
+        SELECT 
+            p.package_id, 
+            pc.item_id, 
+            pc.qty, 
+            i.item_name
         FROM package p
         JOIN package_content pc ON pc.package_id = p.package_id
         JOIN item i ON i.item_id = pc.item_id
-        WHERE (p.keystage_id = :keystage_id OR (p.keystage_id IS NULL AND p.lot_id = :lot_id))
+        WHERE (
+            (:keystage_id IS NOT NULL AND p.keystage_id = :keystage_id)
+            OR (:keystage_id IS NULL AND p.keystage_id IS NULL AND p.lot_id = :lot_id)
+        )
+
     ");
     $stmt->execute([
         ':keystage_id' => $delivery['keystage_id'],

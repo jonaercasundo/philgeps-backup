@@ -47,9 +47,11 @@ try {
             COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
             GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ') — ', COALESCE(dp.status,'Pending')) SEPARATOR '<br>') AS items
         FROM deliveries d
-        LEFT JOIN package p 
-            ON ((d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
-             OR (d.lot_id IS NOT NULL AND d.lot_id = p.lot_id))
+        LEFT JOIN package p
+        ON (
+            (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
+            OR (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
+        )
         JOIN package_content pc ON pc.package_id = p.package_id
         JOIN item i ON pc.item_id = i.item_id
         LEFT JOIN package_status dp 
