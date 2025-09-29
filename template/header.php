@@ -50,7 +50,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       <ul class="navbar-nav me-auto">
         <?php foreach($mainNav as $file => $label): ?>
           <li class="nav-item">
-            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "warehouse.php" || $file === "logistics.php" || $file === "billing.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
+            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "logistics.php" || $file === "billing.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
           </li>
         <?php endforeach; ?>
       </ul>
