@@ -102,13 +102,15 @@ LIMIT :limit OFFSET :offset;
     <div class="col-md-4"><label>Status</label><select class="form-select filter" id="filterStatus" disabled></select></div>
 </div>
 
-<div id="depedDeliveries" class="row mb-3">
+<!-- DepEd specific filters -->
+<div id="depedDeliveries" class="visually-hidden row mb-3">
     <div class="col-md-6"><label>Lot</label><select class="form-select filter" id="importlot"></select></div>
     <div class="col-md-6"><label>Keystage</label><select class="form-select filter" id="importkeystage" disabled></select></div>
 </div>
 
-<div id="depedDeliveries" class="row mb-3">
-    <div class="col-md-4"><label>Region</label><select class="form-select filter" id="filterRegion" ></select></div>
+<!-- Location filters -->
+<div id="locationFilters" class="visually-hidden row mb-3">
+    <div class="col-md-4"><label>Region</label><select class="form-select filter" id="filterRegion"></select></div>
     <div class="col-md-4"><label>Division</label><select class="form-select filter" id="filterDivision" disabled></select></div>
     <div class="col-md-4"><label>Municipality</label><select class="form-select filter" id="filterMunicipality" disabled></select></div>
 </div>
@@ -133,6 +135,18 @@ LIMIT :limit OFFSET :offset;
     </thead>
    <tbody>
         <?php foreach($deliveries as $d): ?>
+            <?php
+            // Use a single query to check if any photo exists for the dr_no
+            $stmt_check = $pdo->prepare("
+                SELECT COUNT(dp.delivery_photo_id)
+                FROM deliveries d
+                JOIN package_status ps ON d.delivery_id = ps.delivery_id
+                JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
+                WHERE d.dr_no = :dr_no AND dp.status IN ('accepted', 'delivered')
+            ");
+            $stmt_check->execute([':dr_no' => $d['dr_no']]);
+            $has_photos = ($stmt_check->fetchColumn() > 0);
+        ?>
         <tr>
             <td><?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td>
             <td><?= htmlspecialchars($d['school_id']). ' ' . htmlspecialchars($d['school_name']) ?></td>
@@ -146,8 +160,8 @@ LIMIT :limit OFFSET :offset;
             </td>
             <td><?= htmlspecialchars($d['dr_no']) ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
-            <td>
-                <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
+            <td class="text-center">
+                <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                         data-id="<?= $d['delivery_id'] ?>"
                         data-project="<?= htmlspecialchars($d['project_name']) ?>"
                         data-school="<?= htmlspecialchars($d['school_id']). ' '. htmlspecialchars($d['school_name']) ?>"
@@ -156,8 +170,11 @@ LIMIT :limit OFFSET :offset;
                         data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
-                >Edit</button>
-                <a class="btn btn-sm btn-success" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank">QR</a>
+                ><i class="bi bi-pencil-square fs-4"></i></button>
+                <a class="btn btn-secondary mb-1" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
+                <?php if ($has_photos): ?> <br>
+                    <a class="btn btn-info" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
+                <?php endif; ?>
             </td>
         </tr>
         <?php endforeach; ?>
