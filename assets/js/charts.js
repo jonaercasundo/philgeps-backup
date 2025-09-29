@@ -16,10 +16,10 @@ const {
 
 // Color palettes
 const statusColors = {
-  'Pending': 'rgba(255, 193, 7, 0.8)',
-  'Delivered': 'rgba(40, 167, 69, 0.8)',
-  'Accepted': 'rgba(23, 162, 184, 0.8)',
-  'Cancelled': 'rgba(220, 53, 69, 0.8)'
+  'Warehouse': 'rgba(255, 193, 7, 0.8)',
+  'Schools': 'rgba(40, 167, 69, 0.8)',
+  'Logistics': 'rgba(23, 162, 184, 0.8)',
+  'Factory': 'rgba(220, 53, 69, 0.8)'
 };
 
 const primaryColors = [
@@ -174,60 +174,80 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Chart initialization functions
-  // 1. Delivery Status Overview (Doughnut)
   if (deliveryStatusOverview.length > 0) {
-    new Chart(document.getElementById('deliveryStatusChart'), {
-      type: 'doughnut',
-      data: {
-        labels: deliveryStatusOverview.map(r => r.status),
-        datasets: [{
-          data: deliveryStatusOverview.map(r => r.total),
-          backgroundColor: deliveryStatusOverview.map(r => statusColors[r.status] || 'rgba(128, 128, 128, 0.8)'),
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom'
-          }
-        }
+  const totalOverall = deliveryStatusOverview.reduce((sum, r) => sum + r.total, 0);
+
+  new Chart(document.getElementById('deliveryStatusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: deliveryStatusOverview.map(r => 
+        `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`
+      ),
+      datasets: [{
+        data: deliveryStatusOverview.map(r => r.total),
+        backgroundColor: deliveryStatusOverview.map(r => statusColors[r.status] || 'rgba(128, 128, 128, 0.8)'),
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
       }
-    });
-  } else {
-    createEmptyChart(document.getElementById('deliveryStatusChart'), 'No delivery data available');
-  }
+    }
+  });
+} else {
+  createEmptyChart(document.getElementById('deliveryStatusChart'), 'No delivery data available');
+}
+
 
   // 2. Monthly Delivery Trend (Line)
-  if (monthlyDeliveryTrend.length > 0) {
-    new Chart(document.getElementById('monthlyDeliveryTrendChart'), {
-      type: 'line',
-      data: {
-        labels: monthlyDeliveryTrend.map(r => r.month),
-        datasets: [{
-          label: 'Deliveries',
-          data: monthlyDeliveryTrend.map(r => r.total),
-          borderColor: 'rgba(54, 162, 235, 1)',
-          backgroundColor: 'rgba(54, 162, 235, 0.1)',
-          tension: 0.4,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true
-          }
+if (monthlyDeliveryTrend.length > 0) {
+  // Extract unique months and statuses
+  const months = [...new Set(monthlyDeliveryTrend.map(r => r.month))];
+  const statuses = [...new Set(monthlyDeliveryTrend.map(r => r.status))];
+
+  // Build datasets for each status
+  const datasets = statuses.map((status, idx) => ({
+    label: status,
+    data: months.map(month => {
+      const row = monthlyDeliveryTrend.find(r => r.month === month && r.status === status);
+      return row ? row.total : 0; // 0 if no data for that month+status
+    }),
+    borderColor: [
+      'rgba(54, 162, 235, 1)',   // warehouse
+      'rgba(255, 206, 86, 1)',   // accepted
+      'rgba(75, 192, 192, 1)'    // delivered
+    ][idx % 4], // fallback color rotation
+    backgroundColor: 'transparent',
+    tension: 0.4,
+    fill: false
+  }));
+
+  new Chart(document.getElementById('monthlyDeliveryTrendChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
         }
       }
-    });
-  } else {
-    createEmptyChart(document.getElementById('monthlyDeliveryTrendChart'), 'No monthly trend data available');
-  }
+    }
+  });
+} else {
+  createEmptyChart(
+    document.getElementById('monthlyDeliveryTrendChart'),
+    'No monthly trend data available'
+  );
+}
+
 
   // 5. Activity Log Actions (Bar)
   if (activityLogActions.length > 0) {

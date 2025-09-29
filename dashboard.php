@@ -78,11 +78,26 @@ try {
 
     // 1. Delivery Status Overview (filtered)
     $deliveryStatusQuery = "
-        SELECT d.status, COUNT(*) as total 
+        SELECT 
+            COUNT(*) AS total,
+            CASE d.status
+                WHEN 'pending'   THEN 'Factory'
+                WHEN 'accepted'  THEN 'Logistics'
+                WHEN 'delivered' THEN 'Schools'
+                WHEN 'warehouse' THEN 'Warehouse'
+                ELSE d.status
+            END AS status
         FROM deliveries d
         " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
-        GROUP BY d.status 
-        ORDER BY total DESC
+        GROUP BY 
+            CASE d.status
+                WHEN 'pending'   THEN 'Factory'
+                WHEN 'accepted'  THEN 'Logistics'
+                WHEN 'delivered' THEN 'Schools'
+                WHEN 'warehouse' THEN 'Warehouse'
+                ELSE d.status
+            END
+        ORDER BY total DESC;
     ";
     
     echo "<!-- DEBUG: Delivery status query: $deliveryStatusQuery -->";
@@ -98,12 +113,21 @@ try {
     // 2. Monthly Delivery Trend (filtered)
     $monthlyTrendQuery = "
         SELECT 
-            DATE_FORMAT(d.delivery_date, '%Y-%m') AS month, 
-            COUNT(*) as total
-        FROM deliveries d
-        WHERE d.delivery_date IS NOT NULL " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-        GROUP BY month
-        ORDER BY month
+          DATE_FORMAT(d.delivered_date, '%Y-%m') AS month,
+          CASE d.status
+              WHEN 'warehouse' THEN 'Warehouse'
+              WHEN 'accepted'  THEN 'Logistics'
+              WHEN 'delivered' THEN 'Schools'
+              ELSE d.status
+          END AS status,
+          COUNT(*) AS total
+      FROM deliveries d
+      WHERE d.delivered_date IS NOT NULL
+        AND d.status <> 'pending'
+        " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+      GROUP BY month, status
+      ORDER BY month, status;
+
     ";
     
     
@@ -268,7 +292,7 @@ if ($selectedProject > 0) {
   </div>
 
   <!-- Chart 10: Places Delivered -->
-  <div class="col-12 mb-4 chart-item" data-chart-id="places-delivered">
+  <div class="col-lg-8 mb-4 chart-item" data-chart-id="places-delivered">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">📍 Places Delivered (Schools Reached by Project & Region)</h6>
