@@ -14,7 +14,7 @@ try {
 
     // Fetch deliveries with project name
     $stmt = $pdo->prepare("
-   SELECT 
+SELECT 
     d.delivery_id,
     p.project_name,
     s.school_id,
@@ -25,16 +25,17 @@ try {
     d.delivery_date,
     d.status,
     COALESCE(pkg_items.items_contents, '') AS items_contents
-    FROM deliveries d
-    JOIN projects p ON d.project_id = p.project_id
-    JOIN school s   ON d.school_id = s.school_id
+FROM deliveries d
+JOIN projects p ON d.project_id = p.project_id
+JOIN school s   ON d.school_id = s.school_id
 
-    LEFT JOIN (
+LEFT JOIN (
     SELECT 
         x.delivery_id,
         GROUP_CONCAT(
             CONCAT(
-                'Package ', x.rn, ' out of ', x.total_packages, '<br>',
+                'Package ', x.rn, ' out of ', x.total_packages, 
+                ' — ', COALESCE(x.pkg_status, 'Pending'), '<br>',
                 x.items
             )
             SEPARATOR '<br><br>'
@@ -45,11 +46,14 @@ try {
             p.package_id,
             ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
             COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
-            GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ') — ', COALESCE(dp.status,'Pending')) SEPARATOR '<br>') AS items
+            GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items,
+            COALESCE(MAX(dp.status), 'Pending') AS pkg_status
         FROM deliveries d
         LEFT JOIN package p 
-            ON ((d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
-             OR (d.lot_id IS NOT NULL AND d.lot_id = p.lot_id))
+            ON (
+                (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
+                OR (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
+            )
         JOIN package_content pc ON pc.package_id = p.package_id
         JOIN item i ON pc.item_id = i.item_id
         LEFT JOIN package_status dp 
@@ -60,8 +64,9 @@ try {
     GROUP BY x.delivery_id
 ) pkg_items ON pkg_items.delivery_id = d.delivery_id
 
-    ORDER BY d.status, d.delivery_date
-    LIMIT :limit OFFSET :offset
+ORDER BY d.status, d.delivery_date
+LIMIT :limit OFFSET :offset;
+
     ");
     $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
     $stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
@@ -97,13 +102,15 @@ try {
     <div class="col-md-4"><label>Status</label><select class="form-select filter" id="filterStatus" disabled></select></div>
 </div>
 
-<div id="depedDeliveries" class="row mb-3">
+<!-- DepEd specific filters -->
+<div id="depedDeliveries" class="visually-hidden row mb-3">
     <div class="col-md-6"><label>Lot</label><select class="form-select filter" id="importlot"></select></div>
     <div class="col-md-6"><label>Keystage</label><select class="form-select filter" id="importkeystage" disabled></select></div>
 </div>
 
-<div id="depedDeliveries" class="row mb-3">
-    <div class="col-md-4"><label>Region</label><select class="form-select filter" id="filterRegion" ></select></div>
+<!-- Location filters -->
+<div id="locationFilters" class="visually-hidden row mb-3">
+    <div class="col-md-4"><label>Region</label><select class="form-select filter" id="filterRegion"></select></div>
     <div class="col-md-4"><label>Division</label><select class="form-select filter" id="filterDivision" disabled></select></div>
     <div class="col-md-4"><label>Municipality</label><select class="form-select filter" id="filterMunicipality" disabled></select></div>
 </div>
@@ -128,6 +135,18 @@ try {
     </thead>
    <tbody>
         <?php foreach($deliveries as $d): ?>
+            <?php
+            // Use a single query to check if any photo exists for the dr_no
+            $stmt_check = $pdo->prepare("
+                SELECT COUNT(dp.delivery_photo_id)
+                FROM deliveries d
+                JOIN package_status ps ON d.delivery_id = ps.delivery_id
+                JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
+                WHERE d.dr_no = :dr_no AND dp.status IN ('accepted', 'delivered')
+            ");
+            $stmt_check->execute([':dr_no' => $d['dr_no']]);
+            $has_photos = ($stmt_check->fetchColumn() > 0);
+        ?>
         <tr>
             <td><?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td>
             <td><?= htmlspecialchars($d['school_id']). ' ' . htmlspecialchars($d['school_name']) ?></td>
@@ -141,8 +160,8 @@ try {
             </td>
             <td><?= htmlspecialchars($d['dr_no']) ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
-            <td>
-                <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
+            <td class="text-center">
+                <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                         data-id="<?= $d['delivery_id'] ?>"
                         data-project="<?= htmlspecialchars($d['project_name']) ?>"
                         data-school="<?= htmlspecialchars($d['school_id']). ' '. htmlspecialchars($d['school_name']) ?>"
@@ -151,8 +170,11 @@ try {
                         data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
-                >Edit</button>
-                <a class="btn btn-sm btn-success" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank">QR</a>
+                ><i class="bi bi-pencil-square fs-4"></i></button>
+                <a class="btn btn-secondary mb-1" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
+                <?php if ($has_photos): ?> <br>
+                    <a class="btn btn-info" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
+                <?php endif; ?>
             </td>
         </tr>
         <?php endforeach; ?>

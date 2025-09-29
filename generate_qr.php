@@ -59,11 +59,19 @@ $allQrs = [];
 foreach ($deliveries as $delivery) {
     // Fetch all packages under this keystage/lot
     $stmt = $pdo->prepare("
-        SELECT p.package_id, pc.item_id, pc.qty, i.item_name
-        FROM package p
-        JOIN package_content pc ON pc.package_id = p.package_id
-        JOIN item i ON i.item_id = pc.item_id
-        WHERE (p.keystage_id = :keystage_id OR (p.keystage_id IS NULL AND p.lot_id = :lot_id))
+        SELECT 
+    p.package_id, 
+    pc.item_id, 
+    pc.qty, 
+    i.item_name
+FROM package p
+JOIN package_content pc ON pc.package_id = p.package_id
+JOIN item i ON i.item_id = pc.item_id
+WHERE (
+    (:keystage_id IS NOT NULL AND p.keystage_id = :keystage_id)
+    OR (:keystage_id IS NULL AND p.keystage_id IS NULL AND p.lot_id = :lot_id)
+)
+
     ");
     $stmt->execute([
         ':keystage_id' => $delivery['keystage_id'],
@@ -104,7 +112,7 @@ foreach ($deliveries as $delivery) {
         ];
 
         // QR code
-        $url = "http://192.168.0.63/philgeps/scan.php?id=" . $package['package_status_id'];
+        $url = "http://192.168.0.63/philgeps/scan.php?id=" . $package['package_status_id']. "&delivery_id=" .$delivery['delivery_id'] ;
         $orderId = "Package $int of $package_count<br> ORD-" . str_pad($package['package_status_id'], 5, "0", STR_PAD_LEFT);
 
         $qr = Builder::create()
@@ -151,10 +159,11 @@ foreach ($allGroups as $group) {
 }
 
 // --- PAGE 1: ARG ---
+$today = date("y-m-d");
 $html .= "
 <div class='label'>
     <div style='text-align:center;'><img class='logoimg' src='$logoBase64'></div>
-    <div style='text-align:right;'><small>Date: {$first['delivery_date']}</small></div>
+    <div style='text-align:right;'><small>Date: $today</small></div>
     <table class='header-table' width='100%' cellspacing='0' cellpadding='4'>
         <tr>
             <td style='width:80px; font-size:13px; font-weight:bold;'>Project:</td>

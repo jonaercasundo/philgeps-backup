@@ -39,12 +39,8 @@ try {
         // Count total rows
         $countStmt = $pdo->prepare("
             SELECT COUNT(*) 
-            FROM item i
-            INNER JOIN package_content pc ON i.item_id = pc.item_id
-            INNER JOIN package p ON pc.package_id = p.package_id
-            INNER JOIN keystage k ON p.keystage_id = k.keystage_id
-            INNER JOIN lot l ON k.lot_id = l.lot_id
-            WHERE l.project_id = ?
+            FROM item 
+            WHERE project_id = ?
         ");
         $countStmt->execute([$project_id]);
         $totalRows = $countStmt->fetchColumn();
@@ -52,19 +48,11 @@ try {
         // Get data with limit
         $stmt = $pdo->prepare("
             SELECT 
-                i.item_id, 
-                i.item_name, 
-                i.unit,
-                p.package_num,
-                k.keystage_num,
-                l.lot_name
-            FROM item i
-            INNER JOIN package_content pc ON i.item_id = pc.item_id
-            INNER JOIN package p ON pc.package_id = p.package_id
-            INNER JOIN keystage k ON p.keystage_id = k.keystage_id
-            INNER JOIN lot l ON k.lot_id = l.lot_id
-            WHERE l.project_id = ?
-            ORDER BY l.lot_name, k.keystage_num, p.package_num, i.item_name
+                item_id, 
+                item_name, 
+                unit
+            FROM item 
+            WHERE project_id = ?
             LIMIT $limit OFFSET $offset
         ");
         $stmt->execute([$project_id]);
@@ -111,9 +99,9 @@ try {
                         <td><?= htmlspecialchars($item['item_name']) ?></td>
                         <td><?= htmlspecialchars($item['unit']) ?></td>
                         <td>
-                            <a href="edit_item.php?id=<?= $item['item_id'] ?>" class="btn btn-warning btn-sm">Edit</a>
-                            <a href="delete_item.php?id=<?= $item['item_id'] ?>" class="btn btn-danger btn-sm"
-                               onclick="return confirm('Are you sure you want to delete this item?')">Delete</a>
+                            <a href="edit_item.php?id=<?= $item['item_id'] ?>" class="btn btn-warning"><i class="bi bi-pencil-square fs-4"></i></a>
+                            <a href="delete_item.php?id=<?= $item['item_id'] ?>" class="btn btn-danger"
+                               onclick="return confirm('Are you sure you want to delete this item?')"><i class="bi bi-trash fs-4"></i></a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

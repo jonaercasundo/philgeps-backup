@@ -1,51 +1,96 @@
 <?php
 header('Content-Type: application/json');
-require "../config/db.php"; // adjust
+require "../config/db.php"; // PDO $pdo
 
-$keystage = $_POST['keystage'] ?? null;
-
-$stmt = $pdo->prepare("
-    SELECT k.keystage_num, k.description, l.lot_name 
-    FROM keystage k 
-    LEFT JOIN lot l ON k.lot_id = l.lot_id 
-    WHERE k.keystage_id = ?
-");
-$stmt->execute([$keystage]);
-$lot = $stmt->fetch(PDO::FETCH_ASSOC);
-
-try {
-    $pdo->beginTransaction();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rows'])) {
+    $project_id = $_POST['project'] ?? null;
+    $rows = $_POST['rows'];
 
     // Insert into deliveries
     $stmtDelivery = $pdo->prepare("
-        INSERT INTO deliveries (project_id, dr_no, delivery_date, school, remarks, address) 
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO deliveries (
+            project_id, school_id, keystage_id, lot_id, package_type, dr_no, delivery_date
+        ) VALUES (
+            :project_id, :school_id, :keystage_id, :lot_id, :package_type, :dr_no, :delivery_date
+        )
     ");
-    $stmtDelivery->execute([
-        $_POST['project'],
-        $_POST['DRN'],
-        $_POST['dateDeliver'],
-        $_POST['school'],
-        $_POST['package_type'] . " LOT " . $lot['lot_name'] . " KS" . $lot['keystage_num'] . " " . $lot['description'],
-        $_POST['address']
-    ]);
 
-    // Get the new delivery_id
-    $deliveryId = $pdo->lastInsertId();
-
-    // Insert into delivery_packages
-    $stmtPackage = $pdo->prepare("
-        INSERT INTO delivery_packages (delivery_id, keystage_id) 
-        VALUES (?, ?)
+    // Get all packages for keystage or lot
+    $stmtPkgs = $pdo->prepare("
+    SELECT package_id
+    FROM package
+    WHERE 
+        (keystage_id = :keystage_id)
+        OR (:keystage_id IS NULL AND keystage_id IS NULL AND lot_id = :lot_id)
     ");
-    $stmtPackage->execute([$deliveryId, $keystage]);
 
-    $pdo->commit();
+    // Insert into package_status
+    $stmtPkgStatus = $pdo->prepare("
+        INSERT INTO package_status (delivery_id, package_id, status)
+        VALUES (:delivery_id, :package_id, :status)
+    ");
 
-    header("Location: ../deliveries.php?toast=Delivery saved successfully&type=success");
-    exit;
-} catch (Exception $e) {
-    $pdo->rollBack();
-    header("Location: ../deliveries.php?toast=Error saving delivery: " . urlencode($e->getMessage()) . "&type=danger");
-    exit;
+    $inserted = 0;
+    $skipped = 0;
+
+    try {
+        $pdo->beginTransaction();
+
+        foreach ($rows as $r) {
+            if (empty($r['keystage_id']) && empty($r['lot_id'])) {
+                $skipped++;
+                continue;
+            }
+
+            $delivery_date = $r['delivery_date'] ?? '0000-00-00';
+            if ($delivery_date === '' || $delivery_date === '00-00-0000') {
+                $delivery_date = '0000-00-00';
+            }
+
+            try {
+                // Insert into deliveries
+                $stmtDelivery->execute([
+                    'project_id'    => $project_id,
+                    'school_id'     => $r['school_id'],
+                    'keystage_id'   => $r['keystage_id'] ?: null,
+                    'lot_id'        => $r['lot_id'] ?: null,
+                    'package_type'  => $r['package_type'],
+                    'dr_no'         => $r['dr_no'],
+                    'delivery_date' => $delivery_date,
+                ]);
+                $delivery_id = $pdo->lastInsertId();
+
+                // Fetch all matching packages
+                $stmtPkgs->execute([
+                    'keystage_id' => !empty($r['keystage_id']) ? $r['keystage_id'] : null,
+                    'lot_id'      => $r['lot_id'] ?? null,
+                ]);
+                $packages = $stmtPkgs->fetchAll(PDO::FETCH_COLUMN);
+
+                foreach ($packages as $pkgId) {
+                    $stmtPkgStatus->execute([
+                        'delivery_id' => $delivery_id,
+                        'package_id'  => $pkgId,
+                        'status'      => 'pending',
+                    ]);
+                }
+
+                $inserted++;
+            } catch (Exception $e) {
+                error_log("Row insert failed: " . $e->getMessage());
+                exit;
+            }
+        }
+
+        $pdo->commit();
+
+        header("Location: ../deliveries.php?toast=$inserted inserted, $skipped skipped&type=warning");
+        exit;
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        header("Location: ../deliveries.php?toast=" . urlencode("Error: " . $e->getMessage()) . "&type=danger");
+        exit;
+    }
+} else {
+    echo "No data received.";
 }

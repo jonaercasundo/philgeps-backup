@@ -60,10 +60,6 @@ try {
   <div class="d-flex mb-3">
     <a href="#" data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Keystage</a>
   </div>
-  <div class="d-flex mb-3">
-    <input class="form-control me-2" type="search" name="q" placeholder="Search items..." aria-label="Search">
-    <button class="btn btn-outline-primary" type="submit">Search</button>
-</div>
 </div>
 
 <?php include "partials/keystage_modals.php"?>
@@ -122,9 +118,7 @@ try {
         <table class="table table-bordered table-striped">
             <thead class="table-dark">
                 <tr>
-                    <th>Keystage Num</th>
-                    <th>Lot Number</th>
-                    <th>Description</th>
+                    <th>Keystage</th>
                     <th>Cartons</th>
                     <th>Actions</th>
                 </tr>
@@ -132,14 +126,17 @@ try {
             <tbody>
                 <?php foreach ($keystages as $ks): ?>
                     <tr>
-                        <td id="id<?= $ks['keystage_id'] ?>s"><?= htmlspecialchars($ks['keystage_num']) ?></td>
-                        <td id="lot<?= $ks['lot_id'] ?>s"><?= htmlspecialchars($ks['lot_name']) ?></td>
-                        <td id="desc<?= $ks['keystage_id'] ?>s"><?= htmlspecialchars($ks['description']) ?></td>
+                        <td>
+                          Lot
+                          <span id="lot<?= $ks['lot_id'] ?>s"><?= htmlspecialchars($ks['lot_name']) ?></span>
+                          Keystage
+                          <span id="id<?= $ks['keystage_id'] ?>s"><?= htmlspecialchars($ks['keystage_num']) ?></span>
+                          <span id="desc<?= $ks['keystage_id'] ?>s"><?= htmlspecialchars($ks['description']) ?></span></td>
                         <td><?= htmlspecialchars($ks['carton_count']) ?></td>
                         <td>
-                        <a href="packages.php?id=<?=$project_id?>&keystage_id=<?= $ks['keystage_id'] ?>" class="btn btn-primary btn-sm">Packages</a>
-                        <button data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= $ks['keystage_id'] ?>,<?= $ks['lot_id'] ?>)" class="btn btn-warning btn-sm">Edit</button>
-                        <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_keystage').value = <?= htmlspecialchars($ks['keystage_id']) ?>;" class="btn btn-danger btn-sm">Delete</button>
+                        <a href="packages.php?id=<?=$project_id?>&lot_id=<?=$ks['lot_id']?>&keystage_id=<?= $ks['keystage_id'] ?>" class="btn btn-primary d-inline-flex align-items-center"><i class='bi bi-eye fs-4 me-1'></i>Packages</a>
+                        <button data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= $ks['keystage_id'] ?>,<?= $ks['lot_id'] ?>)" class="btn btn-warning"><i class="bi bi-pencil-square fs-4"></i></button>
+                        <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_keystage').value = <?= htmlspecialchars($ks['keystage_id']) ?>;" class="btn btn-danger"><i class="bi bi-trash fs-4"></i></button>
                     </td>
                     </tr>
                 <?php endforeach; ?>

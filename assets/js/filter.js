@@ -39,24 +39,3 @@ showLoading()
     });
 }
 
-
-document.getElementById("rmvFilter").addEventListener("click", function() {
-    showLoading();
-    let filters = document.getElementsByClassName("filter");
-    //for none disabled
-    let filter = document.getElementsByClassName("filters");
-
-    Array.from(filters).forEach((element, index) => {
-        element.value = "";
-        if (index === 0) return; // skip first element
-        element.disabled = true;
-        element.value = ""; // optional reset
-    });
-
-    Array.from(filter).forEach((element, index) => {
-        element.value = "";
-        if (index === 0) return; // skip first element
-        element.value = ""; // optional reset
-    });
-hideLoading();
-});

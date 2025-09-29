@@ -77,9 +77,9 @@ require "config/db.php"; // your PDO connection
             </span></td>
             <td id="person<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact_person']) ?></td>
             <td id="contact<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact']) ?></td>
-            <td>
-              <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= htmlspecialchars($project['school_id']) ?>)">Edit School</button>
-              <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;" class="btn btn-danger btn-sm">Delete</button></td>
+            <td class="text-center">
+              <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= htmlspecialchars($project['school_id']) ?>)"><i class="bi bi-pencil-square fs-4"></i></button>
+              <button  class="btn btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;"><i class="bi bi-trash fs-4"></i></button></td>
           </tr>
         <?php }; ?>
     </tbody>
@@ -242,9 +242,9 @@ function updateTable(page = 1) {
                     </td>
                     <td id='person${truncateText(row.school_id)}s'>${row.contact_person}</td>
                     <td id='contact${truncateText(row.school_id)}s'>${row.contact}</td>
-                    <td>
-                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(${row.school_id})">Edit School</button>
-                        <a href="delete_lot.php?id=${row.school_id}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this School?')">Delete</a>
+                    <td class="text-center">
+                        <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(${row.school_id})"><i class="bi bi-pencil-square fs-4"></i></button>
+                        <a href="delete_lot.php?id=${row.school_id}" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this School?')"><i class="bi bi-trash fs-4"></i></a>
                     </td>
                 </tr>`).join("");
         }

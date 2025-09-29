@@ -185,7 +185,7 @@ $statusColors = [
             <?php foreach ($documents as $doc): ?>
                 <li>
                     <?= e($doc['doc_type']) ?> —
-                    <a href="<?= e($doc['file_path']) ?>" target="_blank"><?= e($doc['file_name']) ?></a>
+                    <a href="philgeps/<?= e($doc['file_path']) ?>" target="_blank"><?= e($doc['file_name']) ?></a>
                 </li>
             <?php endforeach; ?>
         <?php else: ?>

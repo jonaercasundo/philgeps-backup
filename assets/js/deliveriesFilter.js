@@ -1,44 +1,39 @@
-
-// Helper: get selected filters
+// Collect selected filters into query string
 function getFilters() {
-    let year = document.getElementById("year").value;
-    let project = document.getElementById("filterProjects").value;
-    let status = document.getElementById("filterStatus").value;
-    let region = document.getElementById("filterRegion").value;
-    let division = document.getElementById("filterDivision").value;
-    let municipality = document.getElementById("filterMunicipality").value;
-    let lot = document.getElementById("importlot").value;
-    let keystage = document.getElementById("importkeystage").value;
-    let search = document.getElementById("searchInput").value.trim();
+    const filterIds = {
+        year: "year",
+        project_id: "filterProjects",
+        status: "filterStatus",
+        region: "filterRegion",
+        division: "filterDivision",
+        municipality: "filterMunicipality",
+        search: "searchInput"
+    };
 
-    let params = new URLSearchParams();
-    if(year) params.append("year", year);
-    if(project) params.append("project_id", project);
-    if(status) params.append("status", status);
-    if(region) params.append("region", region);
-    if(division) params.append("division", division);
-    if(municipality) params.append("municipality", municipality);
-    if(lot) params.append("lot_id", lot);
-    if(keystage) params.append("keystage_id", keystage);
-    if(search) params.append("search", search);
-
+    const params = new URLSearchParams();
+    for (const [key, id] of Object.entries(filterIds)) {
+        const el = document.getElementById(id);
+        const value = el?.value?.trim();
+        if (value) params.append(key, value);
+    }
     return params.toString();
 }
 
-
 // Update table via AJAX
-function updateTable(page = 1) {
-    let tbody = document.getElementById("resultTable");
+async function updateTable(page = 1) {
+    const tbody = document.getElementById("resultTable");
     tbody.innerHTML = "";
     showLoading();
-    fetch("script/filterDeliveries.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: getFilters() + "&page=" + page + "&limit=10"
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.rows && data.rows.length){
+
+    try {
+        const res = await fetch("script/filterDeliveries.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `${getFilters()}&page=${page}&limit=10`
+        });
+        const data = await res.json();
+
+        if (data.rows?.length) {
             tbody.innerHTML = `
                 <thead class="table-dark">
                     <tr>
@@ -50,202 +45,205 @@ function updateTable(page = 1) {
                         <th>Actions</th>
                     </tr>
                 </thead>
-            `; 
-            tbody.innerHTML += data.rows.map(row => `
-                
                 <tbody>
-                    <tr>
-                        <td>${row.school_name}</td>
-                        <td>${row.address}</td>
-                        <td>${row.items_contents}</td>
-                        <td>${row.dr_no}</td>
-                        <td>${row.delivery_date}</td>
-                        <td>
-                            <button class="btn btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
-                                data-id="${row.delivery_id}" data-project="${row.project_name}" data-school_name="${row.school_name}"
-                                data-address="${row.address}" data-items_contents="${row.items_contents}" data-drno="${row.dr_no}"
-                                data-date="${row.delivery_date}" data-status="${row.status}">Edit</button>
-                            <a class="btn btn-sm btn-success" href="generate_qr.php?id=${row.delivery_id}" target="_blank">
-                                QR
-                            </a>
-                        </td>
-                    </tr>
+                    ${data.rows.map(row => `
+                        <tr>
+                            <td>${row.school_name}</td>
+                            <td>${row.address}</td>
+                            <td>${row.items_contents}</td>
+                            <td>${row.dr_no}</td>
+                            <td>${row.delivery_date}</td>
+                            <td class="text-center">
+                                <button class="btn btn-warning mb-1" 
+                                    data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
+                                    data-id="${row.delivery_id}" data-project="${row.project_name}"
+                                    data-school_name="${row.school_name}" data-address="${row.address}"
+                                    data-items_contents="${row.items_contents}" data-drno="${row.dr_no}"
+                                    data-date="${row.delivery_date}" data-status="${row.status}">
+                                    <i class="bi bi-pencil-square fs-4"></i>
+                                </button> <br>
+                                <a class="btn btn-secondary mb-1" href="generate_qr.php?id=${row.dr_no}" target="_blank"><i class="bi bi-qr-code fs-4"></i></a><br>
+                                ${row.has_photos ? `<a class="btn btn-primary mb-1" href="deliveries_details.php?id=${row.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
+                            </td>
+                        </tr>
+                    `).join("")}
                 </tbody>
-                `).join("");
+            `;
         }
         renderPagination(data, page);
-    })
-    .finally(() => hideLoading());
+    } finally {
+        hideLoading();
+    }
 }
 
 // Pagination rendering
 function renderPagination(data, currentPage) {
-    let pagination = document.getElementById("pagination");
+    const pagination = document.getElementById("pagination");
     pagination.innerHTML = "";
-    if(!data.total_pages || data.total_pages <= 1) return;
+    if (!data.total_pages || data.total_pages <= 1) return;
 
     const createPage = (i, text = i) => `
-        <li class="page-item ${i === currentPage ? 'active' : ''}">
+        <li class="page-item ${i === currentPage ? "active" : ""}">
             <a class="page-link" href="#" onclick="updateTable(${i})">${text}</a>
         </li>`;
 
-    pagination.innerHTML += createPage(currentPage-1, "«");
-    let start = Math.max(1, currentPage-4);
-    let end = Math.min(data.total_pages, start+7);
-    for(let i=start; i<=end; i++) pagination.innerHTML += createPage(i);
-    pagination.innerHTML += createPage(currentPage+1, "»");
+    if (currentPage > 1) pagination.innerHTML += createPage(currentPage - 1, "«");
+
+    const start = Math.max(1, currentPage - 4);
+    const end = Math.min(data.total_pages, start + 7);
+    for (let i = start; i <= end; i++) pagination.innerHTML += createPage(i);
+
+    if (currentPage < data.total_pages) pagination.innerHTML += createPage(currentPage + 1, "»");
 }
 
-// Event listeners
-document.getElementById("searchButton").addEventListener("click", () => updateTable(1));
-document.getElementById("searchInput").addEventListener("keypress", e => { if(e.key==="Enter") updateTable(1); });
-
-
-document.addEventListener("DOMContentLoaded", function () {
-    // Populate Year filter
+// DOM Ready
+document.addEventListener("DOMContentLoaded", () => {
+    // Populate initial filters
     populateFilter("year", "SELECT DISTINCT YEAR(created_at) AS options FROM deliveries ORDER BY created_at ASC");
-    populateFilter("importproject",
-                `SELECT project_id, project_name AS options 
-                 FROM projects`);
+    populateFilter("importproject", "SELECT project_id, project_name AS options FROM projects");
     hideLoading();
 
-    const yearSelect = document.getElementById("year");
-    const projectSelect = document.getElementById("filterProjects");
-    const statusSelect = document.getElementById("filterStatus");
-    const filterRegion = document.getElementById("filterRegion");
-    const filterDivision = document.getElementById("filterDivision");
-    const filterMunicipality = document.getElementById("filterMunicipality");
-    const importproject = document.getElementById("importproject");
-    const importlot = document.getElementById("importlot");
-    const importkeystage = document.getElementById("importkeystage");
-    const file_upload_import = document.getElementById("file_upload_import");
-    
-    // When Year changes → enable & populate Project
-    filterRegion.addEventListener("change", () => {
-        let region = filterRegion.value;
-        filterDivision.disabled = !year;
-        filterMunicipality.disabled = true;
-        if (region) {
-            populateFilter(
-                "filterDivision",
-                `SELECT DISTINCT s.division AS options 
-                 FROM schools_project sp 
-                 JOIN school s ON sp.school_id = s.school_id 
-                 WHERE s.region='${region}'`
-            );
-        } else {
-            projectSelect.innerHTML = ""; 
-            statusSelect.innerHTML = ""; 
-        }
-    });
+    // Helper for chained selects
+    const bindDependentFilter = (triggerId, targetId, queryBuilder) => {
+        const trigger = document.getElementById(triggerId);
+        const target = document.getElementById(targetId);
+        trigger.addEventListener("change", () => {
+            const value = trigger.value;
+            target.disabled = !value;
+            if (value) {
+                populateFilter(targetId, queryBuilder(value));
+            } else {
+                target.innerHTML = "";
+            }
+        });
+    };
 
-    // When Year changes → enable & populate Project
-    filterDivision.addEventListener("change", () => {
-        let division = filterDivision.value;
-        filterMunicipality.disabled = !year;
-        if (division) {
-            populateFilter(
-                "filterMunicipality",
-                `SELECT DISTINCT s.municipality AS options 
-                 FROM schools_project sp 
-                 JOIN school s ON sp.school_id = s.school_id 
-                 WHERE s.division='${division}'`
-            );
-        } else {
-            projectSelect.innerHTML = ""; 
-            statusSelect.innerHTML = ""; 
-        }
-    });
+    // Region → Division
+    bindDependentFilter("filterRegion", "filterDivision", region => `
+        SELECT DISTINCT s.division AS options 
+        FROM schools_project sp 
+        JOIN school s ON sp.school_id = s.school_id 
+        WHERE s.region='${region}'`);
 
-    // When Year changes → enable & populate Project
-    yearSelect.addEventListener("change", () => {
-        let year = yearSelect.value;
-        projectSelect.disabled = !year;
-        statusSelect.disabled = true;
-        if (year) {
-            populateFilter(
-                "filterProjects",
-                `SELECT DISTINCT p.project_id, p.project_name AS options 
-                 FROM deliveries d 
-                 JOIN projects p ON d.project_id = p.project_id 
-                 WHERE YEAR(d.created_at)='${year}' ORDER BY p.project_id ASC`
-            );
-        } else {
-            projectSelect.innerHTML = ""; 
-            statusSelect.innerHTML = ""; 
-        }
-    });
+    // Division → Municipality
+    bindDependentFilter("filterDivision", "filterMunicipality", division => `
+        SELECT DISTINCT s.municipality AS options 
+        FROM schools_project sp 
+        JOIN school s ON sp.school_id = s.school_id 
+        WHERE s.division='${division}'`);
 
-    // When Project changes → enable & populate Status
-    projectSelect.addEventListener("change", () => {
-        let project_id = projectSelect.value;
+    // Year → Projects
+    bindDependentFilter("year", "filterProjects", year => `
+        SELECT DISTINCT p.project_id, p.project_name AS options 
+        FROM deliveries d 
+        JOIN projects p ON d.project_id = p.project_id 
+        WHERE YEAR(d.created_at)='${year}' ORDER BY p.project_id ASC`);
+
+    // Project → Status, Lot, Region
+    document.getElementById("filterProjects").addEventListener("change", e => {
+        const project_id = e.target.value;
+        const statusSelect = document.getElementById("filterStatus");
         statusSelect.disabled = !project_id;
+
         if (project_id) {
-            populateFilter(
-                "importlot",
-                `SELECT lot_id as project_id, CONCAT('Lot ', lot_name) as options FROM lot WHERE project_id='${project_id}'`
-            );
-            populateFilter(
-                "filterStatus",
-                `SELECT DISTINCT status AS options FROM deliveries WHERE project_id='${project_id}' ORDER BY status ASC`
-            );
-            populateFilter(
-                "filterRegion",
-                `SELECT DISTINCT s.region AS options FROM schools_project sp JOIN school s ON sp.school_id = s.school_id WHERE project_id='${project_id}'`
-            );
+            populateFilter("importlot", `SELECT lot_id as project_id, CONCAT('Lot ', lot_name) as options FROM lot WHERE project_id='${project_id}'`);
+            populateFilter("filterStatus", `SELECT DISTINCT status AS options FROM deliveries WHERE project_id='${project_id}' ORDER BY status ASC`);
+            populateFilter("filterRegion", `SELECT DISTINCT s.region AS options FROM schools_project sp JOIN school s ON sp.school_id = s.school_id WHERE project_id='${project_id}'`);
+            handleProjectChange(project_id);
         } else {
             statusSelect.innerHTML = "";
         }
     });
 
+    async function handleProjectChange(projectId) {
+    const depedDeliveriesDiv = document.getElementById("depedDeliveries");
+    const locationFiltersDiv = document.getElementById("locationFilters");
 
-    // When importproject changes → enable & populate importlot
-    importproject.addEventListener("change", () => {
-        let project = importproject.value;
-        importlot.disabled = !project;
-        importkeystage.disabled = true;
-        file_upload_import.disabled = true;
-        if (project) {
-            populateFilter(
-                "importlot",
-                `SELECT lot_id as project_id, lot_name as options
-                 FROM lot
-                 WHERE project_id='${project}'`
-            );
+    if (!projectId) {
+        if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+        if (locationFiltersDiv) locationFiltersDiv.classList.add("visually-hidden");
+        return;
+    }
+
+    try {
+        const response = await fetch(`script/get_project.php?projectid=${projectId}`);
+        const data = await response.json();
+
+        if (data.lots && data.lots.length > 0) {
+            const agency = data.lots[0].agency;
+            
+            if (!agency) {
+                if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                return;
+            }
+            
+            // Populate lot filter
+            const lotSelect = document.getElementById("importlot");
+            if (lotSelect) {
+                lotSelect.innerHTML = '<option value="">Select Lot</option>';
+                data.lots.forEach(lot => {
+                    lotSelect.innerHTML += `<option value="${lot.id}">${lot.name}</option>`;
+                });
+            }
+
+            // Show/hide filters based on agency
+            const agencyLower = agency.toLowerCase().trim();
+            
+            switch (agencyLower) {
+                case 'deped':
+                case 'department of education':
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.remove("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+                    
+                case 'dswd':
+                case 'department of social welfare and development':
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+                    
+                default:
+                    if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+                    if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
+                    break;
+            }
+            
+            // Reset keystage filter
+            const keystageSelect = document.getElementById("importkeystage");
+            if (keystageSelect) {
+                keystageSelect.innerHTML = '<option value="">Select Keystage</option>';
+                keystageSelect.disabled = true;
+            }
         } else {
-            importlot.innerHTML = ""; 
-            importkeystage.innerHTML = ""; 
+            if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+            if (locationFiltersDiv) locationFiltersDiv.classList.remove("visually-hidden");
         }
-    });
+    } catch (error) {
+        console.error('Error fetching project details:', error);
+        if (depedDeliveriesDiv) depedDeliveriesDiv.classList.add("visually-hidden");
+        if (locationFiltersDiv) locationFiltersDiv.classList.add("visually-hidden");
+    }
+}
 
-    // When importlot changes → enable & populate importkeystage
-    importlot.addEventListener("change", () => {
-        let lot_id = importlot.value;
-        importkeystage.disabled = !lot_id;
-        file_upload_import.disabled = true;
-        if (lot_id) {
-            populateFilter(
-                "importkeystage",
-                `SELECT keystage_id as project_id, CONCAT('Keystage ', keystage_num,' ', description) AS options FROM keystage WHERE lot_id='${lot_id}'`
-            );
-        } else {
-            importkeystage.innerHTML = "";
-        }
-    });
 
-        // When importkeystage changes → enable Upload of File
-    importkeystage.addEventListener("change", () => {
-        let keystage_id = importkeystage.value;
-        file_upload_import.disabled = !keystage_id;
-    });
-    // Filter & search triggers
-    const filterButton = document.getElementById("filterButt");
-    const searchButton = document.getElementById("searchButton");
-    const searchInput = document.getElementById("searchInput");
+    
+    // Import project → Lot → Keystage → File Upload
+    bindDependentFilter("importproject", "file_upload_import", project => `
+        SELECT lot_id as project_id, lot_name as options FROM lot WHERE project_id='${project}'`);
+    bindDependentFilter("importlot", "importkeystage", lot_id => `
+        SELECT keystage_id as project_id, CONCAT('Keystage ', keystage_num,' ', description) AS options 
+        FROM keystage WHERE lot_id='${lot_id}'`);
+    bindDependentFilter("importkeystage", "file_upload_import", () => "");
+    
 
+    // Search & filter buttons
     const applyFilters = () => updateTable(1);
-
-    filterButton.addEventListener("click", applyFilters);
-    searchButton.addEventListener("click", applyFilters);
-    searchInput.addEventListener("keypress", e => { if(e.key==="Enter") applyFilters(); });
+    ["searchButton"].forEach(id =>
+        document.getElementById(id).addEventListener("click", applyFilters)
+    );
+    document.getElementById("searchInput").addEventListener("keypress", e => {
+        if (e.key === "Enter") applyFilters();
+    });
 });
+

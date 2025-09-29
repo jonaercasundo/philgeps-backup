@@ -8,7 +8,7 @@ $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPa
 
 try {
     $stmt = $pdo->prepare("
-    SELECT d.*, p.project_id, p.project_name, d.keystage_id, s.school_name as school, s.address, ps.status
+    SELECT d.*, p.project_id, p.project_name, d.keystage_id, s.school_name as school, s.address, ps.status AS package_status
     FROM package_status ps 
     JOIN deliveries d ON d.delivery_id = ps.delivery_id
     JOIN school s ON s.school_id = d.school_id 
@@ -99,36 +99,24 @@ try {
     </div>
 
     <!-- Form -->
-    <form method="POST" action="check.php">
+    <form method="POST" action="check.php" enctype="multipart/form-data">
       <input type="hidden" value="<?=$id?>" name="id">
       <input type="hidden" value="<?=$deliveries['status'];?>" name="status">
-      <div class="mb-3">
-        <label for="phone" class="form-label">Phone Number</label>
-        <input 
-          type="tel" 
-          class="form-control" 
-          id="phone" 
-          name="phone" 
-          placeholder="09XXXXXXXXX"
-          pattern="[0-9]{11}" 
-          maxlength="11" 
-          required 
-          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-        >
-        <div class="form-text">Enter 11-digit phone number starting with 09</div>
-      </div>
-      
-      <div class="mb-3">
-        <label for="email" class="form-label">Email</label>
-        <input 
-          type="email" 
-          class="form-control" 
-          id="email" 
-          name="email" 
-          placeholder="anyemail@gmail.com"
-          required 
-        >
-        <div class="form-text">Enter a valid email address</div>
+      <input type="hidden" name="delivery_id" value="<?=$_GET['delivery_id']?>">
+
+      <div class="mb-3 <?php if($deliveries['package_status'] == "pending"){echo "visually-hidden";}; ?>">
+          <label for="photo_upload" class="form-label">Upload Photos</label>
+          <input 
+              type="file" 
+              class="form-control" 
+              id="photo_upload" 
+              name="photo_upload[]" 
+              accept="image/*"
+              multiple
+              required
+              
+              <?php if($deliveries['package_status'] == "pending"){echo "disabled";}; ?>
+          >
       </div>
 
       <!-- Captcha -->

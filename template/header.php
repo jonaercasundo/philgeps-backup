@@ -14,8 +14,15 @@ if (!isset($_SESSION['user_id']) ||
 <head>
   <meta charset="UTF-8">
   <title>MMC Project Tracker</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!--link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"-->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="assets/bootstrap-5.3.7-dist/css/bootstrap.min.css">
+  <style>
+    a.disabled {
+      pointer-events: none;
+      cursor: default;
+    }
+  </style>
 </head>
 <body>
 
@@ -25,7 +32,9 @@ $mainNav = [
     "dashboard.php" => "Dashboard",
     "projects.php" => "Projects",
     "deliveries.php" => "Deliveries",
-    "billing.php" => "Billing",
+    "warehouse.php" => "<span class='text-decoration-line-through'>Warehouse</span>",
+    "logistics.php" => "<span class='text-decoration-line-through'>Logistics</span>",
+    "billing.php" => "<span class='text-decoration-line-through'>Billing</span>",
     "reports.php" => "Reports",
     "users.php" => "Users"
 ];
@@ -41,7 +50,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       <ul class="navbar-nav me-auto">
         <?php foreach($mainNav as $file => $label): ?>
           <li class="nav-item">
-            <a class="nav-link <?= ($currentPage === $file) ? 'active' : '' ?>" href="<?= $file ?>"><?= $label ?></a>
+            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "warehouse.php" || $file === "logistics.php" || $file === "billing.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
           </li>
         <?php endforeach; ?>
       </ul>
@@ -71,8 +80,8 @@ if (isset($_GET['id'])):
         $projectNav["keystage.php"] = "Keystage";
     }
     $projectNav += [
-        "packages.php" => "Packages",
         "items.php" => "Items",
+        "packages.php" => "Packages",
         "project_reports.php" => "Reports"
     ];
 ?>
