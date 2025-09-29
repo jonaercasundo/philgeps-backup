@@ -35,7 +35,7 @@ LEFT JOIN (
         GROUP_CONCAT(
             CONCAT(
                 'Package ', x.rn, ' out of ', x.total_packages, 
-                ' — ', COALESCE(x.pkg_status, 'Pending'), '<br>',
+                ' — ', x.colored_pkg_status, '<br>', 
                 x.items
             )
             SEPARATOR '<br><br>'
@@ -47,7 +47,18 @@ LEFT JOIN (
             ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
             COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
             GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items,
-            COALESCE(MAX(dp.status), 'Pending') AS pkg_status
+            
+           CASE 
+                WHEN COALESCE(MAX(dp.status), 'PENDING') = 'DELIVERED' THEN
+                    CONCAT('<span class=\"text-success font-weight-bold\">DELIVERED</span>')
+                WHEN COALESCE(MAX(dp.status), 'PENDING') = 'ACCEPTED' THEN
+                    CONCAT('<span class=\"text-primary font-weight-bold\">ACCEPTED</span>')
+                WHEN COALESCE(MAX(dp.status), 'PENDING') = 'WAREHOUSE' THEN
+                    CONCAT('<span class=\"text-info font-weight-bold\">WAREHOUSE</span>')
+                ELSE
+                    CONCAT('<span class=\"text-warning font-weight-bold\">PENDING</span>')
+            END AS colored_pkg_status
+
         FROM deliveries d
         LEFT JOIN package p 
             ON (
@@ -136,17 +147,17 @@ LIMIT :limit OFFSET :offset;
    <tbody>
         <?php foreach($deliveries as $d): ?>
             <?php
-            // Use a single query to check if any photo exists for the dr_no
-            $stmt_check = $pdo->prepare("
-                SELECT COUNT(dp.delivery_photo_id)
-                FROM deliveries d
-                JOIN package_status ps ON d.delivery_id = ps.delivery_id
-                JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
-                WHERE d.dr_no = :dr_no AND dp.status IN ('accepted', 'delivered')
-            ");
-            $stmt_check->execute([':dr_no' => $d['dr_no']]);
-            $has_photos = ($stmt_check->fetchColumn() > 0);
-        ?>
+                // Use a single query to check if any photo exists for the dr_no
+                $stmt_check = $pdo->prepare("
+                    SELECT COUNT(dp.delivery_photo_id)
+                    FROM deliveries d
+                    JOIN package_status ps ON d.delivery_id = ps.delivery_id
+                    JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
+                    WHERE d.dr_no = :dr_no AND dp.status IN ('accepted', 'delivered')
+                ");
+                $stmt_check->execute([':dr_no' => $d['dr_no']]);
+                $has_photos = ($stmt_check->fetchColumn() > 0);
+            ?>
         <tr>
             <td><?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td>
             <td><?= htmlspecialchars($d['school_id']). ' ' . htmlspecialchars($d['school_name']) ?></td>
