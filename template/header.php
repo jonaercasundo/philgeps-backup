@@ -3,7 +3,8 @@ session_start();
 
 if (!isset($_SESSION['user_id']) || 
     !isset($_SESSION['username']) || 
-    !isset($_SESSION['name'])) {
+    !isset($_SESSION['name']) || 
+    !isset($_SESSION['role'])) {
     
     header("Location: index.php");
     exit();
@@ -17,6 +18,7 @@ if (!isset($_SESSION['user_id']) ||
   <!--link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"-->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="assets/bootstrap-5.3.7-dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css">
   <style>
     a.disabled {
       pointer-events: none;
@@ -85,6 +87,7 @@ if (isset($_GET['id'])):
         "project_reports.php" => "Reports"
     ];
 ?>
+
 <nav id="project_detail_nav" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
   <div class="container-fluid justify-content-center">
     <ul class="nav navbar-nav">
@@ -98,4 +101,36 @@ if (isset($_GET['id'])):
 </nav>
 <?php endif; ?>
 
-<div class="container mt-4">
+<?php
+// This check assumes $is_warehouse_page is set to true on the relevant pages
+if (isset($is_warehouse_page) && $is_warehouse_page === true): 
+
+    $warehouseNav = [
+      'warehouse.php' => 'Overview',
+      'warehouse_details.php' => 'Warehouse',
+      'logistics.php' => 'Logistics',
+      'reports.php' => 'Reports'
+  ];
+?>
+
+<nav id="warehouse_nav" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container-fluid justify-content-center">
+        <ul class="nav navbar-nav">
+            <?php foreach($warehouseNav as $file => $label): ?>
+                 <li class="nav-item">
+                    <a 
+                        class="nav-link <?= (isset($currentPage) && $currentPage === $file) ? 'active' : '' ?>" 
+                        href="<?= $file ?>"
+                    >
+                        <?= $label ?>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+</nav>
+<?php endif; ?>
+
+
+
+<div class="container-fluid mt-4">

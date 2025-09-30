@@ -1,16 +1,14 @@
 <?php 
-    $is_warehouse_page = true;
-    require "template/header.php"; 
-    require "script/role_auth.php";
-    require "config/db.php";
+$is_warehouse_page = true;
+require "template/header.php"; 
+require "script/role_auth.php";
+require "config/db.php";
 
-    // roles allowed to access this page
-    $allowed_roles = ['Super Admin', 'Admin', 'Warehouse Admin'];
+// roles allowed to access this page
+$allowed_roles = ['Super Admin', 'Admin', 'Warehouse Admin'];
 
-    // redirect
-    redirectIfNotAuthorized($allowed_roles, 'index.php');
-
-
+// redirect
+redirectIfNotAuthorized($allowed_roles, 'index.php');
 ?>
 
 <!-- Main Full-Screen Container -->
@@ -36,6 +34,18 @@
                 </div>
             </div>
 
+            <!-- <div class="d-flex align-items-center mb-3 bg-white rounded p-3 shadow-sm border">
+                <div class="flex-shrink-0 me-3">
+                    <div class="bg-success rounded-circle d-flex align-items-center justify-content-center text-white" style="width: 30px; height: 30px;">
+                        <i class="bi bi-person"></i> </div>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-0">New Users</h6>
+                    <small class="text-muted">Last 7 days</small>
+                </div>
+                <span class="badge bg-success">+12%</span>
+            </div> -->
+
 
             <a href="#" class="btn btn-outline-secondary w-100 mb-2">
                 View Something
@@ -56,10 +66,10 @@
         <!-- Large Main Content/Display Area -->
         <div class="flex-grow-1">
             <div class="bg-white px-4 rounded shadow-sm h-100">
-                <h5 class="mb-0 text-dark">Deliveries Status Warehouse </h5>
+                <h5 class="mb-0 text-dark">Deliveries Status Logistics </h5>
 
-                <table id="warehouseTable" class="table table-bordered table-striped">
-                    <thead class="table-dark text-center">
+                <table id="logisticsTable" class="table product-category-table w-100">
+                    <thead>
                         <tr>
                             <th>Delivery ID</th>
                             <th>Project</th>
@@ -85,20 +95,20 @@
 <!-- Table Scripts -->
 <script>
     $(document).ready(function() {
-        const table = $('#warehouseTable').DataTable({
+        const table = $('#logisticsTable').DataTable({
             processing: true,
             serverSide: true,
             ajax: {
-                url: "script/get_warehouse_deliveries.php",
+                url: "script/get_logistics_deliveries.php",
                 type: "GET"
             },
             columns: [
-                { data: "delivery_id", className: "text-center"  },
-                { data: "project_name", className: "text-center"  },
-                { data: "school_name", className: "text-center"  },
-                { data: "dr_no", className: "text-center"  },
-                { data: "delivery_date", className: "text-center"  },
-                { data: "package_type", className: "text-center"  },
+                { data: "delivery_id" },
+                { data: "project_name" },
+                { data: "school_name" },
+                { data: "dr_no" },
+                { data: "delivery_date" },
+                { data: "package_type" },
                 { 
                     data: "items_contents", 
                     orderable: false,
