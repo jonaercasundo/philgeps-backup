@@ -1,8 +1,8 @@
 <?php
 $host = 'localhost';
 $db   = 'philgeps';
-$user = 'root';
-$pass = '';
+$user = 'rey';
+$pass = 'Rhold#100';
 
 try {
     $pdo = new PDO(
