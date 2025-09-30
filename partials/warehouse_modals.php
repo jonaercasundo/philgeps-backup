@@ -5,7 +5,7 @@
             <div class="modal-body">
                 <form id="deleteForm" method="POST" action="script/delete.php">
                      <input type="hidden" name="source_page" id="delete_source_page" value="warehouse_details.php">
-                    <input type="text" id="delete_warehouse_id" name="id"> 
+                    <input type="hidden" id="delete_warehouse_id" name="id"> 
                     <input type="hidden" name="table" value="warehouse">
                     <input type="hidden" name="condition" value="warehouse_id">
                     <div class="mb-3">
