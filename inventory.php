@@ -71,6 +71,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- CRUD Operations -->
 <script>
     // Function to set the inventory ID for deletion
     function updateDeleteURL(inventoryId) {
@@ -149,8 +150,6 @@
         });
     }
 </script>
-
-<!-- CRUD Operations -->
 <script>
     // Custom addForm function for inventory page
     function addForm(type, scriptUrl) {
