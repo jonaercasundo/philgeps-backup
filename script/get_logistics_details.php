@@ -26,24 +26,18 @@ if (isset($pdo) && $pdo !== null) {
         $totalStmt->execute();
         $totalRecords = $totalStmt->fetch(PDO::FETCH_ASSOC)['total'];
         
-        // Base query with JOIN to get regions and warehouse info from logistics_location
+        // Base query - only logistics table
         $sql = "SELECT 
-                    l.logistic_id, 
-                    l.logistic_name,
-                    GROUP_CONCAT(DISTINCT ll.region SEPARATOR ', ') as regions,
-                    ll.warehouse_id,
-                    w.warehouse_name
-                FROM logistics l
-                LEFT JOIN logistics_location ll ON l.logistic_id = ll.logistics_id
-                LEFT JOIN warehouse w ON ll.warehouse_id = w.warehouse_id
-                GROUP BY l.logistic_id, l.logistic_name, ll.warehouse_id, w.warehouse_name";
+                    logistic_id, 
+                    logistic_name
+                FROM logistics";
         
         // Add search filter if search value exists
         $whereClauses = [];
         $params = [];
         
         if (!empty($searchValue)) {
-            $whereClauses[] = "(l.logistic_name LIKE :search OR ll.region LIKE :search OR w.warehouse_name LIKE :search)";
+            $whereClauses[] = "logistic_name LIKE :search";
             $params[':search'] = "%{$searchValue}%";
         }
         
@@ -51,17 +45,9 @@ if (isset($pdo) && $pdo !== null) {
             $sql .= " WHERE " . implode(" AND ", $whereClauses);
         }
         
-        // Get filtered count (need to use the same JOIN and GROUP BY)
-        $filteredQuery = "SELECT COUNT(*) as total FROM (
-                            SELECT l.logistic_id
-                            FROM logistics l
-                            LEFT JOIN logistics_location ll ON l.logistic_id = ll.logistics_id
-                            LEFT JOIN warehouse w ON ll.warehouse_id = w.warehouse_id" . 
-                            (!empty($whereClauses) ? " WHERE " . implode(" AND ", $whereClauses) : "") . "
-                            GROUP BY l.logistic_id
-                         ) as filtered";
-        
-        $filteredStmt = $pdo->prepare($filteredQuery);
+        // Get filtered count
+        $filteredStmt = $pdo->prepare("SELECT COUNT(*) as total FROM logistics" . 
+            (!empty($whereClauses) ? " WHERE " . implode(" AND ", $whereClauses) : ""));
         foreach ($params as $key => $value) {
             $filteredStmt->bindValue($key, $value);
         }
@@ -70,16 +56,14 @@ if (isset($pdo) && $pdo !== null) {
         
         // Handle ordering based on DataTables parameters
         $orderColumns = [
-            0 => 'l.logistic_id',
-            1 => 'l.logistic_name',
-            2 => 'regions',
-            3 => 'w.warehouse_name'
+            0 => 'logistic_id',
+            1 => 'logistic_name'
         ];
         
         if (isset($orderColumns[$orderColumnIndex])) {
             $sql .= " ORDER BY " . $orderColumns[$orderColumnIndex] . " " . ($orderDirection === 'asc' ? 'ASC' : 'DESC');
         } else {
-            $sql .= " ORDER BY l.logistic_name ASC"; // Default ordering
+            $sql .= " ORDER BY logistic_name ASC"; // Default ordering
         }
         
         // Add pagination
@@ -112,4 +96,3 @@ if (isset($pdo) && $pdo !== null) {
 
 header('Content-Type: application/json');
 echo json_encode($response);
-?>

@@ -36,17 +36,6 @@
                         <label>Logistics Name</label>
                         <input type="text" class="form-control" name="logistic_name" required>
                     </div>
-                    <div class="mb-3">
-                        <label>Region</label>
-                        <input type="text" class="form-control" name="region" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Warehouse</label>
-                        <select class="form-control" name="warehouse_id" required>
-                            <option value="">Select Warehouse</option>
-                            <!-- Options will be populated dynamically -->
-                        </select>
-                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -70,17 +59,6 @@
                     <div class="mb-3">
                         <label>Logistics Name</label>
                         <input type="text" id="edit_logistics_name" class="form-control" name="logistic_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Region</label>
-                        <input type="text" id="edit_region" class="form-control" name="region" required>
-                    </div>
-                    <div class="mb-3">
-                        <label>Warehouse</label>
-                        <select class="form-control" id="edit_warehouse_id" name="warehouse_id" required>
-                            <option value="">Select Warehouse</option>
-                            <!-- Options will be populated dynamically -->
-                        </select>
                     </div>
                 </form>
             </div>
