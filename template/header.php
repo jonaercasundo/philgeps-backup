@@ -34,8 +34,8 @@ $mainNav = [
     "dashboard.php" => "Dashboard",
     "projects.php" => "Projects",
     "deliveries.php" => "Deliveries",
-    "warehouse.php" => "<span class='text-decoration-line-through'>Warehouse</span>",
-    "logistics.php" => "<span class='text-decoration-line-through'>Logistics</span>",
+    "warehouse.php" => "Warehouse",
+    "logistics.php" => "Logistics",
     "billing.php" => "<span class='text-decoration-line-through'>Billing</span>",
     "reports.php" => "Reports",
     "users.php" => "Users"
@@ -52,7 +52,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       <ul class="navbar-nav me-auto">
         <?php foreach($mainNav as $file => $label): ?>
           <li class="nav-item">
-            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "logistics.php" || $file === "billing.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
+            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "billing.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
           </li>
         <?php endforeach; ?>
       </ul>
@@ -109,7 +109,6 @@ if (isset($is_warehouse_page) && $is_warehouse_page === true):
       'warehouse.php' => 'Overview',
       'warehouse_details.php' => 'Warehouse',
       'inventory.php' => 'Inventory',
-      'logistics.php' => 'Logistics',
       'reports.php' => 'Reports'
   ];
 ?>
@@ -132,6 +131,35 @@ if (isset($is_warehouse_page) && $is_warehouse_page === true):
 </nav>
 <?php endif; ?>
 
+<?php
+// This check assumes $is_logistics_page is set to true on the relevant pages
+if (isset($is_logistics_page) && $is_logistics_page === true): 
+
+    $logisticsNav = [
+      'logistics.php' => 'Overview',
+      'logistics_details.php' => 'Logistics',
+      'logistics_location.php' => 'Location',
+      'logistics_reports.php' => 'Reports'
+    ];
+?>
+
+<nav id="logistics_nav" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container-fluid justify-content-center">
+        <ul class="nav navbar-nav">
+            <?php foreach($logisticsNav as $file => $label): ?>
+                 <li class="nav-item">
+                    <a 
+                        class="nav-link <?= (isset($currentPage) && $currentPage === $file) ? 'active' : '' ?>" 
+                        href="<?= $file ?>"
+                    >
+                        <?= $label ?>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+</nav>
+<?php endif; ?>
 
 
 <div class="container-fluid mt-4">

@@ -39,7 +39,7 @@
         <!-- Large Main Content/Display Area -->
         <div class="flex-grow-1">
             <div class="bg-white px-4 rounded shadow-sm h-100">
-                <h5 class="mb-0 text-dark">Deliveries Status Warehouse </h5>
+                <h5 class="mb-0 text-dark">In Warehouse</h5>
 
                 <table id="warehouseTable" class="table table-bordered table-striped">
                     <thead class="table-dark text-center">
