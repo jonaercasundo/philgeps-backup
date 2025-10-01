@@ -1,5 +1,5 @@
 <?php 
-$is_warehouse_page = true;
+$is_logistics_page = true;
 require "template/header.php"; 
 require "script/role_auth.php";
 require "config/db.php";
@@ -19,45 +19,18 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
                 <h5 class="mb-0 text-dark opacity-75">Summary</h5>
         </div>
         
-        <div class="p-3">
-            <div class="card mb-3 shadow-sm border-0">
-                <div class="card-body p-3">
-                    <h6 class="card-title text-primary mb-1">Total Deliveries In Warehouse</h6>
-                    <p id="warehouse_count" class="card-text fw-bold fs-5">Loading...</p>
-                </div>
-            </div>
-            
-            <div class="card mb-3 shadow-sm border-0">
-                <div class="card-body p-3">
-                    <h6 class="card-title text-primary mb-1">Total Deliveries Send to Logistics</h6>
-                    <p id="logistics_count" class="card-text fw-bold fs-5">Loading...</p>
-                </div>
-            </div>
-
-            <!-- <div class="d-flex align-items-center mb-3 bg-white rounded p-3 shadow-sm border">
-                <div class="flex-shrink-0 me-3">
-                    <div class="bg-success rounded-circle d-flex align-items-center justify-content-center text-white" style="width: 30px; height: 30px;">
-                        <i class="bi bi-person"></i> </div>
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="mb-0">New Users</h6>
-                    <small class="text-muted">Last 7 days</small>
-                </div>
-                <span class="badge bg-success">+12%</span>
-            </div> -->
-
-
-            <a href="#" class="btn btn-outline-secondary w-100 mb-2">
-                View Something
-            </a>
-        </div>
-
         <div class="flex-fill p-3 border-top d-flex flex-column">
             <!-- 'h-100' ensures the chart container fills the height of the flex-fill parent -->
             <div class="chart-container h-100">
                 <!-- 'h-100' ensures the canvas fills the height of the chart-container -->
-                <canvas id="warehouseBarChart" class="h-100"></canvas>
+                <canvas id="logisticsStockLevelsChart" class="h-100"></canvas>
             </div>
+        </div>
+
+         <div class="flex-fill p-3 border-top d-flex flex-column">
+            <a href="#" class="btn btn-outline-secondary w-100 mb-2">
+                View Something
+            </a>
         </div>
     </div>
 
@@ -66,10 +39,10 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
         <!-- Large Main Content/Display Area -->
         <div class="flex-grow-1">
             <div class="bg-white px-4 rounded shadow-sm h-100">
-                <h5 class="mb-0 text-dark">Deliveries Status Logistics </h5>
+                <h5 class="mb-0 text-dark">Out to Logistics</h5>
 
-                <table id="logisticsTable" class="table product-category-table w-100">
-                    <thead>
+                <table id="logisticsTable" class="table table-bordered table-striped">
+                    <thead  class="table-dark text-center">
                         <tr>
                             <th>Delivery ID</th>
                             <th>Project</th>
@@ -196,100 +169,130 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
     });
 </script>
 
-<!-- // SAMPLE DATA FOR TESTING PURPOSES OF CHART -->
+<!-- Logistics Stock Levels Graph -->
 <script>
-    // Define data for the chart
-    const warehouseLabels = ['Warehouse A', 'Warehouse B', 'Warehouse C', 'Warehouse D', 'Warehouse E'];
-    const itemData = [1500, 2200, 950, 3100, 1800];
-    
-    // Function to initialize the Chart.js instance
-    function initChart() {
-        const ctx = document.getElementById('warehouseBarChart').getContext('2d');
+    // Fetch data and render chart
+    fetch('script/get_logistics_summary.php')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            
+            if (data.accepted_by_logistics && data.accepted_by_logistics.logistics_names.length > 0) {
+                renderLogisticsStockLevelsChart(data.accepted_by_logistics);
+            } else {
+                document.getElementById('logisticsStockLevelsChart').parentElement.innerHTML = 
+                    '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-muted text-center">No delivery data available</p></div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching logistics delivery data:', error);
+            document.getElementById('logisticsStockLevelsChart').parentElement.innerHTML = 
+                '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-danger text-center">Error loading chart data</p></div>';
+        });
 
-        const chartConfig = {
+    function renderLogisticsStockLevelsChart(chartData) {
+        const ctx = document.getElementById('logisticsStockLevelsChart').getContext('2d');
+        
+        // Use consistent indigo color palette
+        const backgroundColors = [
+            'rgba(79, 70, 229, 0.8)',   // indigo-600
+            'rgba(99, 102, 241, 0.8)',  // indigo-500
+            'rgba(129, 140, 248, 0.8)', // indigo-400
+            'rgba(67, 56, 202, 0.8)',   // indigo-700
+            'rgba(165, 180, 252, 0.8)', // indigo-300
+            'rgba(49, 46, 129, 0.8)'    // indigo-800
+        ];
+        
+        const borderColors = [
+            'rgba(79, 70, 229, 1)',
+            'rgba(99, 102, 241, 1)',
+            'rgba(129, 140, 248, 1)',
+            'rgba(67, 56, 202, 1)',
+            'rgba(165, 180, 252, 1)',
+            'rgba(49, 46, 129, 1)'
+        ];
+
+        // Create the chart with horizontal layout for better fit in sidebar
+        new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: warehouseLabels,
+                labels: chartData.logistics_names,
                 datasets: [{
-                    label: 'Total Items in Stock',
-                    data: itemData,
-                    // Define bar colors using an appealing indigo palette
-                    backgroundColor: [
-                        'rgba(79, 70, 229, 0.8)', // indigo-600
-                        'rgba(99, 102, 241, 0.8)', // indigo-500
-                        'rgba(129, 140, 248, 0.8)', // indigo-400
-                        'rgba(67, 56, 202, 0.8)', // indigo-700
-                        'rgba(165, 180, 252, 0.8)' // indigo-300
-                    ],
-                    // Define border color
-                    borderColor: [
-                        'rgba(79, 70, 229, 1)',
-                        'rgba(99, 102, 241, 1)',
-                        'rgba(129, 140, 248, 1)',
-                        'rgba(67, 56, 202, 1)',
-                        'rgba(165, 180, 252, 1)'
-                    ],
+                    label: 'Accepted Deliveries',
+                    data: chartData.delivery_counts,
+                    backgroundColor: backgroundColors.slice(0, chartData.logistics_names.length),
+                    borderColor: borderColors.slice(0, chartData.logistics_names.length),
                     borderWidth: 1,
-                    borderRadius: 4, // Slightly smaller rounded tops for smaller bars
+                    borderRadius: 4, 
                 }]
             },
             options: {
-                indexAxis: 'y', // KEY CHANGE: Switched to horizontal bars for better fit in a narrow sidebar
+                indexAxis: 'y', 
                 responsive: true,
-                maintainAspectRatio: false, // Allows the chart to adapt to the container's size
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false // Hide the legend since there's only one dataset
+                        display: false
                     },
                     title: {
                         display: true,
-                        text: 'Warehouse Stock Levels', // Simplified title for sidebar
+                        text: 'Logistics Stock Levels',
                         font: {
-                            size: 14, // Smaller font size
+                            size: 14,
                             weight: '600'
                         },
-                        color: '#1f2937' // dark gray
+                        color: '#1f2937',
+                        padding: {
+                            bottom: 15
+                        }
                     },
                     tooltip: {
                         backgroundColor: 'rgba(31, 41, 55, 0.9)',
                         titleFont: { size: 12 },
-                        bodyFont: { size: 12 }
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            label: function(context) {
+                                return `Deliveries: ${context.parsed.x}`;
+                            }
+                        }
                     }
                 },
                 scales: {
-                    x: { // X-axis is now the value axis (Items)
+                    x: {
                         beginAtZero: true,
                         title: {
-                            display: false, // Hide title for brevity in sidebar
+                            display: false,
                         },
                         ticks: {
-                            font: { size: 10 } // Smaller font for ticks
+                            font: { size: 10 },
+                            precision: 0
                         },
                         grid: {
-                            color: '#e5e7eb' // Light gray grid lines
+                            color: '#e5e7eb'
                         }
                     },
-                    y: { // Y-axis is now the category axis (Warehouses)
+                    y: {
                         title: {
-                            display: false, // Hide title for brevity in sidebar
+                            display: false,
                         },
                         ticks: {
-                            font: { size: 10 } // Smaller font for ticks
+                            font: { size: 10 }
                         },
                         grid: {
-                            display: false // Hide vertical grid lines
+                            display: false
                         }
                     }
+                },
+                animation: {
+                    duration: 750,
+                    easing: 'easeOutQuart'
                 }
             }
-        };
-        
-        // Create the chart instance
-        new Chart(ctx, chartConfig);
+        });
     }
-
-    // Initialize chart once the window loads
-    window.onload = initChart;
-
 </script>
 
