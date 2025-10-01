@@ -108,6 +108,7 @@ if (isset($is_warehouse_page) && $is_warehouse_page === true):
     $warehouseNav = [
       'warehouse.php' => 'Overview',
       'warehouse_details.php' => 'Warehouse',
+      'inventory.php' => 'Inventory',
       'logistics.php' => 'Logistics',
       'reports.php' => 'Reports'
   ];

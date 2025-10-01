@@ -7,6 +7,10 @@ $start = isset($_GET['start']) ? intval($_GET['start']) : 0;
 $length = isset($_GET['length']) ? intval($_GET['length']) : 10;
 $searchValue = isset($_GET['search']['value']) ? $_GET['search']['value'] : '';
 
+// Sorting parameters - ADD THESE
+$orderColumnIndex = isset($_GET['order'][0]['column']) ? intval($_GET['order'][0]['column']) : 0;
+$orderDirection = isset($_GET['order'][0]['dir']) ? $_GET['order'][0]['dir'] : 'asc';
+
 $response = [
     "draw" => $draw,
     "recordsTotal" => 0,
@@ -47,8 +51,22 @@ if (isset($pdo) && $pdo !== null) {
         $filteredStmt->execute();
         $filteredRecords = $filteredStmt->fetch(PDO::FETCH_ASSOC)['total'];
         
-        // Add ordering and pagination
-        $sql .= " ORDER BY warehouse_name ASC LIMIT :start, :length";
+        // FIX: Handle ordering based on DataTables parameters
+        $orderColumns = [
+            0 => 'warehouse_id',
+            1 => 'warehouse_name', 
+            2 => 'warehouse_address',
+            3 => 'contact_info'
+        ];
+        
+        if (isset($orderColumns[$orderColumnIndex])) {
+            $sql .= " ORDER BY " . $orderColumns[$orderColumnIndex] . " " . ($orderDirection === 'asc' ? 'ASC' : 'DESC');
+        } else {
+            $sql .= " ORDER BY warehouse_name ASC"; // Default ordering
+        }
+        
+        // Add pagination
+        $sql .= " LIMIT :start, :length";
         
         $stmt = $pdo->prepare($sql);
         
@@ -77,3 +95,4 @@ if (isset($pdo) && $pdo !== null) {
 
 header('Content-Type: application/json');
 echo json_encode($response);
+?>

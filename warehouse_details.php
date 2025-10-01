@@ -41,9 +41,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-
+<!-- CRUD Operations -->
 <script>
-// Function to set the warehouse ID for deletion and update source_page URL
+    // Function to set the warehouse ID for deletion and update source_page URL
     function updateDeleteURL(warehouseId) {
         // Set the warehouse ID in the hidden input
         const deleteInput = document.getElementById('delete_warehouse_id');
@@ -125,60 +125,6 @@
         });
     }
     
-</script>
-<!-- Table Scripts -->
-<script>
-  $(document).ready(function() {
-    // Initialize the DataTables instance for the warehouse table
-    const table = $('#warehouseTable').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            // New URL to fetch server-side processed warehouse data
-            url: "script/get_warehouse.php", 
-            type: "GET"
-        },
-        columns: [
-            { data: "warehouse_id", className: "text-center" },
-            { data: "warehouse_name", className: "text-center" },
-            { data: "warehouse_address", className: "text-center" },
-            { data: "contact_info", className: "text-center" },
-            {
-    data: null,
-    className: "text-center",
-    orderable: false,
-    render: function(data, type, row) {
-        const name = row.warehouse_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-        const address = row.warehouse_address.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-        const contact = row.contact_info.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-        
-        return `
-            <span style="display:none;" id="name${row.warehouse_id}s">${name}</span>
-            <span style="display:none;" id="address${row.warehouse_id}s">${address}</span>
-            <span style="display:none;" id="contact${row.warehouse_id}s">${contact}</span>
-            <button class="btn btn-warning" onclick="updateEdit(${row.warehouse_id})" data-bs-toggle="modal" data-bs-target="#editModal">
-                <i class="bi bi-pencil-square fs-4"></i>
-            </button>
-            <button class="btn btn-danger" 
-                    onclick="updateDeleteURL(${row.warehouse_id})" 
-                    data-bs-toggle="modal" 
-                    data-bs-target="#deleteModal">
-                <i class="bi bi-trash fs-4"></i>
-            </button>
-        `;
-    }
-}
-        ],
-
-        scrollY: "53vh",
-        scrollCollapse: true,
-        paging: true,
-        responsive: true,
-    });
-});
-</script>
-
-<script>
     // Custom addForm function for warehouse page
     function addForm(type, scriptUrl) {
         const formData = new FormData(document.getElementById('addForm'));
@@ -199,4 +145,55 @@
             alert('Error: ' + error);
         });
     }
+</script>
+<!-- Table Scripts -->
+<script>
+  $(document).ready(function() {
+    // Initialize the DataTables instance for the warehouse table
+    const table = $('#warehouseTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            // New URL to fetch server-side processed warehouse data
+            url: "script/get_warehouse_details.php", 
+            type: "GET"
+        },
+        columns: [
+            { data: "warehouse_id", className: "text-center" },
+            { data: "warehouse_name", className: "text-center" },
+            { data: "warehouse_address", className: "text-center" },
+            { data: "contact_info", className: "text-center" },
+            {
+        data: null,
+        className: "text-center",
+        orderable: false,
+        render: function(data, type, row) {
+            const name = row.warehouse_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            const address = row.warehouse_address.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            const contact = row.contact_info.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            
+            return `
+                <span style="display:none;" id="name${row.warehouse_id}s">${name}</span>
+                <span style="display:none;" id="address${row.warehouse_id}s">${address}</span>
+                <span style="display:none;" id="contact${row.warehouse_id}s">${contact}</span>
+                <button class="btn btn-warning" onclick="updateEdit(${row.warehouse_id})" data-bs-toggle="modal" data-bs-target="#editModal">
+                    <i class="bi bi-pencil-square fs-4"></i>
+                </button>
+                <button class="btn btn-danger" 
+                        onclick="updateDeleteURL(${row.warehouse_id})" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#deleteModal">
+                    <i class="bi bi-trash fs-4"></i>
+                </button>
+            `;
+        }
+    }
+            ],
+
+            scrollY: "53vh",
+            scrollCollapse: true,
+            paging: true,
+            responsive: true,
+        });
+    });
 </script>
