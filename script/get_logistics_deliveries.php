@@ -21,7 +21,8 @@ $columns = [
     3 => 'd.dr_no',
     4 => 'd.delivery_date',
     5 => 'd.package_type',
-    6 => 'items_contents' // This column is not orderable in your DataTable config
+    6 => 'w.warehouse_name',
+    7 => 'items_contents' // This column is not orderable in your DataTable config
 ];
 
 // Get the column to sort by (default to delivery_date if invalid)
@@ -38,6 +39,7 @@ if (!empty($searchValue)) {
     $searchConditions[] = "d.dr_no LIKE :search";
     $searchConditions[] = "d.delivery_date LIKE :search";
     $searchConditions[] = "d.package_type LIKE :search";
+    $searchConditions[] = "w.warehouse_name LIKE :search";
     
     $whereClause .= " AND (" . implode(" OR ", $searchConditions) . ")";
 }
@@ -54,12 +56,17 @@ $sql = "
             d.dr_no,
             d.delivery_date,
             d.status,
+            w.warehouse_name,
             COALESCE(pkg_items.items_contents, '') AS items_contents
         FROM deliveries d
         JOIN projects p 
             ON d.project_id = p.project_id
         JOIN school s 
             ON d.school_id = s.school_id
+        JOIN logistics_location ll 
+            ON d.logistics_location_id = ll.logistics_location_id
+        JOIN warehouse w 
+            ON ll.warehouse_id = w.warehouse_id
         LEFT JOIN (
             SELECT 
                 x.delivery_id,

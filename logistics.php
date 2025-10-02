@@ -50,6 +50,7 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
                             <th>DR No.</th>
                             <th>Delivery Date</th>
                             <th>Package Type</th>
+                            <th>Warehouse</th>
                             <th>Contents</th>
                         </tr>
                     </thead>
@@ -76,12 +77,13 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
                 type: "GET"
             },
             columns: [
-                { data: "delivery_id" },
-                { data: "project_name" },
-                { data: "school_name" },
-                { data: "dr_no" },
-                { data: "delivery_date" },
-                { data: "package_type" },
+                { data: "delivery_id", className: "text-center" },
+                { data: "project_name", className: "text-center" },
+                { data: "school_name", className: "text-center" },
+                { data: "dr_no", className: "text-center" },
+                { data: "delivery_date", className: "text-center" },
+                { data: "package_type", className: "text-center" },
+                { data: "warehouse_name", className: "text-center" },
                 { 
                     data: "items_contents", 
                     orderable: false,
