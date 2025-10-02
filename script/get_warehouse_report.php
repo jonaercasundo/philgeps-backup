@@ -36,11 +36,6 @@ if (isset($pdo) && $pdo !== null) {
                     w.warehouse_address as location_region,
                     w.contact_info,
                     COALESCE((
-                        SELECT SUM(i.qty) 
-                        FROM inventory i 
-                        WHERE i.warehouse_id = w.warehouse_id
-                    ), 0) as total_items,
-                    COALESCE((
                         SELECT COUNT(DISTINCT d.delivery_id)
                         FROM deliveries d
                         JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
@@ -93,9 +88,8 @@ if (isset($pdo) && $pdo !== null) {
             0 => 'w.warehouse_name',      // Warehouse Name
             1 => 'w.warehouse_address',   // Location/Region
             2 => 'w.contact_info',        // Contact Info
-            3 => 'total_items',           // Total Items
-            4 => 'active_deliveries',     // Active Deliveries
-            5 => 'projects_served'        // Projects Served
+            3 => 'active_deliveries',     // Active Deliveries
+            4 => 'projects_served'        // Projects Served
         ];
         
         if (isset($orderColumns[$orderColumnIndex])) {
@@ -128,7 +122,6 @@ if (isset($pdo) && $pdo !== null) {
                 'warehouse_name' => $warehouse['warehouse_name'],
                 'location_region' => $warehouse['location_region'],
                 'contact_info' => $warehouse['contact_info'],
-                'total_items' => $warehouse['total_items'],
                 'active_deliveries' => $warehouse['active_deliveries'],
                 'projects_served' => $warehouse['projects_served'],
                 'warehouse_id' => $warehouse['warehouse_id']

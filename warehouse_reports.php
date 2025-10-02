@@ -31,7 +31,6 @@
       <th>Warehouse Name</th>
       <th>Location/Region</th>
       <th>Contact Info</th>
-      <th>Total Items</th>
       <th>Active Deliveries</th>
       <th>Projects Served</th>
       <th>Actions</th>
@@ -66,7 +65,6 @@
                 { data: "warehouse_name", className: "text-center" },
                 { data: "location_region", className: "text-center" },
                 { data: "contact_info", className: "text-center" },
-                { data: "total_items", className: "text-center" },
                 { data: "active_deliveries", className: "text-center" },
                 { data: "projects_served", className: "text-center" },
                 { 
