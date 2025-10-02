@@ -28,6 +28,25 @@ if (isset($pdo) && $pdo !== null) {
             "delivery_counts" => array_column($accepted_data, 'delivery_count')
         ];
 
+        // GRAPH: Count warehouses assigned to each logistics company
+        $stmt_logistics_by_warehouse = $pdo->prepare("
+            SELECT 
+                l.logistic_name,
+                COUNT(DISTINCT ll.warehouse_id) as warehouse_count
+            FROM logistics l
+            LEFT JOIN logistics_location ll ON l.logistic_id = ll.logistics_id
+            GROUP BY l.logistic_id, l.logistic_name
+            ORDER BY warehouse_count DESC
+        ");
+        $stmt_logistics_by_warehouse->execute();
+        $logistics_warehouse_data = $stmt_logistics_by_warehouse->fetchAll(PDO::FETCH_ASSOC);
+
+        // Format for Graph - Warehouses per Logistics
+        $response["logistics_by_warehouse"] = [
+            "logistics_names" => array_column($logistics_warehouse_data, 'logistic_name'),
+            "warehouse_counts" => array_column($logistics_warehouse_data, 'warehouse_count')
+        ];
+
     } catch (Exception $e) {
         $response["error"] = $e->getMessage();
     }

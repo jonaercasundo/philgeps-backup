@@ -21,7 +21,7 @@
         
         <div class="flex-fill p-3 border-top d-flex flex-column">
             <div class="chart-container h-100">
-                <canvas id="logisticsByRegionChart" class="h-100"></canvas>
+                <canvas id="logisticsByWarehouseChart" class="h-100"></canvas>
             </div>
         </div>
 
@@ -297,7 +297,7 @@
     });
 </script>
 
-<!-- Logistics by Region Chart -->
+<!-- Logistics by Warehouse Chart -->
 <script>
     // Fetch data and render chart
     fetch('script/get_logistics_summary.php')
@@ -308,21 +308,21 @@
             return response.json();
         })
         .then(data => {
-            if (data.logistics_by_region && data.logistics_by_region.regions.length > 0) {
-                renderLogisticsByRegionChart(data.logistics_by_region);
+            if (data.logistics_by_warehouse && data.logistics_by_warehouse.logistics_names.length > 0) {
+                renderLogisticsByWarehouseChart(data.logistics_by_warehouse);
             } else {
-                document.getElementById('logisticsByRegionChart').parentElement.innerHTML = 
+                document.getElementById('logisticsByWarehouseChart').parentElement.innerHTML = 
                     '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-muted text-center">No logistics data available</p></div>';
             }
         })
         .catch(error => {
-            console.error('Error fetching logistics by region data:', error);
-            document.getElementById('logisticsByRegionChart').parentElement.innerHTML = 
+            console.error('Error fetching logistics by warehouse data:', error);
+            document.getElementById('logisticsByWarehouseChart').parentElement.innerHTML = 
                 '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-danger text-center">Error loading chart data</p></div>';
         });
 
-    function renderLogisticsByRegionChart(chartData) {
-        const ctx = document.getElementById('logisticsByRegionChart').getContext('2d');
+    function renderLogisticsByWarehouseChart(chartData) {
+        const ctx = document.getElementById('logisticsByWarehouseChart').getContext('2d');
         
         const backgroundColors = [
             'rgba(79, 70, 229, 0.8)',   // indigo-600
@@ -345,12 +345,12 @@
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: chartData.regions,
+                labels: chartData.logistics_names,
                 datasets: [{
-                    label: 'Logistics Count',
-                    data: chartData.location_counts,
-                    backgroundColor: backgroundColors.slice(0, chartData.regions.length),
-                    borderColor: borderColors.slice(0, chartData.regions.length),
+                    label: 'Warehouse Count',
+                    data: chartData.warehouse_counts,
+                    backgroundColor: backgroundColors.slice(0, chartData.logistics_names.length),
+                    borderColor: borderColors.slice(0, chartData.logistics_names.length),
                     borderWidth: 1,
                     borderRadius: 4, 
                 }]
@@ -365,7 +365,7 @@
                     },
                     title: {
                         display: true,
-                        text: 'Logistics by Region',
+                        text: 'Warehouses per Logistics',
                         font: {
                             size: 14,
                             weight: '600'
@@ -381,7 +381,7 @@
                         bodyFont: { size: 12 },
                         callbacks: {
                             label: function(context) {
-                                return `Locations: ${context.parsed.x}`;
+                                return `Warehouses: ${context.parsed.x}`;
                             }
                         }
                     }
