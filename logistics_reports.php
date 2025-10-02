@@ -1,22 +1,22 @@
 <?php 
-    $is_warehouse_page = true;
+    $is_logistics_page = true;
     require "template/header.php"; 
     require "script/role_auth.php";
     require "config/db.php";
 
     // roles allowed to access this page
-    $allowed_roles = ['Super Admin', 'Admin', 'Warehouse Admin'];
+    $allowed_roles = ['Super Admin', 'Admin', 'Logistics Admin'];
 
     // redirect
     redirectIfNotAuthorized($allowed_roles, 'index.php');
 ?>
-<h4>Warehouse Reports</h4>
+<h4>Logistics Reports</h4>
 
 <div class="row mb-3 align-items-end">
   <div class="col-md-4">
-    <label>Warehouse Name</label>
-    <select class="form-select" id="filterWarehouse">
-      <option value="">All Warehouses</option>
+    <label>Logistics Provider</label>
+    <select class="form-select" id="filterLogistics">
+      <option value="">All Logistics Providers</option>
       <!-- Dynamically populate -->
     </select>
   </div>
@@ -25,13 +25,13 @@
   </div>
 </div>
 
-<table id="warehouseReportTable" class="table table-bordered shadow-sm">
+<table id="logisticsReportTable" class="table table-bordered shadow-sm">
   <thead class="table-dark">
     <tr>
-      <th>Warehouse Name</th>
-      <th>Location/Region</th>
-      <th>Contact Info</th>
-      <th>Active Deliveries</th>
+      <th>Logistics Provider</th>
+      <th>Region</th>
+      <th>Warehouse</th>
+      <th>Accepted Deliveries</th>
       <th>Projects Served</th>
       <th>Actions</th>
     </tr>
@@ -51,21 +51,21 @@
     let table;
     
     $(document).ready(function() {
-        table = $('#warehouseReportTable').DataTable({
+        table = $('#logisticsReportTable').DataTable({
             processing: true,
             serverSide: true,
             ajax: {
-                url: "script/get_warehouse_report.php",
+                url: "script/get_logistics_report.php",
                 type: "GET",
                 data: function(d) {
-                    d.warehouse = $('#filterWarehouse').val();
+                    d.logistics = $('#filterLogistics').val();
                 }
             },
             columns: [
+                { data: "logistic_name", className: "text-center" },
+                { data: "region", className: "text-center" },
                 { data: "warehouse_name", className: "text-center" },
-                { data: "location_region", className: "text-center" },
-                { data: "contact_info", className: "text-center" },
-                { data: "active_deliveries", className: "text-center" },
+                { data: "accepted_deliveries", className: "text-center" },
                 { data: "projects_served", className: "text-center" },
                 { 
                     data: null,
@@ -73,7 +73,7 @@
                     className: "text-center",
                     render: function(data, type, row) {
                         return `
-                            <button class="btn btn-sm btn-info" onclick="viewWarehouseDetails(${row.warehouse_id})">
+                            <button class="btn btn-sm btn-info" onclick="viewLogisticsDetails(${row.logistics_location_id})">
                                 <i class="bi bi-eye"></i> View Details
                             </button>
                         `;
@@ -95,31 +95,31 @@
     }
 
     function loadFilterOptions() {
-        // Load warehouses
-        $.getJSON("script/get_warehouse_list.php", function(data) {
-            let options = '<option value="">All Warehouses</option>';
-            data.forEach(function(warehouse) {
-                options += `<option value="${warehouse.warehouse_id}">${warehouse.warehouse_name}</option>`;
+        // Load logistics providers
+        $.getJSON("script/get_logistics_list.php", function(data) {
+            let options = '<option value="">All Logistics Providers</option>';
+            data.forEach(function(logistics) {
+                options += `<option value="${logistics.logistic_id}">${logistics.logistic_name}</option>`;
             });
-            $('#filterWarehouse').html(options);
+            $('#filterLogistics').html(options);
         });
     }
 
-    function viewWarehouseDetails(warehouseId) {
-        window.location.href = 'warehouse_active_deliveries.php?warehouse_id=' + warehouseId;
+    function viewLogisticsDetails(logisticsLocationId) {
+        window.location.href = 'logistics_accepted_deliveries.php?logistics_location_id=' + logisticsLocationId;
     }
 
     function exportPDF() {
         const params = new URLSearchParams({
-            warehouse: $('#filterWarehouse').val()
+            logistics: $('#filterLogistics').val()
         });
-        window.open('script/export_warehouse_pdf.php?' + params.toString(), '_blank');
+        window.open('script/export_logistics_pdf.php?' + params.toString(), '_blank');
     }
 
     function exportExcel() {
         const params = new URLSearchParams({
-            warehouse: $('#filterWarehouse').val()
+            logistics: $('#filterLogistics').val()
         });
-        window.location.href = 'script/export_warehouse_csv.php?' + params.toString();
+        window.location.href = 'script/export_logistics_csv.php?' + params.toString();
     }
 </script>
