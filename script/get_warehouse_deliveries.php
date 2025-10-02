@@ -21,7 +21,9 @@ $columns = [
     3 => 'd.dr_no',
     4 => 'd.delivery_date',
     5 => 'd.package_type',
-    6 => 'items_contents' // This column is not orderable in your DataTable config
+    6 => 'l.logistic_name', 
+    7 => 'w.warehouse_name',
+    8 => 'items_contents' 
 ];
 
 // Get the column to sort by (default to delivery_date if invalid)
@@ -38,6 +40,8 @@ if (!empty($searchValue)) {
     $searchConditions[] = "d.dr_no LIKE :search";
     $searchConditions[] = "d.delivery_date LIKE :search";
     $searchConditions[] = "d.package_type LIKE :search";
+    $searchConditions[] = "l.logistic_name LIKE :search";
+    $searchConditions[] = "w.warehouse_name LIKE :search";
     
     $whereClause .= " AND (" . implode(" OR ", $searchConditions) . ")";
 }
@@ -54,12 +58,20 @@ $sql = "
             d.dr_no,
             d.delivery_date,
             d.status,
+            COALESCE(l.logistic_name, 'N/A') AS logistic_name,  -- CHANGED: Added COALESCE for N/A
+            COALESCE(w.warehouse_name, 'N/A') AS warehouse_name,  -- CHANGED: Added COALESCE for N/A
             COALESCE(pkg_items.items_contents, '') AS items_contents
         FROM deliveries d
         JOIN projects p 
             ON d.project_id = p.project_id
         JOIN school s 
             ON d.school_id = s.school_id
+        LEFT JOIN logistics_location ll  -- CHANGED: JOIN to LEFT JOIN
+            ON d.logistics_location_id = ll.logistics_location_id
+        LEFT JOIN logistics l  -- CHANGED: JOIN to LEFT JOIN
+            ON ll.logistics_id = l.logistic_id
+        LEFT JOIN warehouse w  -- CHANGED: JOIN to LEFT JOIN
+            ON ll.warehouse_id = w.warehouse_id
         LEFT JOIN (
             SELECT 
                 x.delivery_id,
@@ -119,6 +131,9 @@ $count_filtered_sql = "
     FROM deliveries d
     JOIN projects p ON d.project_id = p.project_id
     JOIN school s ON d.school_id = s.school_id
+    LEFT JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id  -- ADDED: Same LEFT JOINs as main query
+    LEFT JOIN logistics l ON ll.logistics_id = l.logistic_id  -- ADDED: Same LEFT JOINs as main query
+    LEFT JOIN warehouse w ON ll.warehouse_id = w.warehouse_id  -- ADDED: Same LEFT JOINs as main query
     WHERE $whereClause
 ";
 

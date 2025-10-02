@@ -32,23 +32,24 @@ if (isset($pdo) && $pdo !== null) {
         $stmt_logistics->execute();
         $response["logistics_count"] = number_format($stmt_logistics->fetchColumn());
 
-        // 3. GRAPH 1: Count deliveries with "accepted" status grouped by warehouse_id
+        // 3. GRAPH 1: Count deliveries with "accepted" status grouped by warehouse WITH warehouse names
         $stmt_accepted_by_warehouse = $pdo->prepare("
             SELECT 
-                ll.warehouse_id,
+                w.warehouse_name,
                 COUNT(d.delivery_id) as delivery_count
             FROM deliveries d
             JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
+            JOIN warehouse w ON ll.warehouse_id = w.warehouse_id
             WHERE d.status = 'accepted'
-            GROUP BY ll.warehouse_id
+            GROUP BY w.warehouse_name
             ORDER BY delivery_count DESC
         ");
         $stmt_accepted_by_warehouse->execute();
         $accepted_data = $stmt_accepted_by_warehouse->fetchAll(PDO::FETCH_ASSOC);
 
-        // Format for Graph 1 - we only have warehouse_id now, not warehouse_name
+        // Format for Graph 1 - now with warehouse names
         $response["accepted_by_warehouse"] = [
-            "warehouse_ids" => array_column($accepted_data, 'warehouse_id'),
+            "warehouse_names" => array_column($accepted_data, 'warehouse_name'),
             "delivery_counts" => array_column($accepted_data, 'delivery_count')
         ];
 

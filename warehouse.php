@@ -50,6 +50,8 @@
                             <th>DR No.</th>
                             <th>Delivery Date</th>
                             <th>Package Type</th>
+                            <th>Logistics</th>
+                            <th>Warehouse</th> 
                             <th>Contents</th>
                         </tr>
                     </thead>
@@ -82,6 +84,8 @@
                 { data: "dr_no", className: "text-center"  },
                 { data: "delivery_date", className: "text-center"  },
                 { data: "package_type", className: "text-center"  },
+                { data: "logistic_name", className: "text-center" },  // ADDED: Logistics column
+                { data: "warehouse_name", className: "text-center" },
                 { 
                     data: "items_contents", 
                     orderable: false,
@@ -181,7 +185,7 @@
         })
         .then(data => {
             
-            if (data.accepted_by_warehouse && data.accepted_by_warehouse.warehouse_ids.length > 0) {
+            if (data.accepted_by_warehouse && data.accepted_by_warehouse.warehouse_names.length > 0) {
                 renderWarehouseStockLevelsChart(data.accepted_by_warehouse);
             } else {
                 document.getElementById('warehouseStockLevelsChart').parentElement.innerHTML = 
@@ -197,8 +201,8 @@
     function renderWarehouseStockLevelsChart(chartData) {
         const ctx = document.getElementById('warehouseStockLevelsChart').getContext('2d');
         
-        // Create labels from warehouse IDs
-        const labels = chartData.warehouse_ids.map(id => `Warehouse ${id}`);
+        // Use warehouse names directly from the data (no mapping needed)
+        const labels = chartData.warehouse_names;
         
         // Use consistent indigo color palette
         const backgroundColors = [
