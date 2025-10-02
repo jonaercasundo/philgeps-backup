@@ -109,7 +109,7 @@ if (isset($is_warehouse_page) && $is_warehouse_page === true):
       'warehouse.php' => 'Overview',
       'warehouse_details.php' => 'Warehouse',
       'inventory.php' => 'Inventory',
-      'reports.php' => 'Reports'
+      'warehouse_reports.php' => 'Reports'
   ];
 ?>
 
