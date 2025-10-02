@@ -13,8 +13,6 @@ $orderDirection = isset($_GET['order'][0]['dir']) ? $_GET['order'][0]['dir'] : '
 
 // Filter parameters
 $warehouse_id = isset($_GET['warehouse']) ? intval($_GET['warehouse']) : null;
-$start_date = isset($_GET['startDate']) ? $_GET['startDate'] : null;
-$end_date = isset($_GET['endDate']) ? $_GET['endDate'] : null;
 
 $response = [
     "draw" => $draw,
@@ -31,20 +29,31 @@ if (isset($pdo) && $pdo !== null) {
         $totalStmt->execute();
         $totalRecords = $totalStmt->fetch(PDO::FETCH_ASSOC)['total'];
         
-        // Base query with joins and calculations
+        // Base query with subqueries to avoid duplicates
         $sql = "SELECT 
                     w.warehouse_id,
                     w.warehouse_name,
                     w.warehouse_address as location_region,
                     w.contact_info,
-                    COALESCE(SUM(i.qty), 0) as total_items,
-                    COUNT(DISTINCT CASE WHEN d.status IN ('pending', 'delivered') THEN d.delivery_id END) as active_deliveries,
-                    COUNT(DISTINCT p.project_id) as projects_served
-                FROM warehouse w
-                LEFT JOIN logistics_location ll ON w.warehouse_id = ll.warehouse_id
-                LEFT JOIN deliveries d ON ll.logistics_location_id = d.logistics_location_id
-                LEFT JOIN projects p ON d.project_id = p.project_id
-                LEFT JOIN inventory i ON w.warehouse_id = i.warehouse_id";
+                    COALESCE((
+                        SELECT SUM(i.qty) 
+                        FROM inventory i 
+                        WHERE i.warehouse_id = w.warehouse_id
+                    ), 0) as total_items,
+                    COALESCE((
+                        SELECT COUNT(DISTINCT d.delivery_id)
+                        FROM deliveries d
+                        JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
+                        WHERE ll.warehouse_id = w.warehouse_id 
+                        AND d.status IN ('warehouse')
+                    ), 0) as active_deliveries,
+                    COALESCE((
+                        SELECT COUNT(DISTINCT d.project_id)
+                        FROM deliveries d
+                        JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
+                        WHERE ll.warehouse_id = w.warehouse_id
+                    ), 0) as projects_served
+                FROM warehouse w";
         
         // Add where clauses for filters and search
         $whereClauses = [];
@@ -62,37 +71,15 @@ if (isset($pdo) && $pdo !== null) {
             $params[':warehouse_id'] = $warehouse_id;
         }
         
-        if ($start_date) {
-            $whereClauses[] = "DATE(d.created_at) >= :start_date";
-            $params[':start_date'] = $start_date;
-        }
-        
-        if ($end_date) {
-            $whereClauses[] = "DATE(d.created_at) <= :end_date";
-            $params[':end_date'] = $end_date;
-        }
-        
         if (!empty($whereClauses)) {
             $sql .= " WHERE " . implode(" AND ", $whereClauses);
         }
         
-        // Group by clause
-        $sql .= " GROUP BY w.warehouse_id, w.warehouse_name, w.warehouse_address, w.contact_info";
-        
-        // Get filtered count
-        $filteredQuery = "SELECT COUNT(*) as total FROM (
-                            SELECT w.warehouse_id
-                            FROM warehouse w
-                            LEFT JOIN logistics_location ll ON w.warehouse_id = ll.warehouse_id
-                            LEFT JOIN deliveries d ON ll.logistics_location_id = d.logistics_location_id
-                            LEFT JOIN projects p ON d.project_id = p.project_id
-                            LEFT JOIN inventory i ON w.warehouse_id = i.warehouse_id";
-        
+        // Get filtered count (simpler approach)
+        $filteredQuery = "SELECT COUNT(*) as total FROM warehouse w";
         if (!empty($whereClauses)) {
             $filteredQuery .= " WHERE " . implode(" AND ", $whereClauses);
         }
-        
-        $filteredQuery .= " GROUP BY w.warehouse_id, w.warehouse_name, w.warehouse_address, w.contact_info) as filtered";
         
         $filteredStmt = $pdo->prepare($filteredQuery);
         foreach ($params as $key => $value) {

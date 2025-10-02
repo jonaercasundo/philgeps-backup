@@ -21,7 +21,7 @@
     </select>
   </div>
   <div class="col-md-4 ms-auto d-flex justify-content-end">
-    <button class="btn btn-primary w-75" onclick="applyFilters()">Generate Report</button>
+    <button class="btn btn-primary w-75" onclick="applyFilters()">Apply Filter</button>
   </div>
 </div>
 

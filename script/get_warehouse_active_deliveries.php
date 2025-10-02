@@ -31,7 +31,7 @@ if (isset($pdo) && $pdo !== null && $warehouse_id) {
         $totalQuery = "SELECT COUNT(*) as total 
                       FROM deliveries d
                       JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
-                      WHERE ll.warehouse_id = ? AND d.status IN ('pending', 'delivered', 'warehouse')";
+                      WHERE ll.warehouse_id = ? AND d.status IN ('warehouse')";
         $totalStmt = $pdo->prepare($totalQuery);
         $totalStmt->execute([$warehouse_id]);
         $totalRecords = $totalStmt->fetch(PDO::FETCH_ASSOC)['total'];
