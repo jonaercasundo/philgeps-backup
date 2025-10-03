@@ -34,7 +34,7 @@ $documents  = fetchAllByProject($pdo, 'documents', $id);
 
 // Progress calculation
 $totalDeliveries = count($deliveries);
-$deliveredDeliveries = count(array_filter($deliveries, fn($d) => $d['status'] === 'Delivered'));
+$deliveredDeliveries = count(array_filter($deliveries, fn($d) => $d['status'] === 'delivered'));
 $progressPercent = $totalDeliveries > 0 ? round(($deliveredDeliveries / $totalDeliveries) * 100) : 0;
 
 // Document checklist
@@ -49,9 +49,9 @@ $uploadedTypes = array_column($documents, 'doc_type');
 
 // Status color map
 $statusColors = [
-    'Pending'   => 'bg-warning',
-    'Delivered' => 'bg-info',
-    'Accepted'  => 'bg-success'
+    'pending'   => 'bg-warning',
+    'delivered' => 'bg-info',
+    'accepted'  => 'bg-success'
 ];
 ?>
 
