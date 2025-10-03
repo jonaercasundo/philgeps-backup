@@ -104,7 +104,7 @@ function renderPagination(data, currentPage) {
 // DOM Ready
 document.addEventListener("DOMContentLoaded", () => {
     // Populate initial filters
-    populateFilter("year", "SELECT DISTINCT YEAR(created_at) AS options FROM deliveries ORDER BY created_at ASC");
+    populateFilter("year", "SELECT DISTINCT YEAR(created_at) AS options FROM deliveries");
     populateFilter("importproject", "SELECT project_id, project_name AS options FROM projects");
     hideLoading();
 

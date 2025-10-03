@@ -31,8 +31,10 @@ try {
     $stmt_package_status->execute([':package_status_id' => $package_status_id]);
     $package_status = $stmt_package_status->fetch(PDO::FETCH_ASSOC);
 
+
     if (!$package_status) exit("Package status not found.");
     if ((string)$package_status['delivery_id'] !== $delivery_id) exit("Data mismatch: Delivery ID does not match.");
+
 
     $current_status = $package_status['status'];
     $status_map = [
@@ -47,6 +49,7 @@ try {
     $uploaded_photos = [];
     if (isset($_FILES['photo_upload']) && !empty($_FILES['photo_upload']['name'][0])) {
         $upload_dir = __DIR__ . '/uploads/'; // Absolute path
+
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
 
         $file_count = count($_FILES['photo_upload']['name']);
@@ -102,22 +105,24 @@ try {
             INSERT INTO delivery_photo (package_status_id, status, delivery_photo)
             VALUES (:package_status_id, :status, :delivery_photo)
         ");
-        foreach ($uploaded_photos as $photo_path) {
+      
+        foreach ($uploaded_photos as $photo_file) {
             $stmt_photo->execute([
                 ':package_status_id' => $package_status_id,
                 ':status' => $next_status,
-                ':delivery_photo' => $photo_path
+                ':delivery_photo' => "uploads/".$photo_file
             ]);
         }
     }
 
-    // Redirect to success page
+    // Redirect to success page (absolute URL)
     $protocol = $secure ? "https" : "http";
     $host = $_SERVER['HTTP_HOST'];
-    header('Location: ' . $protocol . '://' . $host . '/philgeps/success.php?status=' . urlencode($next_status));
+    header("Location: $protocol://$host/philgeps/success.php?status=$next_status");
     exit;
 
 } catch (Exception $e) {
-    exit("Exception: " . $e->getMessage());
+    exit;
+
 }
 ?>
