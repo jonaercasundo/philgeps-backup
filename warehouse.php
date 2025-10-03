@@ -27,11 +27,11 @@
             </div>
         </div>
 
-         <div class="flex-fill p-3 border-top d-flex flex-column">
+         <!-- <div class="flex-fill p-3 border-top d-flex flex-column">
             <a href="#" class="btn btn-outline-secondary w-100 mb-2">
                 View Something
             </a>
-        </div>
+        </div> -->
     </div>
 
     <!-- 2. RIGHT MAIN CONTENT AREA (9 Columns wide on medium/large screens) -->
