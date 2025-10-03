@@ -16,23 +16,44 @@
 <!-- Main Full-Screen Container -->
 <div class="row g-0 h-100">
     <!-- 1. LEFT SIDEBAR (3 Columns wide on medium/large screens) -->
-    <div class="col-md-3 border-end d-flex flex-column">
-        <div class="px-3">
-                <h5 class="mb-0 text-dark opacity-75">Summary</h5>
-        </div>
-        
-        <div class="flex-fill p-3 border-top d-flex flex-column">
-            <div class="chart-container h-100">
-                <canvas id="inventoryByItemChart" class="h-100"></canvas>
-            </div>
-        </div>
+    <!-- LEFT SIDEBAR -->
+<div class="col-md-3 border-end d-flex flex-column vh-100">
 
-         <!-- <div class="flex-fill p-3 border-top d-flex flex-column">
-            <a href="#" class="btn btn-outline-secondary w-100 mb-2">
-                View Something
-            </a>
-        </div> -->
+  <!-- Header: fixed height -->
+  <div class="px-3 d-flex justify-content-between align-items-center py-2 border-bottom flex-shrink-0">
+    <h5 class="mb-0 text-dark opacity-75">Add Items</h5> 
+    <div class="form-check form-switch mb-0">
+      <input class="form-check-input" type="checkbox" role="switch" checked id="flexSwitchCheckDefault">
+      <label class="form-check-label" for="flexSwitchCheckDefault">Item View</label>
     </div>
+  </div>
+
+  <!-- QR Reader container: fixed height and center content -->
+  <div class="d-flex justify-content-center align-items-center flex-shrink-0 py-3 border-bottom" style="height: 30vh;">
+    <div id="reader"></div>
+  </div>
+
+  <!-- Scrollable table area: fills remaining space -->
+  <div class="flex-grow-1 overflow-auto px-3">
+    <table id="itemTable" class="table table-bordered table-striped mb-0">
+      <thead class="table-dark text-center">
+        <tr>
+          <th>Item</th>
+          <th>Quantity</th>
+        </tr>
+      </thead>
+      <tbody id="itemBodytable">
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer button: fixed height -->
+  <div class="px-3 py-2 border-top flex-shrink-0">
+    <button class="btn btn-outline-secondary w-100 mb-2">Add Items</button>
+  </div>
+
+</div>
+
 
     <!-- 2. RIGHT MAIN CONTENT AREA (9 Columns wide on medium/large screens) -->
     <div class="col-md-9 d-flex flex-column">
@@ -68,8 +89,6 @@
 <?php include "partials/inventory_modals.php"?>
 
 <?php require "template/footer.php"; ?>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <!-- CRUD Operations -->
 <script>
@@ -153,24 +172,57 @@
 <script>
     // Custom addForm function for inventory page
     function addForm(type, scriptUrl) {
-        const formData = new FormData(document.getElementById('addForm'));
-        
-        fetch('script/' + scriptUrl, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-             if (data.success) {
-                window.location.href = 'inventory.php?toast=Inventory Added&type=success';
-            } else {
-                alert('Error: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            alert('Error: ' + error);
-        });
+    // Collect all rows in the item table
+    const tbody = document.getElementById('itemBodytable');
+    if (!tbody) {
+        alert('Item table body not found');
+        return;
     }
+
+    const items = [];
+    // Loop over each row to collect item_id and qty
+    for (let tr of tbody.rows) {
+        // Example: assuming your rows have data attributes or td structure
+        // If your row has the item_id in the first cell and qty in the second:
+        const itemId = tr.querySelector('td[data-item-id]')?.dataset.itemId 
+                       || tr.cells[0]?.dataset.itemId 
+                       || tr.cells[0]?.getAttribute('data-item-id') 
+                       || null;
+
+        const qty = tr.cells[1]?.textContent || tr.querySelector('td[data-qty]')?.dataset.qty || null;
+
+        if (itemId && qty) {
+            items.push({item_id: itemId, qty: parseInt(qty, 10)});
+        }
+    }
+
+    if (items.length === 0) {
+        alert('No items found in the table to add.');
+        return;
+    }
+
+    // Set the hidden input value
+    document.getElementById('items_json').value = JSON.stringify(items);
+
+    const formData = new FormData(document.getElementById('addForm'));
+
+    fetch('script/' + scriptUrl, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+         if (data.success) {
+            window.location.href = 'inventory.php?toast=Inventory Added&type=success';
+        } else {
+            alert('Error: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
 
     // Function to populate dropdowns in add modal
     function loadAddModalData() {
@@ -225,6 +277,10 @@
         document.getElementById('addForm').reset();
     });
 </script>
+
+<!-- QR script -->
+ <script src="https://unpkg.com/html5-qrcode"></script>
+
 
 <!-- Table Scripts -->
 <script>
@@ -297,147 +353,162 @@
             }
         });
     });
-</script>
-
-<!-- Summary Scripts -->
-<script>
-    $(document).ready(function () {
-        $.getJSON("script/get_warehouse_summary.php", function (data) {
-            $("#warehouse_count").text(data.warehouse_count);
-            $("#logistics_count").text(data.logistics_count);
-        }).fail(function () {
-            $("#warehouse_count").text("ERROR");
-            $("#logistics_count").text("ERROR");
-        });
+ </script>
+ <script>
+    function simulateScan(num) {
+    const testQRData = JSON.stringify({
+        action: "addPackage",
+        package: num
     });
-</script>
+    onScanSuccess(testQRData);
+}
 
-<!-- Inventory by Item Chart -->
-<script>
-    // Fetch data and render chart
-    fetch('script/get_warehouse_summary.php')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            
-            if (data.inventory_by_item && data.inventory_by_item.item_names.length > 0) {
-                renderInventoryByItemChart(data.inventory_by_item);
-            } else {
-                document.getElementById('inventoryByItemChart').parentElement.innerHTML = 
-                    '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-muted text-center">No inventory data available</p></div>';
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching inventory by item data:', error);
-            document.getElementById('inventoryByItemChart').parentElement.innerHTML = 
-                '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-danger text-center">Error loading chart data</p></div>';
-        });
+// Global tracking of scanned packages
+const addedPackages = [];
 
-    function renderInventoryByItemChart(chartData) {
-        const ctx = document.getElementById('inventoryByItemChart').getContext('2d');
-        
-        // Use consistent indigo color palette (same as warehouse chart)
-        const backgroundColors = [
-            'rgba(79, 70, 229, 0.8)',   // indigo-600
-            'rgba(99, 102, 241, 0.8)',  // indigo-500
-            'rgba(129, 140, 248, 0.8)', // indigo-400
-            'rgba(67, 56, 202, 0.8)',   // indigo-700
-            'rgba(165, 180, 252, 0.8)', // indigo-300
-            'rgba(49, 46, 129, 0.8)'    // indigo-800
-        ];
-        
-        const borderColors = [
-            'rgba(79, 70, 229, 1)',
-            'rgba(99, 102, 241, 1)',
-            'rgba(129, 140, 248, 1)',
-            'rgba(67, 56, 202, 1)',
-            'rgba(165, 180, 252, 1)',
-            'rgba(49, 46, 129, 1)'
-        ];
-
-        // Create the chart with horizontal layout for better fit in sidebar
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: chartData.item_names,
-                datasets: [{
-                    label: 'Total Quantity',
-                    data: chartData.total_quantities,
-                    backgroundColor: backgroundColors.slice(0, chartData.item_names.length),
-                    borderColor: borderColors.slice(0, chartData.item_names.length),
-                    borderWidth: 1,
-                    borderRadius: 4, 
-                }]
-            },
-            options: {
-                indexAxis: 'y', 
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'Total Quantity by Item',
-                        font: {
-                            size: 14,
-                            weight: '600'
-                        },
-                        color: '#1f2937',
-                        padding: {
-                            bottom: 15
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(31, 41, 55, 0.9)',
-                        titleFont: { size: 12 },
-                        bodyFont: { size: 12 },
-                        callbacks: {
-                            label: function(context) {
-                                return `Quantity: ${context.parsed.x}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        title: {
-                            display: false, // Hide title for cleaner look
-                        },
-                        ticks: {
-                            font: { size: 10 },
-                            precision: 0 // Ensure whole numbers
-                        },
-                        grid: {
-                            color: '#e5e7eb' // Light gray grid lines
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: false, // Hide title for cleaner look
-                        },
-                        ticks: {
-                            font: { size: 10 }
-                        },
-                        grid: {
-                            display: false // Hide vertical grid lines
-                        }
-                    }
-                },
-                animation: {
-                    duration: 750,
-                    easing: 'easeOutQuart'
-                }
-            }
-        });
+// Called when QR is scanned
+function onScanSuccess(decodedText, decodedResult) {
+    console.log("QR scanned:", decodedText);
+    let data;
+    try {
+        data = JSON.parse(decodedText);
+    } catch (e) {
+        console.error("QR data not JSON:", decodedText);
+        return;
     }
+
+    if (data.action === "addPackage" && data.package) {
+        const packageID = data.package;
+        if (!addedPackages.includes(packageID)) {
+            addedPackages.push(packageID);
+            console.log("Added package:", packageID, "Current list:", addedPackages);
+        } else {
+            console.log("Package duplicate:", packageID);
+        }
+
+        // After adding, reload current view (item or lot)
+        const checkbox = document.getElementById('flexSwitchCheckDefault');
+        if (checkbox.checked) {
+            loadItemsView();
+        } else {
+            loadLotsView();
+        }
+    } else {
+        console.warn("QR action not recognized:", data.action);
+    }
+}
+
+// Load per-item view
+function loadItemsView() {
+    const tbody = document.getElementById('itemBodytable');
+    if (!tbody) {
+        console.error("itemBodytable not found");
+        return;
+    }
+    tbody.innerHTML = '';
+
+    if (addedPackages.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="2" class="text-center text-muted">No packages scanned yet</td>`;
+        tbody.appendChild(tr);
+        return;
+    }
+
+    console.log("Loading Items View for packages:", addedPackages);
+
+    addedPackages.forEach(pkg => {
+        fetch(`script/get_package.php?package_id=${encodeURIComponent(pkg)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && Array.isArray(data.items)) {
+                // Add a header row for this package
+                const headerRow = document.createElement('tr');
+                headerRow.innerHTML = `<td colspan="2" style="font-weight:bold; background:#f0f0f0;">Package: LOT ${data.package.lot_name} KEYSTAGE ${data.package.keystage_name} KEYSTAGE ${data.package.description}</td>`;
+                tbody.appendChild(headerRow);
+
+                // Add each item row for this package
+                data.items.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-item-id', item.item_id);  // <-- add this
+                    tr.innerHTML = `<td>${item.item_name || ''}</td><td>${item.qty || ''}</td>`;
+                    tbody.appendChild(tr);
+                });
+
+            } else {
+                console.warn("No items for package", pkg, data);
+            }
+          })
+          .catch(err => console.error("Fetch error (items):", err));
+    });
+}
+
+
+// Load per lot/keystage view
+function loadLotsView() {
+    const tbody = document.getElementById('itemBodytable');
+    if (!tbody) {
+        console.error("itemBodytable not found");
+        return;
+    }
+    tbody.innerHTML = '';
+
+    if (addedPackages.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="2" class="text-center text-muted">No packages scanned yet</td>`;
+        tbody.appendChild(tr);
+        return;
+    }
+
+    console.log("Loading Lots View for packages:", addedPackages);
+
+    addedPackages.forEach(pkg => {
+        fetch(`script/get_lots_with_keystages.php?package_id=${encodeURIComponent(pkg)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && Array.isArray(data.lots)) {
+                data.lots.forEach(lot => {
+                    const tr = document.createElement('tr');
+                    let display = `Lot: ${lot.lot_name}`;
+                    if (lot.keystage_num) {
+                        display += ` - Keystage ${lot.keystage_num} ${lot.description || ''}`;
+                    }
+                    tr.innerHTML = `<td>${display}</td><td>${lot.qty || 0}</td>`;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                console.warn("No lots for package", pkg, data);
+            }
+          })
+          .catch(err => console.error("Fetch error (lots):", err));
+    });
+}
+
+// Toggle binding & initial load
+document.addEventListener('DOMContentLoaded', () => {
+    const checkbox = document.getElementById('flexSwitchCheckDefault');
+    if (!checkbox) {
+        console.error("Checkbox flexSwitchCheckDefault not found");
+        return;
+    }
+
+    checkbox.addEventListener('change', () => {
+        console.log("Toggle changed to:", checkbox.checked);
+        if (checkbox.checked) {
+            loadItemsView();
+        } else {
+            loadLotsView();
+        }
+    });
+
+    // Initial view
+    if (checkbox.checked) {
+        loadItemsView();
+    } else {
+        loadLotsView();
+    }
+});
+
+// Start scanner
+html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+html5QrcodeScanner.render(onScanSuccess);
 </script>
-
-
-

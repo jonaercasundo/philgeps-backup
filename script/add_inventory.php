@@ -2,6 +2,10 @@
 header('Content-Type: application/json');
 require "../config/db.php";
 
+echo $_POST['items_json'];
+exit;
+
+
 try {
     // Validate required fields
     if (empty($_POST['inventory_id']) || empty($_POST['warehouse_id']) || empty($_POST['item_id']) || !isset($_POST['quantity'])) {

@@ -32,28 +32,10 @@
             </div>
             <div class="modal-body">
                 <form method="POST" id="addForm">
+                    <input type="hidden" name="items_json" id="items_json">
                     <div class="mb-3">
-                        <label>Inventory ID</label>
-                        <input type="text" class="form-control" name="inventory_id" required>
-                        <small class="text-muted">Enter unique inventory identifier</small>
-                    </div>
-                    <div class="mb-3">
-                        <label>Warehouse</label>
-                        <select class="form-control" name="warehouse_id" required>
-                            <option value="">Select Warehouse</option>
-                            <!-- Options will be populated dynamically -->
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label>Item</label>
-                        <select class="form-control" name="item_id" required>
-                            <option value="">Select Item</option>
-                            <!-- Options will be populated dynamically -->
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label>Quantity</label>
-                        <input type="number" class="form-control" name="quantity" min="0" required>
+                        <label>Enter Password to Proceed</label>
+                        <input type="password" class="form-control" name="password" min="0" required>
                     </div>
                 </form>
             </div>

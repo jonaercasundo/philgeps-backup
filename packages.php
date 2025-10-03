@@ -218,11 +218,14 @@ try {
 
   <div class="container mt-4">
     <h2 class="mb-3">Package List</h2>
-<div class="d-flex mb-3 justify-content-between">
-  <div class="d-flex mb-3">
-    <button data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Package</button>
+    <div class="d-flex mb-3 justify-content-between">
+      <div class="d-flex mb-3">
+        <button data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Package</button>
+      </div>
+      <div class="d-flex mb-3">
+        <a href = "script/generate_qr_per_package.php?project_id=<?=$project_id?>" target="_blank"><button class="btn btn-primary mb-3">Generate QR</button></a>
+      </div>
   </div>
-</div>
 
 
     <?php if (empty($packages)): ?>
