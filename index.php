@@ -1,13 +1,14 @@
 <?php session_start();
 require "config/db.php";
 
-if (isset($_SESSION['user_id']) || 
-    isset($_SESSION['username']) || 
-    isset($_SESSION['name'])) {
+// if (!isset($_SESSION['user_id']) || 
+//     !isset($_SESSION['username']) || 
+//     !isset($_SESSION['name']) || 
+//     !isset($_SESSION['role'])) {
     
-    header("Location: dashboard.php");
-    exit();
-}
+//     header("Location: index.php");
+//     exit();
+// }
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -56,10 +56,15 @@ async function updateTable(page = 1) {
                             <td class="text-center">
                                 <button class="btn btn-warning mb-1" 
                                     data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
-                                    data-id="${row.delivery_id}" data-project="${row.project_name}"
-                                    data-school_name="${row.school_name}" data-address="${row.address}"
-                                    data-items_contents="${row.items_contents}" data-drno="${row.dr_no}"
-                                    data-date="${row.delivery_date}" data-status="${row.status}">
+                                    data-id="${row.delivery_id}" 
+                                    data-project="${row.project_name}"
+                                    data-school="${row.school_name}" 
+                                    data-address="${row.address}"
+                                    data-items_contents="${row.items_contents}" 
+                                    data-remarks="${row.items_contents}"
+                                    data-drno="${row.dr_no}"
+                                    data-date="${row.delivery_date}" 
+                                    data-status="${row.status}">
                                     <i class="bi bi-pencil-square fs-4"></i>
                                 </button> <br>
                                 <a class="btn btn-secondary mb-1" href="generate_qr.php?id=${row.dr_no}" target="_blank"><i class="bi bi-qr-code fs-4"></i></a><br>

@@ -22,7 +22,7 @@ $next_status = '';
 
 // Check captcha
 if (!isset($_POST['captcha_answer']) || $_POST['captcha_answer'] != ($_SESSION['captcha'] ?? '')) {
-    exit;
+    exit("Captcha failed!");
 }
 
 try {
@@ -31,13 +31,10 @@ try {
     $stmt_package_status->execute([':package_status_id' => $package_status_id]);
     $package_status = $stmt_package_status->fetch(PDO::FETCH_ASSOC);
 
-    if (!$package_status) {
-        exit;
-    }
 
-    if ((string)$package_status['delivery_id'] !== $delivery_id) {
-        exit;
-    }
+    if (!$package_status) exit("Package status not found.");
+    if ((string)$package_status['delivery_id'] !== $delivery_id) exit("Data mismatch: Delivery ID does not match.");
+
 
     $current_status = $package_status['status'];
     $status_map = [
@@ -56,15 +53,14 @@ try {
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
 
         $file_count = count($_FILES['photo_upload']['name']);
-
         for ($i = 0; $i < $file_count; $i++) {
             if ($_FILES['photo_upload']['error'][$i] === UPLOAD_ERR_OK) {
                 $original_name = basename($_FILES['photo_upload']['name'][$i]);
                 $unique_filename = uniqid() . "_" . $original_name;
-                $target_file = $upload_dir . $unique_filename;
+                $target_file = "uploads/" . $unique_filename;
 
                 if (move_uploaded_file($_FILES['photo_upload']['tmp_name'][$i], $target_file)) {
-                    $uploaded_photos[] = $unique_filename;
+                    $uploaded_photos[] = $target_file;
                 }
             }
         }
@@ -109,6 +105,7 @@ try {
             INSERT INTO delivery_photo (package_status_id, status, delivery_photo)
             VALUES (:package_status_id, :status, :delivery_photo)
         ");
+      
         foreach ($uploaded_photos as $photo_file) {
             $stmt_photo->execute([
                 ':package_status_id' => $package_status_id,
@@ -126,5 +123,6 @@ try {
 
 } catch (Exception $e) {
     exit;
+
 }
 ?>
