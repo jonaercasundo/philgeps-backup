@@ -90,7 +90,11 @@ foreach ($lotKeystages as $lotKeystage) {
 
             $qr = Builder::create()
                 ->writer(new PngWriter())
-                ->data("{'action':'addPackage','package_id':'".$packageRef['package_id']."','qty':1}")
+                ->data(json_encode([
+                    'action' => 'addPackage',
+                    'package' => $packageRef['package_id'],
+                    'qty' => 1
+                ]))
                 ->size(150)
                 ->margin(0)
                 ->build();
