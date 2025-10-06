@@ -78,6 +78,7 @@
                             <th>Warehouse</th>
                             <th>Item</th>
                             <th>Quantity</th>
+                            <th>Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -171,6 +172,74 @@
             alert('Error: ' + error);
         });
     }
+
+// Update Accept Modal
+function updateAcceptId(inventoryId) {
+    document.getElementById("accept_inventory_id").value = inventoryId;
+}
+
+// Update Reject Modal  
+function updateRejectId(inventoryId) {
+    document.getElementById("reject_inventory_id").value = inventoryId;
+}
+
+// Accept inventory
+function acceptInventory() {
+    const formData = new FormData(document.getElementById('acceptForm'));
+    
+    fetch('script/accept_inventory.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(text => {
+        try {
+            const data = JSON.parse(text);
+            if (data.success) {
+                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
+            } else {
+                // Redirect with error toast instead of alert
+                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+            }
+        } catch (e) {
+            console.error('Response:', text);
+            window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
+    });
+}
+
+// Reject inventory
+function rejectInventory() {
+    const formData = new FormData(document.getElementById('rejectForm'));
+    
+    fetch('script/reject_inventory.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(text => {
+        try {
+            const data = JSON.parse(text);
+            if (data.success) {
+                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
+            } else {
+                // Redirect with error toast instead of alert
+                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+            }
+        } catch (e) {
+            console.error('Response:', text);
+            window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
+    });
+}
 </script>
 
 
@@ -209,6 +278,15 @@
                     className: "text-center",
                     orderable: true
                 },
+                { 
+                    data: "inventory_status", 
+                    className: "text-center",
+                    orderable: true,
+                    render: function(data, type, row) {
+                        const statusClass = data === 'Approved' ? 'badge bg-success' : 'badge bg-warning text-dark';
+                        return `<span class="${statusClass}">${data}</span>`;
+                    }
+                },
                 {
                     data: null,
                     className: "text-center",
@@ -217,22 +295,53 @@
                         const itemName = row.item_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
                         const warehouseName = row.warehouse_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
                         
+                        let actionButtons = '';
+                        
+                        if (row.inventory_status === 'For Approval') {
+                            // Show Accept and Reject buttons for pending items
+                            actionButtons = `
+                                <button class="btn btn-success btn-sm" 
+                                        onclick="updateAcceptId(${row.inventory_id})"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#acceptModal"
+                                        title="Accept Item">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" 
+                                        onclick="updateRejectURL(${row.inventory_id}, '${itemName}')" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#rejectModal"
+                                        title="Reject Item">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            `;
+                        } else {
+                            // Show Edit and Delete for approved items
+                            actionButtons = `
+                                <button class="btn btn-warning btn-sm" 
+                                        onclick="updateEdit(${row.inventory_id}, '${itemName}', '${warehouseName}', ${row.qty})" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editModal"
+                                        title="Edit Item">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" 
+                                        onclick="updateDeleteURL(${row.inventory_id})" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModal"
+                                        title="Delete Item">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            `;
+                        }
+                        
                         return `
                             <span style="display:none;" id="item${row.inventory_id}">${itemName}</span>
                             <span style="display:none;" id="warehouse${row.inventory_id}">${warehouseName}</span>
                             <span style="display:none;" id="quantity${row.inventory_id}">${row.qty}</span>
-                            <button class="btn btn-warning" 
-                                    onclick="updateEdit(${row.inventory_id}, '${itemName}', '${warehouseName}', ${row.qty})" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#editModal">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                            <button class="btn btn-danger" 
-                                    onclick="updateDeleteURL(${row.inventory_id})" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#deleteModal">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                            <div class="btn-group" role="group">
+                                ${actionButtons}
+                            </div>
                         `;
                     }
                 }
@@ -241,7 +350,7 @@
             scrollCollapse: true,
             paging: true,
             responsive: true,
-            order: [[0, 'desc']], // Add default ordering
+            order: [[0, 'desc']],
             language: {
                 emptyTable: "No inventory records found",
                 zeroRecords: "No matching inventory records found"

@@ -83,3 +83,53 @@
         </div>
     </div>
 </div>
+
+<!-- Accept Inventory Modal -->
+<div class="modal fade" id="acceptModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Accept Inventory</h5>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="acceptForm">
+                    <input type="text" id="accept_inventory_id" name="accept_inventory_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Input Password to Continue *</label>
+                        <input type="password" class="form-control" name="accept_password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-success" onclick="acceptInventory()">Accept Inventory</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Inventory Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Reject Inventory</h5>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="rejectForm">
+                    <input type="hidden" id="reject_inventory_id" name="reject_inventory_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Input Password to Continue *</label>
+                        <input type="password" class="form-control" name="reject_password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-danger" onclick="rejectInventory()">Reject Inventory</button>
+            </div>
+        </div>
+    </div>
+</div>

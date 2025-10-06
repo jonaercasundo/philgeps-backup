@@ -30,6 +30,7 @@ if (isset($pdo) && $pdo !== null) {
         $sql = "SELECT 
                     i.inventory_id,
                     i.qty,
+                    i.inventory_status,
                     it.item_name,
                     w.warehouse_name,
                     it.item_id,
@@ -37,13 +38,15 @@ if (isset($pdo) && $pdo !== null) {
                 FROM inventory i
                 JOIN item it ON i.item_id = it.item_id
                 JOIN warehouse w ON i.warehouse_id = w.warehouse_id";
+                // WHERE i.inventory_status = 'For Approval'";
+                
         
         // Add search filter if search value exists
         $whereClauses = [];
         $params = [];
         
         if (!empty($searchValue)) {
-            $whereClauses[] = "(it.item_name LIKE :search OR w.warehouse_name LIKE :search OR i.qty LIKE :search OR i.inventory_id LIKE :search)";
+            $whereClauses[] = "(it.item_name LIKE :search OR w.warehouse_name LIKE :search OR i.qty LIKE :search OR i.inventory_id LIKE :search OR i.inventory_status LIKE :search)";
             $params[':search'] = "%{$searchValue}%";
         }
         
@@ -53,9 +56,9 @@ if (isset($pdo) && $pdo !== null) {
         
         // Get filtered count
         $filteredQuery = "SELECT COUNT(*) as total 
-                         FROM inventory i
-                         JOIN item it ON i.item_id = it.item_id
-                         JOIN warehouse w ON i.warehouse_id = w.warehouse_id" . 
+                        FROM inventory i
+                        JOIN item it ON i.item_id = it.item_id
+                        JOIN warehouse w ON i.warehouse_id = w.warehouse_id" . 
                         (!empty($whereClauses) ? " WHERE " . implode(" AND ", $whereClauses) : "");
         
         $filteredStmt = $pdo->prepare($filteredQuery);
@@ -70,7 +73,8 @@ if (isset($pdo) && $pdo !== null) {
             0 => 'i.inventory_id',      // Inventory ID
             1 => 'w.warehouse_name',    // Warehouse
             2 => 'it.item_name',        // Item
-            3 => 'i.qty'                // Quantity
+            3 => 'i.qty',               // Quantity
+            4 => 'i.inventory_status'
         ];
         
         if (isset($orderColumns[$orderColumnIndex])) {
