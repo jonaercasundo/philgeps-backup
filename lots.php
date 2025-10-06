@@ -1,5 +1,6 @@
 <?php
 require "template/header.php";
+require "script/role_auth.php";
 require "config/db.php"; // <-- your PDO connection
 $project_id = $_GET['id'];
 // roles allowed to access this page

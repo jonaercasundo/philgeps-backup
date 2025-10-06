@@ -1,5 +1,6 @@
 <?php
 require "template/header.php";
+require "script/role_auth.php";
 require "config/db.php"; // your PDO connection
 // roles allowed to access this page
 $allowed_roles = ['Super Admin', 'Admin', 'Office Coordinator', 'Office Admin'];
