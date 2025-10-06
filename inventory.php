@@ -16,50 +16,47 @@
 <!-- Main Full-Screen Container -->
 <div class="row g-0 h-100">
     <!-- 1. LEFT SIDEBAR (3 Columns wide on medium/large screens) -->
-    <!-- LEFT SIDEBAR -->
-<div class="col-md-3 border-end d-flex flex-column vh-100">
+    <div class="col-md-3 border-end d-flex flex-column vh-100">
 
-  <!-- Header: fixed height -->
-  <div class="px-3 d-flex justify-content-between align-items-center py-2 border-bottom flex-shrink-0">
-    <h5 class="mb-0 text-dark opacity-75">Add Items</h5> 
-    <div class="form-check form-switch mb-0">
-      <input class="form-check-input" type="checkbox" role="switch" checked id="flexSwitchCheckDefault">
-      <label class="form-check-label" for="flexSwitchCheckDefault">Item View</label>
+        <!-- Header: fixed height -->
+        <div class="px-3 d-flex justify-content-between align-items-center py-2 border-bottom flex-shrink-0">
+            <h5 class="mb-0 text-dark opacity-75">Add Items</h5> 
+            <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch" checked id="flexSwitchCheckDefault">
+            <label class="form-check-label" for="flexSwitchCheckDefault">Item View</label>
+            </div>
+        </div>
+
+        <!-- QR Reader container: fixed height and center content -->
+        <div class="d-flex justify-content-center align-items-center flex-shrink-0 py-3 border-bottom" style="height: 30vh;">
+            <div id="reader"></div>
+        </div>
+
+        <!-- USB Scanner Input -->
+        <div class="px-3 py-2 border-top flex-shrink-0">
+        <input type="text" id="usbScannerInput" class="form-control" placeholder="Scan with USB scanner here" autofocus>
+        </div>
+
+
+        <!-- Scrollable table area: fills remaining space -->
+        <div class="flex-grow-1 overflow-auto px-3">
+            <table id="itemTable" class="table table-bordered table-striped mb-0">
+            <thead class="table-dark text-center">
+                <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody id="itemBodytable">
+            </tbody>
+            </table>
+        </div>
+
+        <!-- Footer button: fixed height -->
+        <div class="px-3 py-2 border-top flex-shrink-0">
+            <button class="btn btn-outline-secondary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#addModal">Add Items</button>
+        </div>
     </div>
-  </div>
-
-  <!-- QR Reader container: fixed height and center content -->
-  <div class="d-flex justify-content-center align-items-center flex-shrink-0 py-3 border-bottom" style="height: 30vh;">
-    <div id="reader"></div>
-  </div>
-
-  <!-- USB Scanner Input -->
-<div class="px-3 py-2 border-top flex-shrink-0">
-  <input type="text" id="usbScannerInput" class="form-control" placeholder="Scan with USB scanner here" autofocus>
-</div>
-
-
-  <!-- Scrollable table area: fills remaining space -->
-  <div class="flex-grow-1 overflow-auto px-3">
-    <table id="itemTable" class="table table-bordered table-striped mb-0">
-      <thead class="table-dark text-center">
-        <tr>
-          <th>Item</th>
-          <th>Quantity</th>
-        </tr>
-      </thead>
-      <tbody id="itemBodytable">
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Footer button: fixed height -->
-  <div class="px-3 py-2 border-top flex-shrink-0">
-    <button class="btn btn-outline-secondary w-100 mb-2">Add Items</button>
-  </div>
-
-</div>
-
 
     <!-- 2. RIGHT MAIN CONTENT AREA (9 Columns wide on medium/large screens) -->
     <div class="col-md-9 d-flex flex-column">
@@ -175,119 +172,10 @@
         });
     }
 </script>
-<script>
-    // Custom addForm function for inventory page
-    function addForm(type, scriptUrl) {
-    // Collect all rows in the item table
-    const tbody = document.getElementById('itemBodytable');
-    if (!tbody) {
-        alert('Item table body not found');
-        return;
-    }
 
-    const items = [];
-    // Loop over each row to collect item_id and qty
-    for (let tr of tbody.rows) {
-        // Example: assuming your rows have data attributes or td structure
-        // If your row has the item_id in the first cell and qty in the second:
-        const itemId = tr.querySelector('td[data-item-id]')?.dataset.itemId 
-                       || tr.cells[0]?.dataset.itemId 
-                       || tr.cells[0]?.getAttribute('data-item-id') 
-                       || null;
-
-        const qty = tr.cells[1]?.textContent || tr.querySelector('td[data-qty]')?.dataset.qty || null;
-
-        if (itemId && qty) {
-            items.push({item_id: itemId, qty: parseInt(qty, 10)});
-        }
-    }
-
-    if (items.length === 0) {
-        alert('No items found in the table to add.');
-        return;
-    }
-
-    // Set the hidden input value
-    document.getElementById('items_json').value = JSON.stringify(items);
-
-    const formData = new FormData(document.getElementById('addForm'));
-
-    fetch('script/' + scriptUrl, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-         if (data.success) {
-            window.location.href = 'inventory.php?toast=Inventory Added&type=success';
-        } else {
-            alert('Error: ' + (data.message || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        alert('Error: ' + error);
-    });
-}
-
-
-    // Function to populate dropdowns in add modal
-    function loadAddModalData() {
-        // Load warehouses
-        fetch('script/get_warehouse_list.php')
-            .then(response => response.json())
-            .then(data => {
-                const warehouseSelect = document.querySelector('#addForm select[name="warehouse_id"]');
-                warehouseSelect.innerHTML = '<option value="">Select Warehouse</option>';
-                if (!data.error) {
-                    data.forEach(warehouse => {
-                        warehouseSelect.innerHTML += `<option value="${warehouse.warehouse_id}">${warehouse.warehouse_name}</option>`;
-                    });
-                } else {
-                    warehouseSelect.innerHTML += '<option value="">Error loading warehouses</option>';
-                }
-            })
-            .catch(error => {
-                console.error('Error loading warehouses:', error);
-                const warehouseSelect = document.querySelector('#addForm select[name="warehouse_id"]');
-                warehouseSelect.innerHTML = '<option value="">Error loading warehouses</option>';
-            });
-
-        // Load items
-        fetch('script/get_items_list.php')
-            .then(response => response.json())
-            .then(data => {
-                const itemSelect = document.querySelector('#addForm select[name="item_id"]');
-                itemSelect.innerHTML = '<option value="">Select Item</option>';
-                if (!data.error) {
-                    data.forEach(item => {
-                        itemSelect.innerHTML += `<option value="${item.item_id}">${item.item_name}</option>`;
-                    });
-                } else {
-                    itemSelect.innerHTML += '<option value="">Error loading items</option>';
-                }
-            })
-            .catch(error => {
-                console.error('Error loading items:', error);
-                const itemSelect = document.querySelector('#addForm select[name="item_id"]');
-                itemSelect.innerHTML = '<option value="">Error loading items</option>';
-            });
-    }
-
-    // Show add modal and load data
-    document.getElementById('addModal').addEventListener('show.bs.modal', function () {
-        loadAddModalData();
-    });
-
-    // Clear form when modal is hidden
-    document.getElementById('addModal').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('addForm').reset();
-    });
-</script>
 
 <!-- QR script -->
- <script src="https://unpkg.com/html5-qrcode"></script>
-
- 
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <!-- Table Scripts -->
 <script>
@@ -360,165 +248,263 @@
             }
         });
     });
- </script>
- <script>
+</script>
+
+<!-- QR -->
+<script>
     function simulateScan(num) {
-    const testQRData = JSON.stringify({
-        action: "addPackage",
-        package: num
+        const testQRData = JSON.stringify({
+            action: "addPackage",
+            package: num
+        });
+        onScanSuccess(testQRData);
+    }
+
+    // Handle USB scanner input
+    document.getElementById('usbScannerInput').addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            let scannedCode = this.value.trim();
+            this.value = ""; // clear input
+
+            try {
+                // Try JSON format (same as QR codes)
+                let data = JSON.parse(scannedCode);
+                onScanSuccess(scannedCode, null); // reuse your QR function
+            } catch (e) {
+                // If it's just a plain barcode string
+                console.log("USB scanned:", scannedCode);
+                onScanSuccess(JSON.stringify({action: "addPackage", package: scannedCode}), null);
+            }
+        }
     });
-    onScanSuccess(testQRData);
-}
 
-// Handle USB scanner input
-document.getElementById('usbScannerInput').addEventListener("keypress", function(event) {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        let scannedCode = this.value.trim();
-        this.value = ""; // clear input
+    // Global tracking of scanned packages
+    const addedPackages = [];
 
+    // Called when QR is scanned
+    function onScanSuccess(decodedText, decodedResult) {
+        console.log("QR scanned:", decodedText);
+        let data;
         try {
-            // Try JSON format (same as QR codes)
-            let data = JSON.parse(scannedCode);
-            onScanSuccess(scannedCode, null); // reuse your QR function
+            data = JSON.parse(decodedText);
         } catch (e) {
-            // If it's just a plain barcode string
-            console.log("USB scanned:", scannedCode);
-            onScanSuccess(JSON.stringify({action: "addPackage", package: scannedCode}), null);
+            console.error("QR data not JSON:", decodedText);
+            return;
         }
-    }
-});
 
-// Global tracking of scanned packages
-const addedPackages = [];
+        if (data.action === "addPackage" && data.package) {
+            const packageID = data.package;
+            if (!addedPackages.includes(packageID)) {
+                addedPackages.push(packageID);
+                console.log("Added package:", packageID, "Current list:", addedPackages);
+            } else {
+                console.log("Package duplicate:", packageID);
+            }
 
-// Called when QR is scanned
-function onScanSuccess(decodedText, decodedResult) {
-    console.log("QR scanned:", decodedText);
-    let data;
-    try {
-        data = JSON.parse(decodedText);
-    } catch (e) {
-        console.error("QR data not JSON:", decodedText);
-        return;
-    }
-
-    if (data.action === "addPackage" && data.package) {
-        const packageID = data.package;
-        if (!addedPackages.includes(packageID)) {
-            addedPackages.push(packageID);
-            console.log("Added package:", packageID, "Current list:", addedPackages);
+            // After adding, reload current view (item or lot)
+            const checkbox = document.getElementById('flexSwitchCheckDefault');
+            if (checkbox.checked) {
+                loadItemsView();
+            } else {
+                loadLotsView();
+            }
         } else {
-            console.log("Package duplicate:", packageID);
+            console.warn("QR action not recognized:", data.action);
+        }
+    }
+
+    // Load per-item view
+    function loadItemsView() {
+        const tbody = document.getElementById('itemBodytable');
+        if (!tbody) {
+            console.error("itemBodytable not found");
+            return;
+        }
+        tbody.innerHTML = '';
+
+        if (addedPackages.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="2" class="text-center text-muted">No packages scanned yet</td>`;
+            tbody.appendChild(tr);
+            return;
         }
 
-        // After adding, reload current view (item or lot)
+        console.log("Loading Items View for packages:", addedPackages);
+
+        addedPackages.forEach(pkg => {
+            fetch(`script/get_package.php?package_id=${encodeURIComponent(pkg)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.items)) {
+                    // Add a header row for this package
+                    const headerRow = document.createElement('tr');
+                    headerRow.innerHTML = `<td colspan="2" style="font-weight:bold; background:#f0f0f0;">Package: LOT ${data.package.lot_name} KEYSTAGE ${data.package.keystage_name} KEYSTAGE ${data.package.description}</td>`;
+                    tbody.appendChild(headerRow);
+
+                    // Add each item row for this package
+                    data.items.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.setAttribute('data-item-id', item.item_id);  // <-- add this
+                        tr.innerHTML = `<td>${item.item_name || ''}</td><td>${item.qty || ''}</td>`;
+                        tbody.appendChild(tr);
+                    });
+
+                } else {
+                    console.warn("No items for package", pkg, data);
+                }
+            })
+            .catch(err => console.error("Fetch error (items):", err));
+        });
+    }
+
+    // Load per lot/keystage view
+    function loadLotsView() {
+        const tbody = document.getElementById('itemBodytable');
+        if (!tbody) {
+            console.error("itemBodytable not found");
+            return;
+        }
+        tbody.innerHTML = '';
+
+        if (addedPackages.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="2" class="text-center text-muted">No packages scanned yet</td>`;
+            tbody.appendChild(tr);
+            return;
+        }
+
+        console.log("Loading Lots View for packages:", addedPackages);
+
+        addedPackages.forEach(pkg => {
+            fetch(`script/get_lots_with_keystages.php?package_id=${encodeURIComponent(pkg)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.lots)) {
+                    data.lots.forEach(lot => {
+                        const tr = document.createElement('tr');
+                        let display = `Lot: ${lot.lot_name}`;
+                        if (lot.keystage_num) {
+                            display += ` - Keystage ${lot.keystage_num} ${lot.description || ''}`;
+                        }
+                        tr.innerHTML = `<td>${display}</td><td>${lot.qty || 0}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    console.warn("No lots for package", pkg, data);
+                }
+            })
+            .catch(err => console.error("Fetch error (lots):", err));
+        });
+    }
+
+    // Add inventory - bulk submit all items
+    function addForm(type, scriptUrl) {
+        // Collect all scanned items from the table
+        const items = [];
+        
+        // Get all rows from the item table
+        const rows = document.querySelectorAll('#itemBodytable tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length === 2) {
+                const quantity = parseInt(cells[1].textContent.trim());
+                const itemId = row.getAttribute('data-item-id');
+                
+                if (itemId && !isNaN(quantity) && quantity > 0) {
+                    items.push({
+                        warehouse_id: 1,
+                        item_id: parseInt(itemId),
+                        quantity: quantity
+                    });
+                }
+            }
+        });
+
+        if (items.length === 0) {
+            alert('No valid items found to add to inventory.');
+            return;
+        }
+
+        const password = document.querySelector('#addForm input[name="password"]').value;
+        if (!password) {
+            alert('Please enter your password.');
+            return;
+        }
+
+        console.log('Submitting items:', items);
+
+        // Submit ALL items in one bulk request
+        const formData = new FormData();
+        formData.append('items_json', JSON.stringify(items));
+        formData.append('password', password);
+
+        // Show loading state
+        const submitBtn = document.querySelector('#addModal .btn-primary');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Adding Items...';
+        submitBtn.disabled = true;
+
+        fetch('script/add_inventory.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+
+            if (data.success) {
+                // Clear the scanned items table
+                document.getElementById('itemBodytable').innerHTML = '<tr><td colspan="2" class="text-center text-muted">No packages scanned yet</td></tr>';
+                // Clear the scanned packages
+                addedPackages.length = 0;
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
+                if (modal) modal.hide();
+                
+                // Use toast from response if available, otherwise use message
+                const toastMessage = data.toast || data.message;
+                const toastType = data.type || 'success';
+                window.location.href = 'inventory.php?toast=' + encodeURIComponent(toastMessage) + '&type=' + toastType;
+            } else {
+                // If there's a toast in response, redirect to show toast
+                if (data.toast) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
+                    if (modal) modal.hide();
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.toast) + '&type=' + (data.type || 'danger');
+                } else {
+                    // Otherwise show alert
+                    alert('Error: ' + data.message);
+                }
+            }
+        })
+        .catch(error => {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            console.error('Network error:', error);
+            alert('Error adding items: ' + error.message);
+        });
+    }
+
+    // Toggle binding & initial load
+    document.addEventListener('DOMContentLoaded', () => {
         const checkbox = document.getElementById('flexSwitchCheckDefault');
-        if (checkbox.checked) {
-            loadItemsView();
-        } else {
-            loadLotsView();
+        if (!checkbox) {
+            console.error("Checkbox flexSwitchCheckDefault not found");
+            return;
         }
-    } else {
-        console.warn("QR action not recognized:", data.action);
-    }
-}
 
-// Load per-item view
-function loadItemsView() {
-    const tbody = document.getElementById('itemBodytable');
-    if (!tbody) {
-        console.error("itemBodytable not found");
-        return;
-    }
-    tbody.innerHTML = '';
-
-    if (addedPackages.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="2" class="text-center text-muted">No packages scanned yet</td>`;
-        tbody.appendChild(tr);
-        return;
-    }
-
-    console.log("Loading Items View for packages:", addedPackages);
-
-    addedPackages.forEach(pkg => {
-        fetch(`script/get_package.php?package_id=${encodeURIComponent(pkg)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.success && Array.isArray(data.items)) {
-                // Add a header row for this package
-                const headerRow = document.createElement('tr');
-                headerRow.innerHTML = `<td colspan="2" style="font-weight:bold; background:#f0f0f0;">Package: LOT ${data.package.lot_name} KEYSTAGE ${data.package.keystage_name} KEYSTAGE ${data.package.description}</td>`;
-                tbody.appendChild(headerRow);
-
-                // Add each item row for this package
-                data.items.forEach(item => {
-                    const tr = document.createElement('tr');
-                    tr.setAttribute('data-item-id', item.item_id);  // <-- add this
-                    tr.innerHTML = `<td>${item.item_name || ''}</td><td>${item.qty || ''}</td>`;
-                    tbody.appendChild(tr);
-                });
-
+        checkbox.addEventListener('change', () => {
+            console.log("Toggle changed to:", checkbox.checked);
+            if (checkbox.checked) {
+                loadItemsView();
             } else {
-                console.warn("No items for package", pkg, data);
+                loadLotsView();
             }
-          })
-          .catch(err => console.error("Fetch error (items):", err));
-    });
-}
+        });
 
-
-// Load per lot/keystage view
-function loadLotsView() {
-    const tbody = document.getElementById('itemBodytable');
-    if (!tbody) {
-        console.error("itemBodytable not found");
-        return;
-    }
-    tbody.innerHTML = '';
-
-    if (addedPackages.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="2" class="text-center text-muted">No packages scanned yet</td>`;
-        tbody.appendChild(tr);
-        return;
-    }
-
-    console.log("Loading Lots View for packages:", addedPackages);
-
-    addedPackages.forEach(pkg => {
-        fetch(`script/get_lots_with_keystages.php?package_id=${encodeURIComponent(pkg)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.success && Array.isArray(data.lots)) {
-                data.lots.forEach(lot => {
-                    const tr = document.createElement('tr');
-                    let display = `Lot: ${lot.lot_name}`;
-                    if (lot.keystage_num) {
-                        display += ` - Keystage ${lot.keystage_num} ${lot.description || ''}`;
-                    }
-                    tr.innerHTML = `<td>${display}</td><td>${lot.qty || 0}</td>`;
-                    tbody.appendChild(tr);
-                });
-            } else {
-                console.warn("No lots for package", pkg, data);
-            }
-          })
-          .catch(err => console.error("Fetch error (lots):", err));
-    });
-}
-
-// Toggle binding & initial load
-document.addEventListener('DOMContentLoaded', () => {
-    const checkbox = document.getElementById('flexSwitchCheckDefault');
-    if (!checkbox) {
-        console.error("Checkbox flexSwitchCheckDefault not found");
-        return;
-    }
-
-    checkbox.addEventListener('change', () => {
-        console.log("Toggle changed to:", checkbox.checked);
+        // Initial view
         if (checkbox.checked) {
             loadItemsView();
         } else {
@@ -526,15 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Initial view
-    if (checkbox.checked) {
-        loadItemsView();
-    } else {
-        loadLotsView();
-    }
-});
-
-// Start scanner
-html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-html5QrcodeScanner.render(onScanSuccess);
+    // Start scanner
+    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
 </script>
