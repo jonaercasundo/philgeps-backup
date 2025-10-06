@@ -30,8 +30,8 @@ try {
         exit;
     }
 
-    $success_count = 0;
-    $pending_approval_count = 0;
+    $merged_count = 0;
+    $new_count = 0;
     $errors = [];
 
     foreach ($items as $item) {
@@ -49,37 +49,27 @@ try {
             continue;
         }
 
-        // Check if inventory record exists and is approved
-        $check = $pdo->prepare("SELECT qty, inventory_status FROM inventory WHERE item_id = ? AND warehouse_id = ?");
+        // Check if there's an existing "For Approval" record
+        $check = $pdo->prepare("SELECT inventory_id, qty FROM inventory WHERE item_id = ? AND warehouse_id = ? AND inventory_status = 'For Approval'");
         $check->execute([$item_id, $warehouse_id]);
         $existing = $check->fetch();
 
-        if ($existing && $existing['inventory_status'] === 'Approved') {
-            // Update existing APPROVED record - add quantity immediately
+        if ($existing) {
+            // Add quantity to existing "For Approval" record
             $new_qty = $existing['qty'] + $quantity;
-            $update = $pdo->prepare("UPDATE inventory SET qty = ? WHERE item_id = ? AND warehouse_id = ? AND inventory_status = 'Approved'");
-            if ($update->execute([$new_qty, $item_id, $warehouse_id])) {
-                $success_count++;
+            $update = $pdo->prepare("UPDATE inventory SET qty = ? WHERE inventory_id = ?");
+            if ($update->execute([$new_qty, $existing['inventory_id']])) {
+                $merged_count++;
             } else {
-                $errors[] = "Update failed for item $item_id";
-            }
-        } else if ($existing && $existing['inventory_status'] === 'For Approval') {
-            // Item exists but is pending approval - create new pending record
-            $max_id = $pdo->query("SELECT COALESCE(MAX(inventory_id), 0) + 1 as next_id FROM inventory")->fetch()['next_id'];
-            
-            $insert = $pdo->prepare("INSERT INTO inventory (inventory_id, warehouse_id, item_id, qty, inventory_status) VALUES (?, ?, ?, ?, 'For Approval')");
-            if ($insert->execute([$max_id, $warehouse_id, $item_id, $quantity])) {
-                $pending_approval_count++;
-            } else {
-                $errors[] = "Insert failed for item $item_id (pending approval)";
+                $errors[] = "Update failed for pending item $item_id";
             }
         } else {
-            // No existing record or status is neither Approved nor For Approval - create new pending record
+            // No existing "For Approval" record - create new one
             $max_id = $pdo->query("SELECT COALESCE(MAX(inventory_id), 0) + 1 as next_id FROM inventory")->fetch()['next_id'];
             
             $insert = $pdo->prepare("INSERT INTO inventory (inventory_id, warehouse_id, item_id, qty, inventory_status) VALUES (?, ?, ?, ?, 'For Approval')");
             if ($insert->execute([$max_id, $warehouse_id, $item_id, $quantity])) {
-                $pending_approval_count++;
+                $new_count++;
             } else {
                 $errors[] = "Insert failed for item $item_id";
             }
@@ -88,11 +78,11 @@ try {
 
     // Build success message based on what was processed
     $message_parts = [];
-    if ($success_count > 0) {
-        $message_parts[] = "Added $success_count items to existing inventory";
+    if ($merged_count > 0) {
+        $message_parts[] = "Merged $merged_count items with existing pending requests";
     }
-    if ($pending_approval_count > 0) {
-        $message_parts[] = "$pending_approval_count items pending approval";
+    if ($new_count > 0) {
+        $message_parts[] = "Created $new_count new pending requests";
     }
 
     if (!empty($message_parts)) {
