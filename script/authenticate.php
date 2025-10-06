@@ -25,8 +25,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION['name'] = $user['name'];
             $_SESSION['role'] = $user['role'];
 
-            header("Location: ../dashboard.php");
+            // Define main navigation links
+            switch($_SESSION['role']){
+            case "Office Admin":
+                header("Location: ../dashboard.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+            break;
+            case "Warehouse Admin":
+                header("Location: ../warehouse.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+                
+            break;
+            case "Warehouse Coordinator":
+                header("Location: ../warehouse.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+                
+            break;
+            case "Office Coordinator":
+                header("Location: ../projects.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+                
+            break;
+            case "Viewer":
+                header("Location: ../projects.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+                
+            break;
+            default:
+                header("Location: ../dashboard.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+            break;
+            }
             exit;
+            
         } else {
             $_SESSION['error'] = "Invalid username or password!";
             header("Location: ../index.php?toast=Invalid username or password!&type=danger");

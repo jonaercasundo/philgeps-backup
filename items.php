@@ -1,7 +1,13 @@
 <?php
 require "template/header.php";
 require "config/db.php"; // your PDO connection
+require "script/role_auth.php";
 
+// roles allowed to access this page
+$allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator'];
+
+// redirect
+redirectIfNotAuthorized($allowed_roles, 'index.php');
 // Get params
 $package_id = isset($_GET['package_id']) ? (int)$_GET['package_id'] : null;
 $project_id = isset($_GET['id']) ? (int)$_GET['id'] : null;

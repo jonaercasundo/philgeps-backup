@@ -2,6 +2,11 @@
 require "template/header.php";
 require "config/db.php"; // <-- your PDO connection
 $project_id = $_GET['id'];
+// roles allowed to access this page
+$allowed_roles = ['Super Admin', 'Admin', 'Office Coordinator', 'Office Admin'];
+
+// redirect
+redirectIfNotAuthorized($allowed_roles, 'index.php');
 try {
     // Fetch lots with project name
     $stmt = $pdo->query("

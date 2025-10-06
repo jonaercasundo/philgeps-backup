@@ -5,12 +5,10 @@
     require "config/db.php";
 
     // roles allowed to access this page
-    $allowed_roles = ['Super Admin', 'Admin', 'Warehouse Admin'];
+    $allowed_roles = ['Super Admin', 'Admin', 'Office Coordinator', 'Office Admin'];
 
     // redirect
     redirectIfNotAuthorized($allowed_roles, 'index.php');
-
-
 ?>
 
 <!-- Main Full-Screen Container -->

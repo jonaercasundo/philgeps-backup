@@ -48,7 +48,6 @@ if (!isset($_SESSION['user_id']) ||
 <body>
 
 <?php
-// Define main navigation links
 $mainNav = [
     "dashboard.php" => "Dashboard",
     "projects.php" => "Projects",
@@ -59,6 +58,47 @@ $mainNav = [
     "reports.php" => "Reports",
     "users.php" => "Users"
 ];
+// Define main navigation links
+switch($_SESSION['role']){
+  case "Office Admin":
+    $mainNav = [
+    "dashboard.php" => "Dashboard",
+    "projects.php" => "Projects",
+    "deliveries.php" => "Deliveries",
+    "warehouse.php" => "Warehouse",
+    "logistics.php" => "Logistics",
+    "reports.php" => "Reports",
+    ];
+  break;
+  case "Warehouse Admin":
+    $mainNav = [
+      "warehouse.php" => "Warehouse"
+    ];
+    
+  break;
+  case "Warehouse Coordinator":
+    $mainNav = [
+      "warehouse.php" => "Warehouse"
+    ];
+    
+  break;
+  case "Office Coordinator":
+    $mainNav = [
+      "projects.php" => "Projects",
+      "deliveries.php" => "Deliveries",
+      "logistics.php" => "Logistics",
+    ];
+    
+  break;
+  case "Viewer":
+    $mainNav = [
+      "projects.php" => "Projects",
+      "deliveries.php" => "Deliveries",
+      "logistics.php" => "Logistics",
+    ];
+    
+  break;
+}
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 ?>

@@ -1,6 +1,11 @@
 <?php
 require "template/header.php";
 require "config/db.php"; // your PDO connection
+// roles allowed to access this page
+$allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator'];
+
+// redirect
+redirectIfNotAuthorized($allowed_roles, 'index.php');
 // Get params
 $lot_id = isset($_GET['lot_id']) ? (int)$_GET['lot_id'] : null;
 $project_id = isset($_GET['id']) ? (int)$_GET['id'] : null;

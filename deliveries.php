@@ -1,7 +1,13 @@
 <?php 
 require "template/header.php"; 
 require "config/db.php";
+require "script/role_auth.php";
 
+// roles allowed to access this page
+$allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator', 'Warehouse Coordinator', 'Warehouse Admin'];
+
+// redirect
+redirectIfNotAuthorized($allowed_roles, 'index.php');
 try {
     $limit = 10;
     $page = max(1, intval($_GET['page'] ?? 1));

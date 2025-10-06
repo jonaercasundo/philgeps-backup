@@ -5,7 +5,7 @@
     require "config/db.php";
 
     // roles allowed to access this page
-    $allowed_roles = ['Super Admin', 'Admin', 'Warehouse Admin'];
+    $allowed_roles = ['Super Admin', 'Admin', 'Office Admin', 'Office Coordinator','Warehouse Admin', 'Warehouse Coordinator'];
 
     // redirect
     redirectIfNotAuthorized($allowed_roles, 'index.php');
@@ -32,6 +32,12 @@
   <div class="d-flex justify-content-center align-items-center flex-shrink-0 py-3 border-bottom" style="height: 30vh;">
     <div id="reader"></div>
   </div>
+
+  <!-- USB Scanner Input -->
+<div class="px-3 py-2 border-top flex-shrink-0">
+  <input type="text" id="usbScannerInput" class="form-control" placeholder="Scan with USB scanner here" autofocus>
+</div>
+
 
   <!-- Scrollable table area: fills remaining space -->
   <div class="flex-grow-1 overflow-auto px-3">
@@ -281,6 +287,7 @@
 <!-- QR script -->
  <script src="https://unpkg.com/html5-qrcode"></script>
 
+ 
 
 <!-- Table Scripts -->
 <script>
@@ -362,6 +369,25 @@
     });
     onScanSuccess(testQRData);
 }
+
+// Handle USB scanner input
+document.getElementById('usbScannerInput').addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        let scannedCode = this.value.trim();
+        this.value = ""; // clear input
+
+        try {
+            // Try JSON format (same as QR codes)
+            let data = JSON.parse(scannedCode);
+            onScanSuccess(scannedCode, null); // reuse your QR function
+        } catch (e) {
+            // If it's just a plain barcode string
+            console.log("USB scanned:", scannedCode);
+            onScanSuccess(JSON.stringify({action: "addPackage", package: scannedCode}), null);
+        }
+    }
+});
 
 // Global tracking of scanned packages
 const addedPackages = [];

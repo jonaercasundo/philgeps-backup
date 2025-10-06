@@ -1,6 +1,12 @@
 <?php
 require "template/header.php";
 require "config/db.php"; // your PDO connection
+require "script/role_auth.php";
+// roles allowed to access this page
+$allowed_roles = ['Super Admin', 'Admin', 'Office Coordinator', 'Office Admin'];
+
+// redirect
+redirectIfNotAuthorized($allowed_roles, 'index.php');
 // Get params
 $keystage_id = isset($_GET['keystage_id']) ? (int)$_GET['keystage_id'] : null;
 $lot_id = isset($_GET['lot_id']) ? (int)$_GET['lot_id'] : null;

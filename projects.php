@@ -1,7 +1,12 @@
 <?php 
 require "template/header.php"; 
 require "config/db.php";
+require "script/role_auth.php";
+// roles allowed to access this page
+$allowed_roles = ['Super Admin', 'Admin', 'Office Coordinator', 'Office Admin'];
 
+// redirect
+redirectIfNotAuthorized($allowed_roles, 'index.php');
 // Pagination settings
 $limit = 10;
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;

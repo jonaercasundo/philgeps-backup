@@ -1,6 +1,11 @@
 <?php
 require "template/header.php";
 require "config/db.php"; // your PDO connection
+// roles allowed to access this page
+$allowed_roles = ['Super Admin', 'Admin', 'Office Coordinator', 'Office Admin'];
+
+// redirect
+redirectIfNotAuthorized($allowed_roles, 'index.php');
 ?>
 <div class="container">
   <h2 class="mb-4">School List</h2>
