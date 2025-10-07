@@ -33,11 +33,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 header("Location: ../dashboard.php?toast=Welcome ". $_SESSION['name']."!&type=success");
             break;
             case "Warehouse Admin":
-                header("Location: ../warehouse.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+                header("Location: ../inventory.php?toast=Welcome ". $_SESSION['name']."!&type=success");
                 
             break;
             case "Warehouse Coordinator":
-                header("Location: ../warehouse.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+                header("Location: ../inventory.php?toast=Welcome ". $_SESSION['name']."!&type=success");
                 
             break;
             case "Office Coordinator":

@@ -52,7 +52,7 @@ $mainNav = [
     "dashboard.php" => "Dashboard",
     "projects.php" => "Projects",
     "deliveries.php" => "Deliveries",
-    "warehouse.php" => "Warehouse",
+    "inventory.php" => "Warehouse",
     "logistics.php" => "Logistics",
     "billing.php" => "<span class='text-decoration-line-through'>Billing</span>",
     "reports.php" => "Reports",
@@ -65,7 +65,7 @@ switch($_SESSION['role']){
     "dashboard.php" => "Dashboard",
     "projects.php" => "Projects",
     "deliveries.php" => "Deliveries",
-    "warehouse.php" => "Warehouse",
+    "inventory.php" => "Warehouse",
     "logistics.php" => "Logistics",
     "reports.php" => "Reports",
     ];
@@ -73,7 +73,7 @@ switch($_SESSION['role']){
   case "Warehouse Admin":
     $mainNav = [
     "deliveries.php" => "Deliveries",
-    "warehouse.php" => "Warehouse"
+    "inventory.php" => "Warehouse"
     ];
     
   break;
@@ -128,20 +128,20 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 if (isset($is_warehouse_page) && $is_warehouse_page === true): 
 
     $warehouseNav = [
-      'warehouse.php' => 'Overview',
+      // 'warehouse.php' => 'Overview',
       'warehouse_details.php' => 'Warehouse',
       'inventory.php' => 'Inventory',
       'warehouse_reports.php' => 'Reports'
   ];
   if($_SESSION['role'] == 'Warehouse Admin'){
     $warehouseNav = [
-      'warehouse.php' => 'Overview',
+      // 'warehouse.php' => 'Overview',
       'inventory.php' => 'Inventory',
       'warehouse_reports.php' => 'Reports'
   ];
   }elseif($_SESSION['role'] == 'Warehouse Coordinator'){
     $warehouseNav = [
-      'warehouse.php' => 'Overview',
+      // 'warehouse.php' => 'Overview',
       'inventory.php' => 'Inventory'
   ];
   }
