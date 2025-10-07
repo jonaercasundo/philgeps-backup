@@ -15,6 +15,7 @@
 
 <!-- Main Full-Screen Container -->
 <div class="row g-0 h-100">
+    <?php if($_SESSION['role'] == "Warehouse Coordinator" || $_SESSION['role'] == "Warehouse Admin"): ?>
     <!-- 1. LEFT SIDEBAR (3 Columns wide on medium/large screens) -->
     <div class="col-md-3 border-end d-flex flex-column vh-100">
 
@@ -57,9 +58,12 @@
             <button class="btn btn-outline-secondary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#addModal">Add Items</button>
         </div>
     </div>
-
-    <!-- 2. RIGHT MAIN CONTENT AREA (9 Columns wide on medium/large screens) -->
     <div class="col-md-9 d-flex flex-column">
+<?php else:?>
+    <div>
+        <?php endif;?>
+    <!-- 2. RIGHT MAIN CONTENT AREA (9 Columns wide on medium/large screens) -->
+    
         <!-- Large Main Content/Display Area -->
         <div class="flex-grow-1">
             <div class="bg-white px-4 rounded shadow-sm h-100">
@@ -76,7 +80,9 @@
                             <th>Item</th>
                             <th>Quantity</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <?php if($_SESSION['role'] != "Warehouse Coordinator"){
+                                echo "<th>Action</th>";
+                            } ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -293,7 +299,7 @@ function rejectInventory() {
                         const warehouseName = row.warehouse_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
                         
                         let actionButtons = '';
-                        
+                    if('<?= $_SESSION['role']?>' != 'Warehouse Coordinator' && '<?= $_SESSION['role']?>' != 'Office Coordinator'){
                         if (row.inventory_status === 'For Approval') {
                             // Show Accept and Reject buttons for pending items
                             actionButtons = `
@@ -331,7 +337,7 @@ function rejectInventory() {
                                 </button>
                             `;
                         }
-                        
+                    }
                         return `
                             <span style="display:none;" id="item${row.inventory_id}">${itemName}</span>
                             <span style="display:none;" id="warehouse${row.inventory_id}">${warehouseName}</span>

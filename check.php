@@ -38,8 +38,7 @@ try {
 
     $current_status = $package_status['status'];
     $status_map = [
-        'pending' => 'warehouse',
-        'warehouse' => 'accepted',
+        'pending' => 'accepted',
         'accepted' => 'delivered',
         'delivered' => 'delivered'
     ];
@@ -48,7 +47,7 @@ try {
     // Handle file uploads
     $uploaded_photos = [];
     if (isset($_FILES['photo_upload']) && !empty($_FILES['photo_upload']['name'][0])) {
-        $upload_dir = __DIR__ . '/uploads/'; // Absolute path
+        $upload_dir ='uploads/'; // Absolute path
 
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
 
@@ -110,7 +109,7 @@ try {
             $stmt_photo->execute([
                 ':package_status_id' => $package_status_id,
                 ':status' => $next_status,
-                ':delivery_photo' => "uploads/".$photo_file
+                ':delivery_photo' => $photo_file
             ]);
         }
     }

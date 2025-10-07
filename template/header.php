@@ -72,13 +72,14 @@ switch($_SESSION['role']){
   break;
   case "Warehouse Admin":
     $mainNav = [
-      "warehouse.php" => "Warehouse"
+    "deliveries.php" => "Deliveries",
+    "warehouse.php" => "Warehouse"
     ];
     
   break;
   case "Warehouse Coordinator":
     $mainNav = [
-      "warehouse.php" => "Warehouse"
+      
     ];
     
   break;
@@ -122,44 +123,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     </div>
   </div>
 </nav>
-
-<?php
-// Project detail navigation, only if 'id' is set
-if (isset($_GET['id'])):
-    $id = (int)$_GET['id'];
-    include 'config/db.php';
-    $stmt = $pdo->query("
-        SELECT keystage from projects WHERE project_id = $id
-    ");
-    $keystage = $stmt->fetch(PDO::FETCH_ASSOC);
-    $projectNav = [
-        "project_details.php" => "Overview",
-        "schools.php" => "Schools",
-        "lots.php" => "Lots"
-    ];
-    if ($keystage && $keystage['keystage'] == 1) {
-        $projectNav["keystage.php"] = "Keystage";
-    }
-    $projectNav += [
-        "items.php" => "Items",
-        "packages.php" => "Packages",
-        "project_reports.php" => "Reports"
-    ];
-?>
-
-<nav id="project_detail_nav" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
-  <div class="container-fluid justify-content-center">
-    <ul class="nav navbar-nav">
-      <?php foreach($projectNav as $file => $label): ?>
-        <li class="nav-item">
-          <a class="nav-link <?= ($currentPage === $file) ? 'active' : '' ?>" href="<?= $file ?>?id=<?= $id ?>"><?= $label ?></a>
-        </li>
-      <?php endforeach; ?>
-    </ul>
-  </div>
-</nav>
-<?php endif; ?>
-
 <?php
 // This check assumes $is_warehouse_page is set to true on the relevant pages
 if (isset($is_warehouse_page) && $is_warehouse_page === true): 
@@ -170,6 +133,18 @@ if (isset($is_warehouse_page) && $is_warehouse_page === true):
       'inventory.php' => 'Inventory',
       'warehouse_reports.php' => 'Reports'
   ];
+  if($_SESSION['role'] == 'Warehouse Admin'){
+    $warehouseNav = [
+      'warehouse.php' => 'Overview',
+      'inventory.php' => 'Inventory',
+      'warehouse_reports.php' => 'Reports'
+  ];
+  }elseif($_SESSION['role'] == 'Warehouse Coordinator'){
+    $warehouseNav = [
+      'warehouse.php' => 'Overview',
+      'inventory.php' => 'Inventory'
+  ];
+  }
 ?>
 
 <nav id="warehouse_nav" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
@@ -219,6 +194,40 @@ if (isset($is_logistics_page) && $is_logistics_page === true):
     </div>
 </nav>
 <?php endif; ?>
+<?php
+// Project detail navigation, only if 'id' is set
+if (isset($_GET['id'])):
+    $id = (int)$_GET['id'];
+    include 'config/db.php';
+    $stmt = $pdo->query("
+        SELECT keystage from projects WHERE project_id = $id
+    ");
+    $keystage = $stmt->fetch(PDO::FETCH_ASSOC);
+    $projectNav = [
+        "project_details.php" => "Overview",
+        "schools.php" => "Schools",
+        "lots.php" => "Lots"
+    ];
+    if ($keystage && $keystage['keystage'] == 1) {
+        $projectNav["keystage.php"] = "Keystage";
+    }
+    $projectNav += [
+        "items.php" => "Items",
+        "packages.php" => "Packages",
+        "project_reports.php" => "Reports"
+    ];
+?>
 
-
+<nav id="project_detail_nav" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+  <div class="container-fluid justify-content-center">
+    <ul class="nav navbar-nav">
+      <?php foreach($projectNav as $file => $label): ?>
+        <li class="nav-item">
+          <a class="nav-link <?= ($currentPage === $file) ? 'active' : '' ?>" href="<?= $file ?>?id=<?= $id ?>"><?= $label ?></a>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  </div>
+</nav>
+<?php endif; ?>
 <div class="container-fluid mt-4">

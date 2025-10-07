@@ -104,7 +104,7 @@ try {
       <input type="hidden" value="<?=$deliveries['status'];?>" name="status">
       <input type="hidden" name="delivery_id" value="<?=$_GET['delivery_id']?>">
 
-      <div class="mb-3 <?php if($deliveries['package_status'] == "pending"){echo "visually-hidden";}; ?>">
+      <div class="mb-3">
           <label for="photo_upload" class="form-label">Upload Photos</label>
           <input 
               type="file" 
@@ -114,8 +114,6 @@ try {
               accept="image/*"
               multiple
               required
-              
-              <?php if($deliveries['package_status'] == "pending"){echo "disabled";}; ?>
           >
       </div>
 
