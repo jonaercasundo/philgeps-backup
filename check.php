@@ -107,6 +107,9 @@ try {
                 $remaining_to_subtract -= $available_qty;
             }
         }
+        // // Optional: Delete inventory records that now have 0 quantity
+        // $stmt_cleanup = $pdo->prepare("DELETE FROM inventory WHERE qty = 0 AND inventory_status = 'Approved'");
+        // $stmt_cleanup->execute();
     }
 
     // Handle file uploads
