@@ -2,6 +2,7 @@
 $question = include "captcha.php"; 
 require 'config/db.php';
 
+
 $id = isset($_GET['id']) ? intval($_GET['id']) : 1;
 $logoPath = __DIR__ . "/assets/uploads/logo/logo.webp";
 $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
@@ -31,6 +32,12 @@ try {
 
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
+}
+$warehouse_id = $_SESSION['warehouse_id'];
+if($deliveries['package_status'] == 'pending' && isset($warehouse_id) == false){
+  echo "
+  Please Login!
+  ";
 }
 ?>
 <!DOCTYPE html>
