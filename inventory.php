@@ -319,23 +319,25 @@ function rejectInventory() {
                                 </button>
                             `;
                         } else {
-                            // Show Edit and Delete for approved items
-                            actionButtons = `
-                                <button class="btn btn-warning btn-sm" 
-                                        onclick="updateEdit(${row.inventory_id}, '${itemName}', '${warehouseName}', ${row.qty})" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#editModal"
-                                        title="Edit Item">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <button class="btn btn-danger btn-sm" 
-                                        onclick="updateDeleteURL(${row.inventory_id})" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#deleteModal"
-                                        title="Delete Item">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            `;
+                            if('<?= $_SESSION['role']?>' == 'Super Admin' ||'<?= $_SESSION['role']?>' == 'Office Admin'){
+                                // Show Edit and Delete for approved items
+                                actionButtons = `
+                                    <button class="btn btn-warning btn-sm" 
+                                            onclick="updateEdit(${row.inventory_id}, '${itemName}', '${warehouseName}', ${row.qty})" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editModal"
+                                            title="Edit Item">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" 
+                                            onclick="updateDeleteURL(${row.inventory_id})" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal"
+                                            title="Delete Item">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                `;
+                            }
                         }
                     }
                         return `
