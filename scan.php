@@ -30,6 +30,46 @@ try {
     $stmt->execute();
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // NEW: Fetch current inventory quantities for comparison
+    $warehouse_id = $_SESSION['warehouse_id'] ?? null;
+    $inventoryQuantities = [];
+    $sufficientQuantities = true; 
+    $insufficientItems = [];
+    
+  if ($warehouse_id && $deliveries['package_status'] === 'pending') {
+      $stmt = $pdo->prepare("
+          SELECT i.item_id, SUM(i.qty) as total_qty 
+          FROM inventory i 
+          WHERE i.warehouse_id = ? AND i.inventory_status = 'Approved'
+          GROUP BY i.item_id
+      ");
+      $stmt->execute([$warehouse_id]);
+      $inventoryResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+      
+      // Convert to associative array for easy lookup
+      foreach ($inventoryResults as $inv) {
+          $inventoryQuantities[$inv['item_id']] = $inv['total_qty'];
+      }
+
+      // Check if quantities are sufficient - ONLY FOR PENDING STATUS
+      foreach ($items as $item) {
+          $requiredQty = $item['qty'];
+          $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
+          
+          if ($availableQty < $requiredQty) {
+              $sufficientQuantities = false;
+              $insufficientItems[] = [
+                  'item_name' => $item['item_name'],
+                  'required' => $requiredQty,
+                  'available' => $availableQty
+              ];
+          }
+      }
+  } else {
+      // For non-pending packages, always allow submission
+      $sufficientQuantities = true;
+  }
+
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
 }
@@ -93,14 +133,41 @@ if($deliveries['package_status'] == 'pending' && isset($warehouse_id) == false &
         <tr>
           <th>Item</th>
           <th>Quantity</th>
+          <?php if ($deliveries['package_status'] === 'pending'): ?>
+            <th>Available</th>
+          <?php endif; ?>
         </tr>
-        <?php foreach ($items as $item){ ?>
-          <tr>
+        <?php foreach ($items as $item){ 
+          if ($deliveries['package_status'] === 'pending') {
+            $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
+            $isSufficient = $availableQty >= $item['qty'];
+          } else {
+            $isSufficient = true; // Always sufficient for non-pending
+          }
+          ?>
+          <tr class="<?= ($deliveries['package_status'] === 'pending' && !$isSufficient) ? 'insufficient-item' : '' ?>">
             <td><?=$item['item_name']?></td>
             <td><?=$item['qty']?></td>
+            <?php if ($deliveries['package_status'] === 'pending'): ?>
+              <td>
+                <?=$availableQty?>
+                <?php if (!$isSufficient): ?>
+                  <div class="quantity-warning">
+                    Insufficient! Need <?=$item['qty'] - $availableQty?> more
+                  </div>
+                <?php endif; ?>
+              </td>
+            <?php endif; ?>
           </tr>
         <?php } ?>
       </table>
+      <!-- Warning Message -->
+      <?php if ($deliveries['package_status'] === 'pending' && !$sufficientQuantities): ?>
+        <div class="alert alert-warning mt-3">
+          <strong>Warning:</strong> Some items have insufficient quantities in inventory. 
+          Please ensure all items are available before submitting.
+        </div>
+      <?php endif; ?>
     </div>
 
     <!-- Form -->
@@ -135,7 +202,25 @@ if($deliveries['package_status'] == 'pending' && isset($warehouse_id) == false &
         >
       </div>
 
-      <button type="submit" class="btn btn-primary w-100">Submit</button>
+      <button type="submit" class="btn btn-primary w-100" id="submitBtn" 
+        <?= ($deliveries['package_status'] === 'pending' && !$sufficientQuantities) ? 'disabled' : '' ?>>
+        <?= ($deliveries['package_status'] === 'pending' && !$sufficientQuantities) ? 'Insufficient Inventory' : 'Submit' ?>
+      </button>
+      
+      <?php if ($deliveries['package_status'] === 'pending' && !$sufficientQuantities): ?>
+        <div class="alert alert-danger mt-2">
+          <strong>Cannot Submit:</strong> The following items are insufficient:
+          <ul class="mb-0">
+            <?php foreach ($insufficientItems as $insufficient): ?>
+              <li>
+                <?=$insufficient['item_name']?>: 
+                Required <?=$insufficient['required']?>, 
+                Available <?=$insufficient['available']?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
     </form>
   </div>
 </div>

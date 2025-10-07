@@ -44,6 +44,71 @@ try {
     ];
     $next_status = $status_map[$current_status] ?? $current_status;
 
+        // NEW: Get package items to subtract from inventory
+    $warehouse_id = $_SESSION['warehouse_id'] ?? null;
+    if (!$warehouse_id) {
+        exit("Warehouse not specified in session.");
+    }
+
+    // Get all items in this package
+    $stmt_items = $pdo->prepare("
+        SELECT pc.item_id, pc.qty, i.item_name
+        FROM package_status ps
+        JOIN package p ON p.package_id = ps.package_id
+        JOIN package_content pc ON pc.package_id = p.package_id
+        JOIN item i ON i.item_id = pc.item_id
+        WHERE ps.package_status_id = :package_status_id
+    ");
+    $stmt_items->execute([':package_status_id' => $package_status_id]);
+    $package_items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
+
+    // Subtract quantities from inventory
+    foreach ($package_items as $item) {
+        $item_id = $item['item_id'];
+        $quantity_to_subtract = $item['qty'];
+        
+        // Get available approved inventory for this item in current warehouse
+        $stmt_inventory = $pdo->prepare("
+            SELECT inventory_id, qty 
+            FROM inventory 
+            WHERE item_id = :item_id 
+            AND warehouse_id = :warehouse_id 
+            AND inventory_status = 'Approved'
+            ORDER BY inventory_id
+        ");
+        $stmt_inventory->execute([
+            ':item_id' => $item_id,
+            ':warehouse_id' => $warehouse_id
+        ]);
+        $inventory_records = $stmt_inventory->fetchAll(PDO::FETCH_ASSOC);
+        
+        $remaining_to_subtract = $quantity_to_subtract;
+        
+        // Subtract from inventory records until we've deducted the full quantity
+        foreach ($inventory_records as $inv_record) {
+            if ($remaining_to_subtract <= 0) break;
+            
+            $available_qty = $inv_record['qty'];
+            $inventory_id = $inv_record['inventory_id'];
+            
+            if ($available_qty >= $remaining_to_subtract) {
+                // This record has enough quantity to cover the remainder
+                $new_qty = $available_qty - $remaining_to_subtract;
+                $stmt_update = $pdo->prepare("UPDATE inventory SET qty = :new_qty WHERE inventory_id = :inventory_id");
+                $stmt_update->execute([
+                    ':new_qty' => $new_qty,
+                    ':inventory_id' => $inventory_id
+                ]);
+                $remaining_to_subtract = 0;
+            } else {
+                // This record doesn't have enough, take all of it and move to next record
+                $stmt_update = $pdo->prepare("UPDATE inventory SET qty = 0 WHERE inventory_id = :inventory_id");
+                $stmt_update->execute([':inventory_id' => $inventory_id]);
+                $remaining_to_subtract -= $available_qty;
+            }
+        }
+    }
+
     // Handle file uploads
     $uploaded_photos = [];
     if (isset($_FILES['photo_upload']) && !empty($_FILES['photo_upload']['name'][0])) {
