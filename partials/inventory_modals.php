@@ -93,7 +93,7 @@
             </div>
             <div class="modal-body">
                 <form method="POST" id="acceptForm">
-                    <input type="text" id="accept_inventory_id" name="accept_inventory_id">
+                    <input type="hidden" id="accept_inventory_id" name="accept_inventory_id">
                     
                     <div class="mb-3">
                         <label class="form-label">Input Password to Continue *</label>

@@ -2,7 +2,6 @@
 session_start();
 header('Content-Type: application/json');
 require "../config/db.php";
-
 try {
     // Check if we have the required data
     if (empty($_POST['items_json']) || empty($_POST['password'])) {
@@ -40,7 +39,7 @@ try {
             continue;
         }
 
-        $warehouse_id = $item['warehouse_id'] ?? 1;
+        $warehouse_id = $_SESSION['warehouse_id'] ?? 1;
         $item_id = intval($item['item_id']);
         $quantity = intval($item['quantity']);
 
@@ -95,6 +94,12 @@ try {
         echo json_encode(["success" => false, "message" => "Failed to add items: " . implode(', ', $errors), "toast" => "Failed to add items", "type" => "danger"]);
     }
 
-} catch (Exception $e) {
-    echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage(), "toast" => "Database error", "type" => "danger"]);
+} catch (PDOException $e) {
+    echo json_encode([
+    "success" => false,
+    "message" => "SQL Error: " . $e->getMessage(),
+    "toast" => $e->getMessage(),
+    "type" => "danger"
+]);
+
 }

@@ -65,9 +65,6 @@
             <div class="bg-white px-4 rounded shadow-sm h-100">
                  <div class="d-flex align-items-center mb-3">
                        <h5 class="mb-0 text-dark">Inventory List</h5>
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success ms-auto">
-                        + Add New Inventory
-                    </a>
                 </div>
              
 
@@ -308,7 +305,7 @@ function rejectInventory() {
                                     <i class="bi bi-check-lg"></i>
                                 </button>
                                 <button class="btn btn-danger btn-sm" 
-                                        onclick="updateRejectURL(${row.inventory_id}, '${itemName}')" 
+                                        onclick="updateRejectId(${row.inventory_id})" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#rejectModal"
                                         title="Reject Item">
@@ -547,7 +544,6 @@ function rejectInventory() {
         const formData = new FormData();
         formData.append('items_json', JSON.stringify(items));
         formData.append('password', password);
-
         // Show loading state
         const submitBtn = document.querySelector('#addModal .btn-primary');
         const originalText = submitBtn.textContent;
@@ -562,7 +558,6 @@ function rejectInventory() {
         .then(data => {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
-
             if (data.success) {
                 // Clear the scanned items table
                 document.getElementById('itemBodytable').innerHTML = '<tr><td colspan="2" class="text-center text-muted">No packages scanned yet</td></tr>';

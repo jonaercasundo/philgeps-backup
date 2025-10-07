@@ -24,6 +24,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION['username'] = $user['username'];
             $_SESSION['name'] = $user['name'];
             $_SESSION['role'] = $user['role'];
+            $_SESSION['warehouse_id'] = $user['warehouse_id'] ?? null;
+
 
             // Define main navigation links
             switch($_SESSION['role']){
