@@ -1,6 +1,8 @@
 <?php
 require_once "../config/db.php";
+session_start();
 
+$warehouse_id = $_SESSION['warehouse_id'] ?? null;
 // DataTables parameters
 $draw = isset($_GET['draw']) ? intval($_GET['draw']) : 1;
 $start = isset($_GET['start']) ? intval($_GET['start']) : 0;
@@ -20,9 +22,19 @@ $response = [
 
 if (isset($pdo) && $pdo !== null) {
     try {
-        // Get total records count
+        // Get total records count - FILTER BY WAREHOUSE_ID
         $totalQuery = "SELECT COUNT(*) as total FROM inventory";
+        $totalParams = [];
+        
+        if ($warehouse_id) {
+            $totalQuery .= " WHERE warehouse_id = :warehouse_id";
+            $totalParams[':warehouse_id'] = $warehouse_id;
+        }
+        
         $totalStmt = $pdo->prepare($totalQuery);
+        foreach ($totalParams as $key => $value) {
+            $totalStmt->bindValue($key, $value);
+        }
         $totalStmt->execute();
         $totalRecords = $totalStmt->fetch(PDO::FETCH_ASSOC)['total'];
         
@@ -45,6 +57,11 @@ if (isset($pdo) && $pdo !== null) {
         $whereClauses = [];
         $params = [];
         
+        if ($warehouse_id) {
+            $whereClauses[] = "i.warehouse_id = :warehouse_id";
+            $params[':warehouse_id'] = $warehouse_id;
+        }
+
         if (!empty($searchValue)) {
             $whereClauses[] = "(it.item_name LIKE :search OR w.warehouse_name LIKE :search OR i.qty LIKE :search OR i.inventory_id LIKE :search OR i.inventory_status LIKE :search)";
             $params[':search'] = "%{$searchValue}%";
@@ -58,8 +75,11 @@ if (isset($pdo) && $pdo !== null) {
         $filteredQuery = "SELECT COUNT(*) as total 
                         FROM inventory i
                         JOIN item it ON i.item_id = it.item_id
-                        JOIN warehouse w ON i.warehouse_id = w.warehouse_id" . 
-                        (!empty($whereClauses) ? " WHERE " . implode(" AND ", $whereClauses) : "");
+                        JOIN warehouse w ON i.warehouse_id = w.warehouse_id";
+        
+        if (!empty($whereClauses)) {
+            $filteredQuery .= " WHERE " . implode(" AND ", $whereClauses);
+        }
         
         $filteredStmt = $pdo->prepare($filteredQuery);
         foreach ($params as $key => $value) {
