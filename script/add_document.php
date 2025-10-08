@@ -1,4 +1,5 @@
 <?php
+session_start();
 require "../config/db.php"; // make sure $pdo is included
 
 try {
@@ -29,6 +30,10 @@ try {
         throw new Exception("Failed to move uploaded file");
     }
 
+    $stmt = $pdo->prepare("SELECT project_name FROM projects WHERE project_id = ?");
+    $stmt->execute([$project_id]);
+    $projectName = $stmt->fetchColumn();
+
     // Save to DB
     $stmt = $pdo->prepare("
         INSERT INTO documents (project_id, doc_type, file_name, file_path)
@@ -39,6 +44,14 @@ try {
         $doc_type,
         $newName,
         $filePath
+    ]);
+
+    $stmt = $pdo->prepare("INSERT INTO activity_logs 
+        (user_id, action) 
+        VALUES (?,?)");
+    $stmt->execute([
+        $_SESSION['user_id'],
+        $_SESSION['name']." Added File $newName as $doc_type to ". $projectName
     ]);
 
     echo json_encode(["success" => true, "file" => $newName]);

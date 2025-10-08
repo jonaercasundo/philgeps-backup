@@ -1,6 +1,7 @@
 <?php
-require "../config/db.php"; // your PDO connection
 session_start();
+require "../config/db.php"; // your PDO connection
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
@@ -44,6 +45,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $row++;
         }
         fclose($handle);
+
+    $stmt = $pdo->prepare("
+    SELECT project_name FROM projects
+    WHERE project_id = ?");
+    $stmt->execute([$_POST['project_id']]);
+    $projectName = $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("INSERT INTO activity_logs 
+        (user_id, action) 
+        VALUES (?,?)");
+    $stmt->execute([
+    $_SESSION['user_id'],
+    $_SESSION['name']." Added $row items on $projectName"
+    ]);
+
         header("Location: ../items.php?id=$project_id&toast=Inserted items successfully&type=success");
     } else {
         die("Unable to open uploaded file.");

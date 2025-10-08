@@ -1,4 +1,5 @@
 <?php
+session_start();
 header('Content-Type: application/json');
 require "../config/db.php"; // adjust
 
@@ -11,6 +12,18 @@ try {
         $_POST['contract_no']
     ]);
     $project_id = $pdo->lastInsertId();
+
+    $stmt = $pdo->prepare("SELECT project_name FROM projects WHERE project_id = ?");
+    $stmt->execute([$_POST['project_id']]);
+    $projectName = $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("INSERT INTO activity_logs 
+        (user_id, action) 
+        VALUES (?,?)");
+    $stmt->execute([
+    $_SESSION['user_id'],
+    $_SESSION['name']." Added Lot ".$_POST['lot_no']." to ". $projectName
+    ]);
 
     echo json_encode(["success" => true]);
 } catch (Exception $e) {

@@ -1,11 +1,11 @@
 <?php
+session_start();
 require "../config/db.php";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lot_id       = $_POST['lot_id'] ?? null;
     $keystage_id  = $_POST['keystage_id'] ?? null;
 
-    // force NULL if empty
     if (empty($keystage_id)) {
         $keystage_id = null;
     }
@@ -29,6 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("SELECT project_id FROM lot WHERE lot_id = ?");
         $stmt->execute([$lot_id]);
         $project_id = $stmt->fetchColumn();
+
+        // fix query alias
+        $stmt = $pdo->prepare("
+            SELECT p.project_name 
+            FROM lot l 
+            JOIN projects p ON l.project_id = p.project_id 
+            WHERE l.lot_id = ?
+        ");
+        $stmt->execute([$lot_id]);
+        $projectName = $stmt->fetchColumn();
 
         foreach ($items as $i => $item_id) {
             $qty = $quantities[$i] ?? 0;
@@ -67,6 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $packages[$dimKey]['items'][] = ['id' => $item_id, 'qty' => $qty];
             }
         }
+
+        // count how many packages will be inserted
+        $numberofPackages = count($packages);
 
         // Insert grouped packages
         foreach ($packages as $pkg) {
@@ -108,6 +121,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$package_id, $it['id'], $it['qty']]);
             }
         }
+
+        // Log the activity
+        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action) VALUES (?, ?)");
+        $stmt->execute([
+            $_SESSION['user_id'],
+            $_SESSION['name'] . " added {$numberofPackages} package(s) to project {$projectName}"
+        ]);
 
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Packages added successfully']);

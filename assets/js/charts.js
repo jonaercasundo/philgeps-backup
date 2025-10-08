@@ -10,9 +10,23 @@ const {
   topPackageTypes,
   deliveriesPerProject,
   activityLogActions,
-  selectedProject
+  selectedProject,
+  inventoryData 
 } = phpData;
 
+// Group data by item_name
+const itemGroups = {};
+inventoryData.forEach(row => {
+  const { item_name, qty, warehouse_name } = row;
+  if (!itemGroups[item_name]) itemGroups[item_name] = { total: 0, warehouses: {} };
+  itemGroups[item_name].total += Number(qty);
+  itemGroups[item_name].warehouses[warehouse_name] = 
+      (itemGroups[item_name].warehouses[warehouse_name] || 0) + Number(qty);
+});
+
+// Prepare arrays for chart
+const labels = Object.keys(itemGroups);
+const totals = labels.map(name => itemGroups[name].total);
 
 // Color palettes
 const statusColors = {
@@ -39,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize Sortable
   let sortable = new Sortable(document.getElementById('draggable-dashboard'), {
     animation: 150,
-    ghostClass: 'sortable-ghost',
+    ghostClass: 'blue-background-class',
     chosenClass: 'sortable-chosen',
     dragClass: 'sortable-drag',
     handle: '.drag-handle',
@@ -276,6 +290,57 @@ if (monthlyDeliveryTrend.length > 0) {
   } else {
     createEmptyChart(document.getElementById('activityLogActionsChart'), 'No activity log data available');
   }
+
+
+  // 6. Inventory Quantities per Warehouse (Vertical Bar)
+if (inventoryData.length > 0) {
+  const ctx = document.getElementById('inventoryChart');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Total Quantity',
+      data: totals,
+      backgroundColor: 'rgba(54, 162, 235, 0.7)',
+      borderColor: 'rgba(54, 162, 235, 1)',
+      borderWidth: 1
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const itemName = context.label;
+            const item = itemGroups[itemName];
+            const lines = [];
+            for (const [warehouse, qty] of Object.entries(item.warehouses)) {
+              const percent = ((qty / item.total) * 100).toFixed(1);
+              lines.push(`${warehouse}: ${qty} (${percent}%)`);
+            }
+            return [`Total: ${item.total}`].concat(lines);
+          }
+        }
+      },
+      legend: { display: false }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Quantity' }
+      },
+      x: {
+        title: { display: true, text: 'Item' }
+      }
+    }
+  }
+});
+} else {
+  createEmptyChart(document.getElementById('inventoryChart'), 'No inventory data available');
+}
 
   // Places Delivered (Horizontal Bar) - by schools reached
   if (placesDelivered.length > 0) {

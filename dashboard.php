@@ -159,13 +159,26 @@ try {
     
     echo "<!-- DEBUG: Activity log count: " . count($activityLogActions) . " -->";
 
-    // Add missing variables with empty data for now
-    $projectsPerYear = [];
-    $projectsByAgency = [];
-    $amountPerYear = [];
-    $projectProgress = [];
-    $topPackageTypes = [];
-    $deliveriesPerProject = [];
+    // Inventory Quantities (sum by warehouse)
+    $inventoryQuery = "
+        SELECT 
+            ii.item_name, i.qty, w.warehouse_name
+        FROM inventory i
+        JOIN item ii ON i.item_id = ii.item_id
+        JOIN warehouse w ON i.warehouse_id = w.warehouse_id
+        WHERE inventory_status = 'Approved'
+    ";
+    $stmt = $pdo->query($inventoryQuery);
+    $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Add missing variables with empty data for now
+$projectsPerYear = [];
+$projectsByAgency = [];
+$amountPerYear = [];
+$projectProgress = [];
+$topPackageTypes = [];
+$deliveriesPerProject = [];
+
 
 } catch (PDOException $e) {
     echo "<!-- DEBUG: DB Error: " . $e->getMessage() . " -->";
@@ -269,7 +282,7 @@ if ($selectedProject > 0) {
 
 
   <!-- Chart 4: Monthly Delivery Trend -->
-  <div class="col-lg-8 col-md-12 mb-4 chart-item" data-chart-id="monthly-trend">
+  <div class="col-lg-6 col-md-12 mb-4 chart-item" data-chart-id="monthly-trend">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">📈 Monthly Delivery Trend</h6>
@@ -299,7 +312,7 @@ if ($selectedProject > 0) {
   </div>
 
   <!-- Chart 10: Places Delivered -->
-  <div class="col-lg-8 mb-4 chart-item" data-chart-id="places-delivered">
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">📍 Places Delivered (Schools Reached by Project & Region)</h6>
@@ -310,6 +323,19 @@ if ($selectedProject > 0) {
       </div>
     </div>
   </div>
+
+  <!-- Chart: Inventory Quantities per Warehouse -->
+<div class="col-lg-4 mb-4 chart-item" data-chart-id="inventory-quantities">
+  <div class="card shadow-sm h-100">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">📦 Inventory Quantity</h6>
+      <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+    </div>
+    <div class="card-body">
+      <canvas id="inventoryChart" height="250"></canvas>
+    </div>
+  </div>
+</div>
 
 </div>
 
@@ -392,6 +418,7 @@ if ($selectedProject > 0) {
         topPackageTypes: <?= json_encode($topPackageTypes) ?>,
         deliveriesPerProject: <?= json_encode($deliveriesPerProject) ?>,
         activityLogActions: <?= json_encode($activityLogActions) ?>,
+        inventoryData: <?= json_encode($inventoryData) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>
     };
 </script>

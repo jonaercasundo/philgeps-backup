@@ -1,10 +1,11 @@
 <?php
+session_start();
 header('Content-Type: application/json');
 require "../config/db.php"; // adjust
 if (isset($_POST['keystage'])) {
     $keystage = $_POST['keystage']; // "1"
 } else {
-    $keystage = 0; // or NULL, depending on your logic
+$keystage = 0; // or NULL, depending on your logic
 }
 try {
     $stmt = $pdo->prepare("INSERT INTO projects 
@@ -20,6 +21,13 @@ try {
         $_POST['end_date']
     ]);
 
+    $stmt = $pdo->prepare("INSERT INTO activity_logs 
+        (user_id, action) 
+        VALUES (?,?)");
+    $stmt->execute([
+        $_SESSION['user_id'],
+        $_SESSION['name']." Added Project ".$_POST['project_name']
+    ]);
     echo json_encode(["success" => true]);
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
