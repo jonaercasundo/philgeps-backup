@@ -22,10 +22,6 @@
         <!-- Header: fixed height -->
         <div class="px-3 d-flex justify-content-between align-items-center py-2 border-bottom flex-shrink-0">
             <h5 class="mb-0 text-dark opacity-75">Add Items</h5> 
-            <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" role="switch" checked id="flexSwitchCheckDefault">
-            <label class="form-check-label" for="flexSwitchCheckDefault">Item View</label>
-            </div>
         </div>
 
         <!-- QR Reader container: fixed height and center content -->
@@ -49,6 +45,7 @@
                 </tr>
             </thead>
             <tbody id="itemBodytable">
+                <td colspan="2" class="text-center text-muted">No packages scanned yet</td>
             </tbody>
             </table>
         </div>
@@ -415,20 +412,13 @@ function rejectInventory() {
             } else {
                 console.log("Package duplicate:", packageID);
             }
-
-            // After adding, reload current view (item or lot)
-            const checkbox = document.getElementById('flexSwitchCheckDefault');
-            if (checkbox.checked) {
                 loadItemsView();
-            } else {
-                loadLotsView();
-            }
+
         } else {
             console.warn("QR action not recognized:", data.action);
         }
     }
 
-    // Load per-item view
     function loadItemsView() {
         const tbody = document.getElementById('itemBodytable');
         if (!tbody) {
@@ -453,14 +443,14 @@ function rejectInventory() {
                 if (data.success && Array.isArray(data.items)) {
                     // Add a header row for this package
                     const headerRow = document.createElement('tr');
-                    headerRow.innerHTML = `<td colspan="2" style="font-weight:bold; background:#f0f0f0;">Package: LOT ${data.package.lot_name} KEYSTAGE ${data.package.keystage_name} KEYSTAGE ${data.package.description}</td>`;
+                    headerRow.innerHTML = `<td style="font-weight:bold; background:#f0f0f0;">Package: LOT ${data.package.lot_name} KEYSTAGE ${data.package.keystage_name} KEYSTAGE ${data.package.description}</td><td contenteditable="true" data-package-id="${data.package.package_id}" onblur="changeQuantity(this)">1</td>`;
                     tbody.appendChild(headerRow);
 
                     // Add each item row for this package
                     data.items.forEach(item => {
                         const tr = document.createElement('tr');
                         tr.setAttribute('data-item-id', item.item_id);  // <-- add this
-                        tr.innerHTML = `<td>${item.item_name || ''}</td><td>${item.qty || ''}</td>`;
+                        tr.innerHTML = `<td>${item.item_name || ''}</td><td data-base-qty="${item.qty || ''}" class="item-${data.package.package_id}">${item.qty || ''}</td>`;
                         tbody.appendChild(tr);
                     });
 
@@ -471,46 +461,18 @@ function rejectInventory() {
             .catch(err => console.error("Fetch error (items):", err));
         });
     }
+    function changeQuantity(el) {
+    const packageId = el.dataset.packageId; // use data-package-id in your td
+    const items = document.querySelectorAll(".item-" + packageId);
 
-    // Load per lot/keystage view
-    function loadLotsView() {
-        const tbody = document.getElementById('itemBodytable');
-        if (!tbody) {
-            console.error("itemBodytable not found");
-            return;
-        }
-        tbody.innerHTML = '';
+    const newQty = parseInt(el.textContent.trim()) || 0;
 
-        if (addedPackages.length === 0) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="2" class="text-center text-muted">No packages scanned yet</td>`;
-            tbody.appendChild(tr);
-            return;
-        }
-
-        console.log("Loading Lots View for packages:", addedPackages);
-
-        addedPackages.forEach(pkg => {
-            fetch(`script/get_lots_with_keystages.php?package_id=${encodeURIComponent(pkg)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && Array.isArray(data.lots)) {
-                    data.lots.forEach(lot => {
-                        const tr = document.createElement('tr');
-                        let display = `Lot: ${lot.lot_name}`;
-                        if (lot.keystage_num) {
-                            display += ` - Keystage ${lot.keystage_num} ${lot.description || ''}`;
-                        }
-                        tr.innerHTML = `<td>${display}</td><td>${lot.qty || 0}</td>`;
-                        tbody.appendChild(tr);
-                    });
-                } else {
-                    console.warn("No lots for package", pkg, data);
-                }
-            })
-            .catch(err => console.error("Fetch error (lots):", err));
-        });
-    }
+    items.forEach(item => {
+        // Assuming item.innerHTML holds the base quantity
+        const baseQty = parseInt(item.dataset.baseQty) || 1; // store original qty in data attribute
+        item.textContent = baseQty * newQty;
+    });
+}
 
     // Add inventory - bulk submit all items
     function addForm(type, scriptUrl) {
@@ -598,31 +560,6 @@ function rejectInventory() {
             alert('Error adding items: ' + error.message);
         });
     }
-
-    // Toggle binding & initial load
-    document.addEventListener('DOMContentLoaded', () => {
-        const checkbox = document.getElementById('flexSwitchCheckDefault');
-        if (!checkbox) {
-            console.error("Checkbox flexSwitchCheckDefault not found");
-            return;
-        }
-
-        checkbox.addEventListener('change', () => {
-            console.log("Toggle changed to:", checkbox.checked);
-            if (checkbox.checked) {
-                loadItemsView();
-            } else {
-                loadLotsView();
-            }
-        });
-
-        // Initial view
-        if (checkbox.checked) {
-            loadItemsView();
-        } else {
-            loadLotsView();
-        }
-    });
 
     // Start scanner
     html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
