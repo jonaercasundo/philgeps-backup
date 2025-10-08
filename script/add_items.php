@@ -111,7 +111,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
         echo json_encode(['success' => true, 'message' => 'Packages added successfully']);
-        exit;
     } catch (PDOException $e) {
         $pdo->rollBack();
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
