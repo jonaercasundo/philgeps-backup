@@ -1,20 +1,13 @@
 // Access the global phpData object created in the main PHP file.
 const {
-  projectsPerYear,
-  projectsByAgency,
-  amountPerYear,
-  projectProgress,
   placesDelivered,
   deliveryStatusOverview,
   monthlyDeliveryTrend,
-  topPackageTypes,
-  deliveriesPerProject,
-  activityLogActions,
+  todayUserActivity,
   selectedProject,
   inventoryData 
 } = phpData;
 
-// Group data by item_name
 const itemGroups = {};
 inventoryData.forEach(row => {
   const { item_name, qty, warehouse_name } = row;
@@ -187,95 +180,62 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Chart initialization functions
+  // 1. Delivery Status Overview (Doughnut)
   if (deliveryStatusOverview.length > 0) {
-  const totalOverall = deliveryStatusOverview.reduce((sum, r) => sum + r.total, 0);
+    const totalOverall = deliveryStatusOverview.reduce((sum, r) => sum + r.total, 0);
 
-  new Chart(document.getElementById('deliveryStatusChart'), {
-    type: 'doughnut',
-    data: {
-      labels: deliveryStatusOverview.map(r => 
-        `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`
-      ),
-      datasets: [{
-        data: deliveryStatusOverview.map(r => r.total),
-        backgroundColor: deliveryStatusOverview.map(r => statusColors[r.status] || 'rgba(128, 128, 128, 0.8)'),
-        borderWidth: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'bottom' }
-      }
-    }
-  });
-} else {
-  createEmptyChart(document.getElementById('deliveryStatusChart'), 'No delivery data available');
-}
-
-
-  // 2. Monthly Delivery Trend (Line)
-if (monthlyDeliveryTrend.length > 0) {
-  // Extract unique months and statuses
-  const months = [...new Set(monthlyDeliveryTrend.map(r => r.month))];
-  const statuses = [...new Set(monthlyDeliveryTrend.map(r => r.status))];
-
-  // Build datasets for each status
-  const datasets = statuses.map((status, idx) => ({
-    label: status,
-    data: months.map(month => {
-      const row = monthlyDeliveryTrend.find(r => r.month === month && r.status === status);
-      return row ? row.total : 0; // 0 if no data for that month+status
-    }),
-    borderColor: [
-      'rgba(54, 162, 235, 1)',   // warehouse
-      'rgba(255, 206, 86, 1)',   // accepted
-      'rgba(75, 192, 192, 1)'    // delivered
-    ][idx % 4], // fallback color rotation
-    backgroundColor: 'transparent',
-    tension: 0.4,
-    fill: false
-  }));
-
-  new Chart(document.getElementById('monthlyDeliveryTrendChart'), {
-    type: 'line',
-    data: {
-      labels: months,
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true
+    new Chart(document.getElementById('deliveryStatusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: deliveryStatusOverview.map(r => 
+          `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`
+        ),
+        datasets: [{
+          data: deliveryStatusOverview.map(r => r.total),
+          backgroundColor: deliveryStatusOverview.map(r => statusColors[r.status] || 'rgba(128, 128, 128, 0.8)'),
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
         }
       }
-    }
-  });
-} else {
-  createEmptyChart(
-    document.getElementById('monthlyDeliveryTrendChart'),
-    'No monthly trend data available'
-  );
-}
+    });
+  } else {
+    createEmptyChart(document.getElementById('deliveryStatusChart'), 'No delivery data available');
+  }
 
+  // 2. Monthly Delivery Trend (Line)
+  if (monthlyDeliveryTrend.length > 0) {
+    // Extract unique months and statuses
+    const months = [...new Set(monthlyDeliveryTrend.map(r => r.month))];
+    const statuses = [...new Set(monthlyDeliveryTrend.map(r => r.status))];
 
-  // 5. Activity Log Actions (Bar)
-  if (activityLogActions.length > 0) {
-    new Chart(document.getElementById('activityLogActionsChart'), {
-      type: 'bar',
+    // Build datasets for each status
+    const datasets = statuses.map((status, idx) => ({
+      label: status,
+      data: months.map(month => {
+        const row = monthlyDeliveryTrend.find(r => r.month === month && r.status === status);
+        return row ? row.total : 0; // 0 if no data for that month+status
+      }),
+      borderColor: [
+        'rgba(54, 162, 235, 1)',   // warehouse
+        'rgba(255, 206, 86, 1)',   // accepted
+        'rgba(75, 192, 192, 1)'    // delivered
+      ][idx % 4], // fallback color rotation
+      backgroundColor: 'transparent',
+      tension: 0.4,
+      fill: false
+    }));
+
+    new Chart(document.getElementById('monthlyDeliveryTrendChart'), {
+      type: 'line',
       data: {
-        labels: activityLogActions.map(r => r.action),
-        datasets: [{
-          label: 'Count',
-          data: activityLogActions.map(r => r.total),
-          backgroundColor: 'rgba(153, 102, 255, 0.7)',
-          borderColor: 'rgba(153, 102, 255, 1)',
-          borderWidth: 1
-        }]
+        labels: months,
+        datasets: datasets
       },
       options: {
         responsive: true,
@@ -288,61 +248,85 @@ if (monthlyDeliveryTrend.length > 0) {
       }
     });
   } else {
-    createEmptyChart(document.getElementById('activityLogActionsChart'), 'No activity log data available');
+    createEmptyChart(
+      document.getElementById('monthlyDeliveryTrendChart'),
+      'No monthly trend data available'
+    );
   }
 
+  // 3. Today's User Activity (Doughnut)
+  if (todayUserActivity.length > 0) {
+      const activityTypes = [...new Set(todayUserActivity.map(r => r.activity_type))];
+      const timeLabels = [...new Set(todayUserActivity.map(r => r.time_label))].sort();
+      
+      const activityDetails = {};
+      todayUserActivity.forEach(r => {
+          activityDetails[`${r.time_label}-${r.activity_type}`] = r.activity_list?.split('|||') || [];
+      });
+      
+      const datasets = activityTypes.map((type, i) => {
+          const color = statusColors[type] || primaryColors[i % primaryColors.length];
+          const bgColor = color.replace('0.8', '0.1');
+          
+          return {
+              label: type,
+              data: timeLabels.map(t => todayUserActivity.find(r => r.time_label === t && r.activity_type === type)?.total_activities || 0),
+              borderColor: color,
+              backgroundColor: bgColor,
+              tension: 0.4,
+              fill: true
+          };
+      });
 
-  // 6. Inventory Quantities per Warehouse (Vertical Bar)
-if (inventoryData.length > 0) {
-  const ctx = document.getElementById('inventoryChart');
-new Chart(ctx, {
-  type: 'bar',
-  data: {
-    labels: labels,
-    datasets: [{
-      label: 'Total Quantity',
-      data: totals,
-      backgroundColor: 'rgba(54, 162, 235, 0.7)',
-      borderColor: 'rgba(54, 162, 235, 1)',
-      borderWidth: 1
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            const itemName = context.label;
-            const item = itemGroups[itemName];
-            const lines = [];
-            for (const [warehouse, qty] of Object.entries(item.warehouses)) {
-              const percent = ((qty / item.total) * 100).toFixed(1);
-              lines.push(`${warehouse}: ${qty} (${percent}%)`);
-            }
-            return [`Total: ${item.total}`].concat(lines);
+      new Chart(document.getElementById('todayActivityChart'), {
+          type: 'line',
+          data: { labels: timeLabels, datasets },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'point', intersect: true },
+              plugins: {
+                  legend: { position: 'bottom' },
+                  tooltip: {
+                      enabled: true,
+                      backgroundColor: '#fff',
+                      titleColor: '#333',
+                      bodyColor: '#666',
+                      borderColor: '#ddd',
+                      borderWidth: 2,
+                      padding: 12,
+                      displayColors: false,
+                      titleFont: { size: 13, weight: 'bold' },
+                      bodyFont: { size: 12 },
+                      callbacks: {
+                          title: ctx => ctx[0].dataset.label + ' Activity',
+                          label: ctx => {
+                              const key = `${timeLabels[ctx.dataIndex]}-${ctx.dataset.label}`;
+                              const activities = activityDetails[key] || [];
+                              return activities.length > 0 ? activities.slice(0, 5) : `${ctx.parsed.y} Activities at ${ctx.label}`;
+                          },
+                          afterLabel: ctx => {
+                              const key = `${timeLabels[ctx.dataIndex]}-${ctx.dataset.label}`;
+                              const activities = activityDetails[key] || [];
+                              return activities.length > 5 ? `... and ${activities.length - 5} more` : null;
+                          }
+                      }
+                  }
+              },
+              scales: {
+                  y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                  x: { 
+                      grid: { display: false },
+                      ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 20 }
+                  }
+              }
           }
-        }
-      },
-      legend: { display: false }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: { display: true, text: 'Quantity' }
-      },
-      x: {
-        title: { display: true, text: 'Item' }
-      }
-    }
+      });
+  } else {
+      createEmptyChart(document.getElementById('todayActivityChart'), 'No activity today');
   }
-});
-} else {
-  createEmptyChart(document.getElementById('inventoryChart'), 'No inventory data available');
-}
 
-  // Places Delivered (Horizontal Bar) - by schools reached
+  // 4. Places Delivered (Horizontal Bar) - by schools reached
   if (placesDelivered.length > 0) {
     new Chart(document.getElementById('placesDeliveredChart'), {
       type: 'bar',
@@ -370,6 +354,58 @@ new Chart(ctx, {
   } else {
     createEmptyChart(document.getElementById('placesDeliveredChart'), 'No places delivered data available');
   }
+
+  // 5. Inventory Quantities per Warehouse (Vertical Bar)
+  if (inventoryData.length > 0) {
+    const ctx = document.getElementById('inventoryChart');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Total Quantity',
+        data: totals,
+        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const itemName = context.label;
+              const item = itemGroups[itemName];
+              const lines = [];
+              for (const [warehouse, qty] of Object.entries(item.warehouses)) {
+                const percent = ((qty / item.total) * 100).toFixed(1);
+                lines.push(`${warehouse}: ${qty} (${percent}%)`);
+              }
+              return [`Total: ${item.total}`].concat(lines);
+            }
+          }
+        },
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Quantity' }
+        },
+        x: {
+          title: { display: true, text: 'Item' }
+        }
+      }
+    }
+  });
+  } else {
+    createEmptyChart(document.getElementById('inventoryChart'), 'No inventory data available');
+  }
+
+
 
 
 });

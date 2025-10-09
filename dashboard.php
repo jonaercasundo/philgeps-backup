@@ -65,23 +65,22 @@ try {
         $stmt = $pdo->query("
             SELECT
                 SUM(CASE WHEN status='Ongoing' THEN 1 ELSE 0 END) AS activeProjects,
-                SUM(CASE WHEN status='Completed' THEN 1 ELSE 0 END) AS completedProjects,
-                (SELECT COALESCE(SUM(amount),0) FROM invoices WHERE status='Paid' AND project_id = $selectedProject) AS totalPaid,
-                (SELECT COALESCE(SUM(amount),0) FROM invoices WHERE status='Pending' AND project_id = $selectedProject) AS totalPending
+                (SELECT COUNT(*) FROM deliveries WHERE status='pending' AND project_id = $selectedProject) AS pending,
+                (SELECT COUNT(*) FROM deliveries WHERE status='accepted' AND project_id = $selectedProject) AS accepted,
+                (SELECT COUNT(*) FROM deliveries WHERE status='delivered' AND project_id = $selectedProject) AS delivered
             FROM projects WHERE project_id = $selectedProject
         ");
     } else {
         $stmt = $pdo->query("
             SELECT
                 SUM(CASE WHEN status='Ongoing' THEN 1 ELSE 0 END) AS activeProjects,
-                SUM(CASE WHEN status='Completed' THEN 1 ELSE 0 END) AS completedProjects,
-                (SELECT COALESCE(SUM(amount),0) FROM invoices WHERE status='Paid') AS totalPaid,
-                (SELECT COALESCE(SUM(amount),0) FROM invoices WHERE status='Pending') AS totalPending
+                (SELECT COUNT(*) FROM deliveries WHERE status='pending') AS pending,
+                (SELECT COUNT(*) FROM deliveries WHERE status='accepted') AS accepted,
+                (SELECT COUNT(*) FROM deliveries WHERE status='delivered') AS delivered
             FROM projects
         ");
     }
     $totals = $stmt->fetch(PDO::FETCH_ASSOC);
-    echo "<!-- DEBUG: Totals: " . json_encode($totals) . " -->";
 
     // 1. Delivery Status Overview (filtered)
     $deliveryStatusQuery = "
@@ -143,23 +142,35 @@ try {
     
     echo "<!-- DEBUG: Monthly trend count: " . count($monthlyDeliveryTrend) . " -->";
 
-    // 5. Activity Log Actions
-    $activityQuery = "
-        SELECT action, COUNT(*) as total
-        FROM activity_logs
-        WHERE action IS NOT NULL
-        GROUP BY action
-        ORDER BY total DESC
+    // 3. Today's User Activity by Warehouse/Office
+    $todayActivityQuery = "
+        SELECT 
+          DATE_FORMAT(al.created_at, '%H:%i') as time_label,
+          HOUR(al.created_at) as hour,
+          MINUTE(al.created_at) as minute,
+          CASE 
+              WHEN u.warehouse_id IS NULL THEN 'Office'
+              ELSE w.warehouse_name
+          END AS activity_type,
+          COUNT(*) as total_activities,
+          CONCAT( al.action ) as activity_list
+      FROM activity_logs al
+      JOIN users u ON al.user_id = u.user_id
+      LEFT JOIN warehouse w ON u.warehouse_id = w.warehouse_id
+      WHERE DATE(al.created_at) = CURDATE()
+      GROUP BY 
+          DATE_FORMAT(al.created_at, '%H:%i'),
+          CASE 
+              WHEN u.warehouse_id IS NULL THEN 'Office'
+              ELSE w.warehouse_name
+          END
+      ORDER BY hour, minute, activity_type
     ";
-    
-    echo "<!-- DEBUG: Activity query: $activityQuery -->";
-    
-    $stmt = $pdo->query($activityQuery);
-    $activityLogActions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "<!-- DEBUG: Activity log count: " . count($activityLogActions) . " -->";
 
-    // Inventory Quantities (sum by warehouse)
+    $stmt = $pdo->query($todayActivityQuery);
+    $todayUserActivity = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 4. Inventory Quantities (sum by warehouse)
     $inventoryQuery = "
         SELECT 
             ii.item_name, i.qty, w.warehouse_name
@@ -172,12 +183,12 @@ try {
     $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Add missing variables with empty data for now
-$projectsPerYear = [];
-$projectsByAgency = [];
-$amountPerYear = [];
-$projectProgress = [];
-$topPackageTypes = [];
-$deliveriesPerProject = [];
+// $projectsPerYear = [];
+// $projectsByAgency = [];
+// $amountPerYear = [];
+// $projectProgress = [];
+// $topPackageTypes = [];
+// $deliveriesPerProject = [];
 
 
 } catch (PDOException $e) {
@@ -247,9 +258,9 @@ if ($selectedProject > 0) {
   <?php 
   $cards = [
       ['title'=>'Active Projects','value'=>$totals['activeProjects'],'class'=>'primary','icon'=>'🚀'],
-      ['title'=>'Total Value','value'=>'₱'.number_format($totals['totalPaid']),'class'=>'success','icon'=>'💰'],
-      ['title'=>'Pending Payments','value'=>'₱'.number_format($totals['totalPending']),'class'=>'warning','icon'=>'⏳'],
-      ['title'=>'Completed Projects','value'=>$totals['completedProjects'],'class'=>'dark','icon'=>'✅']
+      ['title'=>'Pending','value'=>$totals['pending'] ?? 0,'class'=>'warning','icon'=>'⏳'],
+      ['title'=>'Accepted','value'=>$totals['accepted'] ?? 0,'class'=>'info','icon'=>'✅'],
+      ['title'=>'Delivered','value'=>$totals['delivered'] ?? 0,'class'=>'success','icon'=>'📦']
   ];
   foreach($cards as $c): ?>
   <div class="col-md-3 mb-3">
@@ -281,7 +292,7 @@ if ($selectedProject > 0) {
   </div>
 
 
-  <!-- Chart 4: Monthly Delivery Trend -->
+  <!-- Chart 2: Monthly Delivery Trend -->
   <div class="col-lg-6 col-md-12 mb-4 chart-item" data-chart-id="monthly-trend">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -294,24 +305,20 @@ if ($selectedProject > 0) {
     </div>
   </div>
 
- <!-- Chart 2: Ongoing Activity Record -->
-  <div class="col-lg-4 col-md-6 mb-4 chart-item" data-chart-id="activity-logs">
-    <div class="card shadow-sm h-100">
-      <div class="feature-overlay">
-         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"> 🕜 Ongoing Activity Record</h6>
-            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+  <!-- Chart 3: Today's User Activity -->
+  <div class="col-lg-4 col-md-6 mb-4 chart-item" data-chart-id="today-activity">
+      <div class="card shadow-sm h-100">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">🕜 Today's User Activity</h6>
+              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
           </div>
-          <div class="text-center p-4 bg-white rounded-3 border-top">
-              <p class="fs-2 mb-3 text-primary">🚀</p>
-              <p class="h5 fw-bolder text-dark mb-2">Get Ready for Enhanced Logs!</p>
-              <p class="small text-muted">This graph will provide insights for all user actions. Stay tuned!</p>
+          <div class="card-body">
+              <canvas id="todayActivityChart" height="250"></canvas>
           </div>
       </div>
-    </div>
   </div>
 
-  <!-- Chart 10: Places Delivered -->
+  <!-- Chart 4: Places Delivered -->
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -408,16 +415,10 @@ if ($selectedProject > 0) {
 <!-- Pass PHP data to JavaScript and load the external script -->
 <script>
   const phpData = {
-        projectsPerYear: <?= json_encode($projectsPerYear) ?>,
-        projectsByAgency: <?= json_encode($projectsByAgency) ?>,
-        amountPerYear: <?= json_encode($amountPerYear) ?>,
-        projectProgress: <?= json_encode($projectProgress) ?>,
         placesDelivered: <?= json_encode($placesDelivered) ?>,
         deliveryStatusOverview: <?= json_encode($deliveryStatusOverview) ?>,
         monthlyDeliveryTrend: <?= json_encode($monthlyDeliveryTrend) ?>,
-        topPackageTypes: <?= json_encode($topPackageTypes) ?>,
-        deliveriesPerProject: <?= json_encode($deliveriesPerProject) ?>,
-        activityLogActions: <?= json_encode($activityLogActions) ?>,
+        todayUserActivity: <?= json_encode($todayUserActivity) ?>,
         inventoryData: <?= json_encode($inventoryData) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>
     };
