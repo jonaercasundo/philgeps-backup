@@ -1,0 +1,7 @@
+# Ignore specific file
+config/db.php
+# Ignore all uploaded files
+uploads/
+
+# Ignore all .env files
+*.env
