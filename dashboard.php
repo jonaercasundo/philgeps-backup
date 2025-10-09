@@ -106,15 +106,8 @@ try {
         ORDER BY total DESC;
     ";
     
-    echo "<!-- DEBUG: Delivery status query: $deliveryStatusQuery -->";
-    
     $stmt = $pdo->query($deliveryStatusQuery);
     $deliveryStatusOverview = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "<!-- DEBUG: Delivery status count: " . count($deliveryStatusOverview) . " -->";
-    if (count($deliveryStatusOverview) > 0) {
-        echo "<!-- DEBUG: Sample delivery status: " . json_encode($deliveryStatusOverview[0]) . " -->";
-    }
 
     // 2. Monthly Delivery Trend (filtered)
     $monthlyTrendQuery = "
@@ -136,11 +129,8 @@ try {
 
     ";
     
-    
     $stmt = $pdo->query($monthlyTrendQuery);
     $monthlyDeliveryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "<!-- DEBUG: Monthly trend count: " . count($monthlyDeliveryTrend) . " -->";
 
     // 3. Today's User Activity by Warehouse/Office
     $todayActivityQuery = "
@@ -182,6 +172,25 @@ try {
     $stmt = $pdo->query($inventoryQuery);
     $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // 5. Inventory Items by Warehouse (Only Approved)
+    $inventoryByWarehouseQuery = "
+        SELECT 
+            w.warehouse_name,
+            i.item_name,
+            i.unit,
+            inv.qty
+        FROM inventory inv
+        JOIN item i ON inv.item_id = i.item_id
+        JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
+        WHERE inv.inventory_status = 'Approved'
+            AND inv.qty > 0
+            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+        ORDER BY w.warehouse_name, i.item_name
+    ";
+
+    $stmt = $pdo->query($inventoryByWarehouseQuery);
+    $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
 // Add missing variables with empty data for now
 // $projectsPerYear = [];
 // $projectsByAgency = [];
@@ -332,17 +341,30 @@ if ($selectedProject > 0) {
   </div>
 
   <!-- Chart: Inventory Quantities per Warehouse -->
-<div class="col-lg-4 mb-4 chart-item" data-chart-id="inventory-quantities">
-  <div class="card shadow-sm h-100">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-      <h6 class="mb-0">📦 Inventory Quantity</h6>
-      <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-    </div>
-    <div class="card-body">
-      <canvas id="inventoryChart" height="250"></canvas>
+  <div class="col-lg-4 mb-4 chart-item" data-chart-id="inventory-quantities">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">📦 Inventory Quantity</h6>
+        <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+      </div>
+      <div class="card-body">
+        <canvas id="inventoryChart" height="250"></canvas>
+      </div>
     </div>
   </div>
-</div>
+
+  <!-- Inventory by Warehouse -->
+  <div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
+      <div class="card shadow-sm h-100">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">📦 Inventory by Warehouse <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h6>
+              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          </div>
+          <div class="card-body">
+              <div id="warehouseChartsContainer" class="row"></div>
+          </div>
+      </div>
+  </div>
 
 </div>
 
@@ -420,6 +442,7 @@ if ($selectedProject > 0) {
         monthlyDeliveryTrend: <?= json_encode($monthlyDeliveryTrend) ?>,
         todayUserActivity: <?= json_encode($todayUserActivity) ?>,
         inventoryData: <?= json_encode($inventoryData) ?>,
+        inventoryByWarehouse: <?= json_encode($inventoryByWarehouse) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>
     };
 </script>

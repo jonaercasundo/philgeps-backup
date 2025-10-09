@@ -5,7 +5,9 @@ const {
   monthlyDeliveryTrend,
   todayUserActivity,
   selectedProject,
-  inventoryData 
+  inventoryData,
+  stockLevelData,
+  inventoryByWarehouse
 } = phpData;
 
 const itemGroups = {};
@@ -405,7 +407,66 @@ document.addEventListener('DOMContentLoaded', function() {
     createEmptyChart(document.getElementById('inventoryChart'), 'No inventory data available');
   }
 
-
-
+// Inventory by Warehouse - Separate Charts
+if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {
+    const container = document.getElementById('warehouseChartsContainer');
+    
+    // Group items by warehouse
+    const warehouseGroups = {};
+    phpData.inventoryByWarehouse.forEach(r => {
+        if (!warehouseGroups[r.warehouse_name]) {
+            warehouseGroups[r.warehouse_name] = [];
+        }
+        warehouseGroups[r.warehouse_name].push(r);
+    });
+    
+    // Create chart for each warehouse
+    Object.keys(warehouseGroups).forEach((warehouseName, index) => {
+        const items = warehouseGroups[warehouseName];
+        const itemCount = items.length; // COUNT(*) equivalent
+        const totalQty = items.reduce((sum, item) => sum + parseInt(item.qty), 0);
+        
+        const col = document.createElement('div');
+        col.className = 'col-lg-4 col-md-6 col-sm-12 mb-3';
+        col.innerHTML = `
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h6 class="mb-1">${warehouseName}</h6>
+                    <small class="text-muted">${itemCount} items | Total: ${totalQty} units</small>
+                </div>
+                <div class="card-body">
+                    <canvas id="warehouseChart_${index}" height="250"></canvas>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(col);
+        
+        // Create pie chart for this warehouse
+        new Chart(document.getElementById(`warehouseChart_${index}`), {
+            type: 'pie',
+            data: {
+                labels: items.map(item => item.item_name),
+                datasets: [{
+                    data: items.map(item => parseInt(item.qty)),
+                    backgroundColor: items.map((_, i) => 
+                        `hsl(${(i * 360 / items.length)}, 70%, 60%)`
+                    ),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    });
+} else {
+    const container = document.getElementById('warehouseChartsContainer');
+    container.innerHTML = '<div class="col-12 text-center text-muted py-5"><p>No inventory data available</p></div>';
+}
 
 });
