@@ -10,6 +10,42 @@ const {
   inventoryByWarehouse
 } = phpData;
 
+// Modern Professional Color Scheme
+const statusColors = {
+    'Warehouse': 'rgba(59, 130, 246, 0.9)',   // Blue-600
+    'Schools': 'rgba(16, 185, 129, 0.9)',     // Emerald-500
+    'Logistics': 'rgba(139, 92, 246, 0.9)',   // Violet-500
+    'Factory': 'rgba(245, 158, 11, 0.9)'      // Amber-500
+};
+
+const primaryColors = [
+    'rgba(59, 130, 246, 0.8)',   // Blue
+    'rgba(16, 185, 129, 0.8)',   // Emerald
+    'rgba(139, 92, 246, 0.8)',   // Violet
+    'rgba(245, 158, 11, 0.8)',   // Amber
+    'rgba(99, 102, 241, 0.8)',   // Indigo
+    'rgba(14, 165, 233, 0.8)',   // Sky
+    'rgba(100, 116, 139, 0.8)',  // Slate
+    'rgba(168, 85, 247, 0.8)'    // Purple
+];
+
+// Professional color variants
+const colorVariants = {
+    light: {
+        'Warehouse': 'rgba(59, 130, 246, 0.15)',
+        'Schools': 'rgba(16, 185, 129, 0.15)',
+        'Logistics': 'rgba(139, 92, 246, 0.15)',
+        'Factory': 'rgba(245, 158, 11, 0.15)'
+    },
+    border: {
+        'Warehouse': 'rgba(59, 130, 246, 1)',
+        'Schools': 'rgba(16, 185, 129, 1)',
+        'Logistics': 'rgba(139, 92, 246, 1)',
+        'Factory': 'rgba(245, 158, 11, 1)'
+    }
+};
+
+// Group inventory data
 const itemGroups = {};
 inventoryData.forEach(row => {
   const { item_name, qty, warehouse_name } = row;
@@ -22,25 +58,6 @@ inventoryData.forEach(row => {
 // Prepare arrays for chart
 const labels = Object.keys(itemGroups);
 const totals = labels.map(name => itemGroups[name].total);
-
-// Color palettes
-const statusColors = {
-  'Warehouse': 'rgba(255, 193, 7, 0.8)',
-  'Schools': 'rgba(40, 167, 69, 0.8)',
-  'Logistics': 'rgba(23, 162, 184, 0.8)',
-  'Factory': 'rgba(220, 53, 69, 0.8)'
-};
-
-const primaryColors = [
-  'rgba(54, 162, 235, 0.8)',
-  'rgba(255, 99, 132, 0.8)',
-  'rgba(255, 206, 86, 0.8)',
-  'rgba(75, 192, 192, 0.8)',
-  'rgba(153, 102, 255, 0.8)',
-  'rgba(255, 159, 64, 0.8)',
-  'rgba(199, 199, 199, 0.8)',
-  'rgba(83, 102, 255, 0.8)'
-];
 
 // Document ready function to ensure the DOM is loaded before running scripts
 document.addEventListener('DOMContentLoaded', function() {
@@ -194,7 +211,8 @@ document.addEventListener('DOMContentLoaded', function() {
         ),
         datasets: [{
           data: deliveryStatusOverview.map(r => r.total),
-          backgroundColor: deliveryStatusOverview.map(r => statusColors[r.status] || 'rgba(128, 128, 128, 0.8)'),
+          backgroundColor: deliveryStatusOverview.map(r => statusColors[r.status] || primaryColors[0]),
+          borderColor: deliveryStatusOverview.map(r => colorVariants.border[r.status] || primaryColors[0]),
           borderWidth: 2
         }]
       },
@@ -223,14 +241,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = monthlyDeliveryTrend.find(r => r.month === month && r.status === status);
         return row ? row.total : 0; // 0 if no data for that month+status
       }),
-      borderColor: [
-        'rgba(54, 162, 235, 1)',   // warehouse
-        'rgba(255, 206, 86, 1)',   // accepted
-        'rgba(75, 192, 192, 1)'    // delivered
-      ][idx % 4], // fallback color rotation
-      backgroundColor: 'transparent',
+      borderColor: statusColors[status] || primaryColors[idx % primaryColors.length],
+      backgroundColor: colorVariants.light[status] || primaryColors[idx % primaryColors.length].replace('0.8', '0.2'),
+      borderWidth: 3,
       tension: 0.4,
-      fill: false
+      fill: true,
+      pointBackgroundColor: statusColors[status] || primaryColors[idx % primaryColors.length],
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7
     }));
 
     new Chart(document.getElementById('monthlyDeliveryTrendChart'), {
@@ -251,9 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   } else {
     createEmptyChart(
-      document.getElementById('monthlyDeliveryTrendChart'),
-      'No monthly trend data available'
-    );
+      document.getElementById('monthlyDeliveryTrendChart'), 'No monthly trend data available');
   }
 
   // 3. Today's User Activity (Doughnut)
@@ -268,15 +286,21 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const datasets = activityTypes.map((type, i) => {
           const color = statusColors[type] || primaryColors[i % primaryColors.length];
-          const bgColor = color.replace('0.8', '0.1');
+          const bgColor = colorVariants.light[type] || color.replace('0.8', '0.1');
           
           return {
               label: type,
               data: timeLabels.map(t => todayUserActivity.find(r => r.time_label === t && r.activity_type === type)?.total_activities || 0),
-              borderColor: color,
+              borderColor: colorVariants.border[type] || color,
               backgroundColor: bgColor,
+              borderWidth: 3,
               tension: 0.4,
-              fill: true
+              fill: true,
+              pointBackgroundColor: color,
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6
           };
       });
 
@@ -286,18 +310,23 @@ document.addEventListener('DOMContentLoaded', function() {
           options: {
               responsive: true,
               maintainAspectRatio: false,
-              interaction: { mode: 'point', intersect: true },
+              interaction: { mode: 'nearest', intersect: true },
               plugins: {
-                  legend: { position: 'bottom' },
+                  legend: { 
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                },
                   tooltip: {
-                      enabled: true,
                       backgroundColor: '#fff',
                       titleColor: '#333',
                       bodyColor: '#666',
                       borderColor: '#ddd',
                       borderWidth: 2,
                       padding: 12,
-                      displayColors: false,
+                      displayColors: true,
                       titleFont: { size: 13, weight: 'bold' },
                       bodyFont: { size: 12 },
                       callbacks: {
@@ -337,21 +366,48 @@ document.addEventListener('DOMContentLoaded', function() {
         datasets: [{
           label: 'Schools per Region',
           data: placesDelivered.map(r => r.total_schools),
-          backgroundColor: 'rgba(0,123,255,0.7)',
-          borderColor: 'rgba(0,123,255,1)',
-          borderWidth: 1
+          backgroundColor: placesDelivered.map((_, i) => primaryColors[i % primaryColors.length]),
+          borderColor: placesDelivered.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+          borderWidth: 2,
+          borderRadius: 4,
+          borderSkipped: false
         }]
       },
       options: {
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          x: {
-            beginAtZero: true
-          }
+        plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const region = placesDelivered[context.dataIndex];
+                            return `Delivered: ${region.delivered_count} schools`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Schools'
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        autoSkip: false
+                    }
+                }
+            }
         }
-      }
     });
   } else {
     createEmptyChart(document.getElementById('placesDeliveredChart'), 'No places delivered data available');
@@ -367,9 +423,11 @@ document.addEventListener('DOMContentLoaded', function() {
       datasets: [{
         label: 'Total Quantity',
         data: totals,
-        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 1
+        backgroundColor: labels.map((_, i) => primaryColors[i % primaryColors.length]),
+        borderColor: labels.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+        borderWidth: 2,
+        borderRadius: 4,
+        borderSkipped: false
       }]
     },
     options: {
@@ -377,6 +435,14 @@ document.addEventListener('DOMContentLoaded', function() {
       maintainAspectRatio: false,
       plugins: {
         tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
+          borderWidth: 2,
+          padding: 12,
+          titleFont: { size: 13, weight: 'bold' },
+          bodyFont: { size: 12 },
           callbacks: {
             label: function(context) {
               const itemName = context.label;
@@ -407,66 +473,82 @@ document.addEventListener('DOMContentLoaded', function() {
     createEmptyChart(document.getElementById('inventoryChart'), 'No inventory data available');
   }
 
-// Inventory by Warehouse - Separate Charts
-if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {
-    const container = document.getElementById('warehouseChartsContainer');
-    
-    // Group items by warehouse
-    const warehouseGroups = {};
-    phpData.inventoryByWarehouse.forEach(r => {
-        if (!warehouseGroups[r.warehouse_name]) {
-            warehouseGroups[r.warehouse_name] = [];
-        }
-        warehouseGroups[r.warehouse_name].push(r);
-    });
-    
-    // Create chart for each warehouse
-    Object.keys(warehouseGroups).forEach((warehouseName, index) => {
-        const items = warehouseGroups[warehouseName];
-        const itemCount = items.length; // COUNT(*) equivalent
-        const totalQty = items.reduce((sum, item) => sum + parseInt(item.qty), 0);
-        
-        const col = document.createElement('div');
-        col.className = 'col-lg-4 col-md-6 col-sm-12 mb-3';
-        col.innerHTML = `
-            <div class="card h-100">
-                <div class="card-header bg-light">
-                    <h6 class="mb-1">${warehouseName}</h6>
-                    <small class="text-muted">${itemCount} items | Total: ${totalQty} units</small>
-                </div>
-                <div class="card-body">
-                    <canvas id="warehouseChart_${index}" height="250"></canvas>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(col);
-        
-        // Create pie chart for this warehouse
-        new Chart(document.getElementById(`warehouseChart_${index}`), {
-            type: 'pie',
-            data: {
-                labels: items.map(item => item.item_name),
-                datasets: [{
-                    data: items.map(item => parseInt(item.qty)),
-                    backgroundColor: items.map((_, i) => 
-                        `hsl(${(i * 360 / items.length)}, 70%, 60%)`
-                    ),
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
+  // Inventory by Warehouse - Separate Charts
+  if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {
+      const container = document.getElementById('warehouseChartsContainer');
+      
+      // Group items by warehouse
+      const warehouseGroups = {};
+      phpData.inventoryByWarehouse.forEach(r => {
+          if (!warehouseGroups[r.warehouse_name]) {
+              warehouseGroups[r.warehouse_name] = [];
+          }
+          warehouseGroups[r.warehouse_name].push(r);
+      });
+      
+      // Create chart for each warehouse
+      Object.keys(warehouseGroups).forEach((warehouseName, index) => {
+          const items = warehouseGroups[warehouseName];
+          const itemCount = items.length; // COUNT(*) equivalent
+          const totalQty = items.reduce((sum, item) => sum + parseInt(item.qty), 0);
+          
+          const col = document.createElement('div');
+          col.className = 'col-lg-4 col-md-6 col-sm-12 mb-3';
+          col.innerHTML = `
+              <div class="card h-100">
+                  <div class="card-header bg-light">
+                      <h6 class="mb-1">${warehouseName}</h6>
+                      <small class="text-muted">${itemCount} items | Total: ${totalQty} units</small>
+                  </div>
+                  <div class="card-body">
+                      <canvas id="warehouseChart_${index}" height="250"></canvas>
+                  </div>
+              </div>
+          `;
+          
+          container.appendChild(col);
+          
+          // Create pie chart for this warehouse
+          new Chart(document.getElementById(`warehouseChart_${index}`), {
+              type: 'pie',
+              data: {
+                  labels: items.map(item => item.item_name),
+                  datasets: [{
+                      data: items.map(item => parseInt(item.qty)),
+                      backgroundColor: items.map((_, i) => primaryColors[i % primaryColors.length]),
+                      borderColor: items.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+                      borderWidth: 2
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                      legend: { position: 'bottom', 
+                      labels: {
+                            usePointStyle: true,
+                            padding: 10,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const item = items[context.dataIndex];
+                                const percentage = ((item.qty / totalQty) * 100).toFixed(1);
+                                return `${item.item_name}: ${item.qty} ${item.unit} (${percentage}%)`;
+                            }
+                        }
+                    }
                 }
             }
-        });
-    });
-} else {
-    const container = document.getElementById('warehouseChartsContainer');
-    container.innerHTML = '<div class="col-12 text-center text-muted py-5"><p>No inventory data available</p></div>';
-}
+          });
+      });
+  } else {
+      const container = document.getElementById('warehouseChartsContainer');
+      container.innerHTML = '<div class="col-12 text-center text-muted py-5"><p>No inventory data available</p></div>';
+  }
 
 });
