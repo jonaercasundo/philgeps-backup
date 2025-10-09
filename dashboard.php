@@ -80,7 +80,14 @@ try {
             FROM projects
         ");
     }
+
     $totals = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Calculate progress percentages AFTER getting $totals
+    $totalDeliveries = ($totals['pending'] ?? 0) + ($totals['accepted'] ?? 0) + ($totals['delivered'] ?? 0);
+    $pendingPercent = $totalDeliveries > 0 ? round(($totals['pending'] / $totalDeliveries) * 100) : 0;
+    $acceptedPercent = $totalDeliveries > 0 ? round(($totals['accepted'] / $totalDeliveries) * 100) : 0;
+    $deliveredPercent = $totalDeliveries > 0 ? round(($totals['delivered'] / $totalDeliveries) * 100) : 0;
 
     // 1. Delivery Status Overview (filtered)
     $deliveryStatusQuery = "
@@ -267,9 +274,9 @@ if ($selectedProject > 0) {
   <?php 
   $cards = [
       ['title'=>'Active Projects','value'=>$totals['activeProjects'],'class'=>'primary','icon'=>'🚀'],
-      ['title'=>'Pending','value'=>$totals['pending'] ?? 0,'class'=>'warning','icon'=>'⏳'],
-      ['title'=>'Accepted','value'=>$totals['accepted'] ?? 0,'class'=>'info','icon'=>'✅'],
-      ['title'=>'Delivered','value'=>$totals['delivered'] ?? 0,'class'=>'success','icon'=>'📦']
+      ['title'=>'Pending','value'=>$totals['pending'] ?? 0,'class'=>'warning','icon'=>'⏳', 'percent'=>$pendingPercent],
+      ['title'=>'Accepted','value'=>$totals['accepted'] ?? 0,'class'=>'info','icon'=>'✅', 'percent'=>$acceptedPercent],
+      ['title'=>'Delivered','value'=>$totals['delivered'] ?? 0,'class'=>'success','icon'=>'📦', 'percent'=>$deliveredPercent]
   ];
   foreach($cards as $c): ?>
   <div class="col-md-3 mb-3">
@@ -278,6 +285,17 @@ if ($selectedProject > 0) {
         <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
         <h6 class="card-title"><?= $c['title'] ?></h6>
         <h4 class="mb-0"><strong><?= $c['value'] ?></strong></h4>
+        
+        <!-- Progress Bar for delivery status cards -->
+        <?php if (isset($c['percent'])): ?>
+        <div class="mt-2">
+          <div class="progress" style="height: 8px;">
+            <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
+                 aria-valuenow="<?= $c['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <small class="text-light opacity-75"><?= $c['percent'] ?>%</small>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
   </div>
