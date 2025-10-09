@@ -84,7 +84,6 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
             <td id="person<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact_person']) ?></td>
             <td id="contact<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact']) ?></td>
             <td class="text-center">
-              <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= htmlspecialchars($project['school_id']) ?>)"><i class="bi bi-pencil-square fs-4"></i></button>
               <button  class="btn btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;"><i class="bi bi-trash fs-4"></i></button></td>
           </tr>
         <?php }; ?>
@@ -135,27 +134,27 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
 <script src="assets/js/project_details.js"></script>
 
 <script>
-function updateEdit(schoolId){
-const id = document.getElementById("id"+schoolId+"s").innerHTML;
-const name = document.getElementById("name"+schoolId+"s").innerHTML;
-const address = document.getElementById("address"+schoolId+"s").innerHTML;
-const person = document.getElementById("person"+schoolId+"s").innerHTML;
-const contact = document.getElementById("contact"+schoolId+"s").innerHTML;
-const municipalty = document.getElementById("municipality"+schoolId+"s").innerHTML;
-const division = document.getElementById("division"+schoolId+"s").innerHTML;
-const region = document.getElementById("region"+schoolId+"s").innerHTML;
+//function updateEdit(schoolId){
+//const id = document.getElementById("id"+schoolId+"s").innerHTML;
+//const name = document.getElementById("name"+schoolId+"s").innerHTML;
+//const address = document.getElementById("address"+schoolId+"s").innerHTML;
+//const person = document.getElementById("person"+schoolId+"s").innerHTML;
+//const contact = document.getElementById("contact"+schoolId+"s").innerHTML;
+//const municipalty = document.getElementById("municipality"+schoolId+"s").innerHTML;
+//const division = document.getElementById("division"+schoolId+"s").innerHTML;
+//const region = document.getElementById("region"+schoolId+"s").innerHTML;
 
-document.getElementById("editid").value = id;
-document.getElementById("editname").value = name;
-document.getElementById("editaddress").value = address;
-document.getElementById("editcontact").value = contact;
-document.getElementById("editperson").value = person;
-document.getElementById("editmunicipality").value = municipalty;
-document.getElementById("editdivision").value = division;
-document.getElementById("editregion").value = region;
+//document.getElementById("editid").value = id;
+//document.getElementById("editname").value = name;
+//document.getElementById("editaddress").value = address;
+//document.getElementById("editcontact").value = contact;
+//document.getElementById("editperson").value = person;
+//document.getElementById("editmunicipality").value = municipalty;
+//document.getElementById("editdivision").value = division;
+//document.getElementById("editregion").value = region;
 
 
-}
+//}
 // Populate region on page load
 document.addEventListener("DOMContentLoaded", function () {
     populateFilter("filterRegion", "SELECT DISTINCT region AS options FROM school ORDER BY region ASC");
@@ -249,8 +248,8 @@ function updateTable(page = 1) {
                     <td id='person${truncateText(row.school_id)}s'>${row.contact_person}</td>
                     <td id='contact${truncateText(row.school_id)}s'>${row.contact}</td>
                     <td class="text-center">
-                        <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(${row.school_id})"><i class="bi bi-pencil-square fs-4"></i></button>
-                        <a href="delete_lot.php?id=${row.school_id}" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this School?')"><i class="bi bi-trash fs-4"></i></a>
+                        <!--button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(${row.school_id})"><i class="bi bi-pencil-square fs-4"></i></button-->
+                        <button  class="btn btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;"><i class="bi bi-trash fs-4"></i></button></td>
                     </td>
                 </tr>`).join("");
         }

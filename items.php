@@ -102,12 +102,11 @@ try {
             <tbody>
                 <?php foreach ($items as $item): ?>
                     <tr>
-                        <td><?= htmlspecialchars($item['item_name']) ?></td>
-                        <td><?= htmlspecialchars($item['unit']) ?></td>
+                        <td id="name<?= $item['item_id'] ?>"><?= htmlspecialchars($item['item_name']) ?></td>
+                        <td id="unit<?= $item['item_id'] ?>"><?= htmlspecialchars($item['unit']) ?></td>
                         <td>
-                            <a href="edit_item.php?id=<?= $item['item_id'] ?>" class="btn btn-warning"><i class="bi bi-pencil-square fs-4"></i></a>
-                            <a href="delete_item.php?id=<?= $item['item_id'] ?>" class="btn btn-danger"
-                               onclick="return confirm('Are you sure you want to delete this item?')"><i class="bi bi-trash fs-4"></i></a>
+                            <button data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= $item['item_id'] ?>)" class="btn btn-warning"><i class="bi bi-pencil-square fs-4"></i></button>
+                        <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_item').value = <?= htmlspecialchars($item['item_id']) ?>;" class="btn btn-danger"><i class="bi bi-trash fs-4"></i></button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -139,29 +138,18 @@ try {
     <?php endif; ?>
 </div>
 
-<!-- Import Items Modal -->
-<div class="modal fade" id="importModal" tabindex="-1">
-  <div class="modal-dialog modal-md">
-    <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Import Items</h5></div>
-      <div class="modal-body">
-        <form id="importForm" method="POST" action="script/import_items.php" enctype="multipart/form-data">
-          <input type="hidden" name="project_id" value="<?= htmlspecialchars($id) ?>">
-          <div class="mb-3">
-            <label>Upload Items</label>
-            <input type="file" name="file" id="file" class="form-control" accept=".csv,.xlsx,.xls" required><br>
-            <a href="assets/uploads/itemtemplate.csv" download="itemtemplate.csv">Download Items Template</a>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" id="importBtn" onclick="document.getElementById('importForm').submit();">Import</button>
-      </div>
-    </div>
-  </div>
-</div>
+<?php include "partials/item_modals.php"?>
 
 
 <script src="assets/js/project_details.js"></script>
+<script>
+function updateEdit(itemId){
+    const id = itemId;
+    const itemName = document.getElementById("name"+itemId).innerHTML;
+    const unit = document.getElementById("unit"+itemId).innerHTML;
+
+    document.getElementById("edititem_id").value = id;
+    document.getElementById("editname").value = itemName;
+    document.getElementById("editunit").value = unit;
+}</script>
 <?php require "template/footer.php"; ?>

@@ -19,7 +19,7 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         <!-- no need for form="" attribute -->
-        <button type="button" class="btn btn-primary" onclick="submitAddForm()">Delete</button>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('deleteForm').submit();">Delete</button>
       </div>
     </div>
   </div>

@@ -259,9 +259,9 @@ document.addEventListener("DOMContentLoaded", function() {
     .then(res => res.json())
     .then(resp => {
       if (resp.success) {
-        location.reload();
+        window.location.href = resp.redirect;
       } else {
-        alert("Update failed: " + resp.message);
+        window.location.href = resp.redirect;
       }
     });
   });
