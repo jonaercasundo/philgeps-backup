@@ -306,7 +306,7 @@ if ($selectedProject > 0) {
 <div id="draggable-dashboard" class="row">
   
   <!-- Chart 1: Delivery Status Overview -->
-  <div class="col-lg-4 col-md-6 mb-4 chart-item" data-chart-id="delivery-status">
+  <div class="col-lg-3 col-md-6 mb-4 chart-item" data-chart-id="delivery-status">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">📊 Delivery Status Overview</h6>
@@ -318,22 +318,21 @@ if ($selectedProject > 0) {
     </div>
   </div>
 
-
-  <!-- Chart 2: Monthly Delivery Trend -->
-  <div class="col-lg-6 col-md-12 mb-4 chart-item" data-chart-id="monthly-trend">
+    <!-- Chart 4: School Density -->
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">📈 Monthly Delivery Trend</h6>
+        <h6 class="mb-0">📍 School Density</h6>
         <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
       </div>
       <div class="card-body">
-        <canvas id="monthlyDeliveryTrendChart" height="150"></canvas>
+        <canvas id="placesDeliveredChart" height="300"></canvas>
       </div>
     </div>
   </div>
 
   <!-- Chart 3: Today's User Activity -->
-  <div class="col-lg-4 col-md-6 mb-4 chart-item" data-chart-id="today-activity">
+  <div class="col-lg-3 col-md-6 mb-4 chart-item" data-chart-id="today-activity">
       <div class="card shadow-sm h-100">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h6 class="mb-0">🕜 Today's User Activity</h6>
@@ -345,15 +344,15 @@ if ($selectedProject > 0) {
       </div>
   </div>
 
-  <!-- Chart 4: Places Delivered -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
+  <!-- Chart 2: Monthly Delivery Trend -->
+  <div class="col-lg-8 col-md-12 mb-4 chart-item" data-chart-id="monthly-trend">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">📍 School Density</h6>
+        <h6 class="mb-0">📈 Monthly Delivery Trend</h6>
         <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
       </div>
       <div class="card-body">
-        <canvas id="placesDeliveredChart" height="300"></canvas>
+        <canvas id="monthlyDeliveryTrendChart" height="150"></canvas>
       </div>
     </div>
   </div>
