@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
       data: {
         labels: placesDelivered.map(r => r.project_name + ' (' + r.region + ')'),
         datasets: [{
-          label: 'Schools Reached',
+          label: 'Schools per Region',
           data: placesDelivered.map(r => r.total_schools),
           backgroundColor: 'rgba(0,123,255,0.7)',
           borderColor: 'rgba(0,123,255,1)',

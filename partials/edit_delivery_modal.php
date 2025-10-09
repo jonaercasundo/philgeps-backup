@@ -32,20 +32,21 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">DR No.</label>
-              <input type="text" class="form-control" name="dr_no" id="editDrNo" required>
+              <input type="text" class="form-control" name="dr_no" id="editDrNo">
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Delivery Date</label>
-              <input type="date" class="form-control" name="delivery_date" id="editDate" required>
+              <input type="date" class="form-control" name="delivery_date" id="editDate">
             </div>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Status</label>
             <select class="form-select" name="status" id="editStatus" required>
-              <option value="Pending">Pending</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Cancelled">Cancelled</option>
+              <option value="pending">Pending</option>
+              <option value="delivered">Delivered</option>
+              <option value="accepted">Accepted</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         </div>

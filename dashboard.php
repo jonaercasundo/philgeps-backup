@@ -331,7 +331,7 @@ if ($selectedProject > 0) {
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">📍 Places Delivered (Schools Reached by Project & Region)</h6>
+        <h6 class="mb-0">📍 School Density</h6>
         <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
       </div>
       <div class="card-body">

@@ -152,7 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (project_id) {
             populateFilter("importlot", `SELECT lot_id as project_id, CONCAT('Lot ', lot_name) as options FROM lot WHERE project_id='${project_id}'`);
-            populateFilter("filterStatus", `SELECT DISTINCT status AS options FROM deliveries WHERE project_id='${project_id}' ORDER BY status ASC`);
+            populateFilter("filterStatus", `SELECT DISTINCT CONCAT(UCASE(LEFT(status, 1)), LCASE(SUBSTRING(status, 2))) AS options FROM deliveries WHERE project_id='${project_id}' ORDER BY status ASC`);
             populateFilter("filterRegion", `SELECT DISTINCT s.region AS options FROM schools_project sp JOIN school s ON sp.school_id = s.school_id WHERE project_id='${project_id}'`);
             handleProjectChange(project_id);
         } else {
