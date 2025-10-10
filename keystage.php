@@ -103,13 +103,14 @@ try {
     <?php endif; ?>
 
     <script>
-        function updateEdit(schoolId, lotId){
-            const id = document.getElementById("id"+schoolId+"s").innerHTML;
-            const desc = document.getElementById("desc"+schoolId+"s").innerHTML;
+        function updateEdit(keystageId, lotId){
+        const id = document.getElementById("id"+keystageId+"s").innerHTML;
+        const desc = document.getElementById("desc"+keystageId+"s").innerHTML;
 
-            document.getElementById("opt"+lotId).selected = true;
-            document.getElementById("editid").value = id;
-            document.getElementById("editdesc").value = desc;
+        document.getElementById("edit_keystage_id").value = keystageId;
+        document.getElementById("opt"+lotId).selected = true;
+        document.getElementById("editid").value = id;
+        document.getElementById("editdesc").value = desc;
 }
     </script>
 <script src="assets/js/project_details.js"></script>

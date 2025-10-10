@@ -33,7 +33,7 @@
       <div class="modal-body">
         <form method="POST" action="script/edit_keystage.php" id="editKeystageForm">
           <input type="hidden" value="<?=$_GET['id']?>" name="project_id" class="form-control">
-          <input type="hidden" value="<?$ks['keystage_id']?>" name="keystage_id" class="form-control">
+          <input type="hidden" id="edit_keystage_id" name="keystage_id" class="form-control">
           <div class="mb-3"><label>Lot Number</label><select name="lotID" class="form-control"><?php
            foreach ($lotsFilter as $lotFilter){
              echo "<option id='opt" . htmlspecialchars($lotFilter['lot_id'], ENT_QUOTES) . "' value='" . htmlspecialchars($lotFilter['lot_id'], ENT_QUOTES) . "'>" 
