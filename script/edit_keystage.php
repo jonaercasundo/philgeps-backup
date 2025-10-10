@@ -1,6 +1,5 @@
 <?php
 session_start();
-header('Content-Type: application/json');
 require "../config/db.php";
 
 try {
@@ -36,12 +35,9 @@ try {
             $_SESSION['name'] . " Edited Lot $lotNum Keystage ".$_POST['keystageNum']." ".$_POST['description']." on project $projectName"
         ]);
 
-    echo json_encode(["success" => true]);
-    header("Location: ../keystage.php?id=" . $_POST['project_id']);
-    exit;
+    header("Location: ../keystage.php?id=" . $_POST['project_id'] . "&toast=Keystage%20Updated%20successfully&type=success");
+exit;
 } catch (Exception $e) {
-    echo json_encode([
-        "success" => false,
-        "message" => $e->getMessage()
-    ]);
+   header("Location: ../keystage.php?id=" . $_POST['project_id'] . "&toast=" . urlencode($e->getMessage()) . "&type=danger");
+    exit;
 }

@@ -39,7 +39,7 @@
              echo "<option id='opt" . htmlspecialchars($lotFilter['lot_id'], ENT_QUOTES) . "' value='" . htmlspecialchars($lotFilter['lot_id'], ENT_QUOTES) . "'>" 
         . htmlspecialchars($lotFilter['lot_name'], ENT_QUOTES) 
         . "</option>";}?></select></div>
-          <div class="mb-3"><label>Keystage Number</label><input id="editid" name="keystageNum" type="text" class="form-control"></div>
+          <div class="mb-3"><label>Keystage Number</label><input id="editid" name="keystageNum" type="number" class="form-control"></div>
           <div class="mb-3"><label>Description</label><input id="editdesc" name="description" type="text" class="form-control"></div>
         </form>
       </div>
@@ -63,7 +63,7 @@
              echo "<option value='" . htmlspecialchars($lotFilter['lot_id'], ENT_QUOTES) . "'>" 
         . htmlspecialchars($lotFilter['lot_name'], ENT_QUOTES) 
         . "</option>";}?></select></div>
-          <div class="mb-3"><label>Keystage Number</label><input type="text" class="form-control" name="keystage_no"></div>
+          <div class="mb-3"><label>Keystage Number</label><input type="number" class="form-control" name="keystage_no"></div>
           <div class="mb-3"><label>Description</label><input type="text" class="form-control" name="description"></div>
         </form>
       </div>

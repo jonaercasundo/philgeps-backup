@@ -130,9 +130,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         $pdo->commit();
-        echo json_encode(['success' => true, 'message' => 'Packages added successfully']);
+        header("Location: ../packages.php?id=" . $project_id . "&toast=Packages%20added%20successfully&type=success");
+        exit;
     } catch (PDOException $e) {
         $pdo->rollBack();
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        header("Location: ../packages.php?id=" . $project_id . "&toast=" . urlencode($e->getMessage()) . "&type=danger");
+        exit;
     }
 }
