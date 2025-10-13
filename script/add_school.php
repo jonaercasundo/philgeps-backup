@@ -18,7 +18,7 @@ try {
     ]);
     $project_id = $pdo->lastInsertId();
 
-    echo json_encode(["success" => true]);
+    echo json_encode(["success" => true, "message" => "Project added successfully"]);
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
 }
