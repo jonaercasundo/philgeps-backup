@@ -300,7 +300,7 @@ if ($selectedProject > 0) {
         <!-- Progress Bar for delivery status cards -->
         <?php if (isset($c['percent'])): ?>
         <div class="mt-2">
-          <div class="progress" style="height: 8px;">
+          <div class="progress border border-1 border-light" style="height: 8px;">
             <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
                  aria-valuenow="<?= $c['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
