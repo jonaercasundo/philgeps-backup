@@ -464,6 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }]
       },
       options: {
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {

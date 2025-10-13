@@ -324,7 +324,7 @@ if ($selectedProject > 0) {
         <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
       </div>
       <div class="card-body">
-        <canvas id="deliveryStatusChart" height="200"></canvas>
+        <canvas id="deliveryStatusChart" height="300"></canvas>
       </div>
     </div>
   </div>
@@ -363,7 +363,7 @@ if ($selectedProject > 0) {
         <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
       </div>
       <div class="card-body">
-        <canvas id="monthlyDeliveryTrendChart" height="150"></canvas>
+        <canvas id="monthlyDeliveryTrendChart" height="300"></canvas>
       </div>
     </div>
   </div>
@@ -376,7 +376,7 @@ if ($selectedProject > 0) {
         <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
       </div>
       <div class="card-body">
-        <canvas id="inventoryChart" height="250"></canvas>
+        <canvas id="inventoryChart" height="300"></canvas>
       </div>
     </div>
   </div>
