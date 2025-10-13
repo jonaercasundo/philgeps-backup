@@ -97,7 +97,7 @@ try {
                 WHEN 'pending'   THEN 'Pending'
                 WHEN 'accepted'  THEN 'Accepted'
                 WHEN 'delivered' THEN 'Delivered'
-                WHEN 'warehouse' THEN 'Warehouse'
+                WHEN 'cancelled' THEN 'Cancelled'
                 ELSE d.status
             END AS status
         FROM deliveries d
@@ -107,7 +107,7 @@ try {
                 WHEN 'pending'   THEN 'Pending'
                 WHEN 'accepted'  THEN 'Accepted'
                 WHEN 'delivered' THEN 'Delivered'
-                WHEN 'warehouse' THEN 'Warehouse'
+                WHEN 'cancelled' THEN 'Cancelled'
                 ELSE d.status
             END
         ORDER BY total DESC;
@@ -170,14 +170,18 @@ try {
     // 4. Inventory Quantities (sum by warehouse)
     $inventoryQuery = "
         SELECT 
-            ii.item_name, i.qty, w.warehouse_name
+            ii.item_name,
+            SUM(i.qty) as total_qty
         FROM inventory i
         JOIN item ii ON i.item_id = ii.item_id
         JOIN warehouse w ON i.warehouse_id = w.warehouse_id
         WHERE inventory_status = 'Approved'
+        GROUP BY ii.item_id, ii.item_name
     ";
     $stmt = $pdo->query($inventoryQuery);
     $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $selectedDate = $_GET['selectedDate'] ?? date('Y-m-d');
 
     // 5. Inventory Items by Warehouse (Only Approved)
     $inventoryByWarehouseQuery = "
@@ -370,18 +374,43 @@ if ($selectedProject > 0) {
     </div>
   </div>
 
-  <!-- Inventory by Warehouse -->
-  <div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
-      <div class="card shadow-sm h-100">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">📦 Inventory by Warehouse <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h6>
-              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-          </div>
-          <div class="card-body">
-              <div id="warehouseChartsContainer" class="row"></div>
-          </div>
-      </div>
-  </div>
+ <!-- Inventory by Warehouse -->
+<div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
+    <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">📦 Inventory by Warehouse <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h6>
+            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body">
+            <!-- Date Filter Form -->
+            <form method="GET" class="row mb-3">
+                <!-- Preserve project_id if it exists -->
+                <?php if($selectedProject > 0): ?>
+                    <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
+                <?php endif; ?>
+                
+                <div class="col-md-4">
+                    <label for="dateFilter" class="form-label"><small><strong>Filter by Date</strong></small></label>
+                    <input type="date" class="form-control form-control-sm" id="dateFilter" name="selectedDate" 
+                          value="<?php echo htmlspecialchars($selectedDate); ?>">
+                </div>
+                <div class="col-md-4 align-self-end">
+                    <button type="submit" class="btn btn-primary btn-sm">Apply Date Filter</button>
+                    <a href="?" class="btn btn-outline-secondary btn-sm">Clear</a>
+                </div>
+                <?php if(isset($selectedDate) && $selectedDate !== date('Y-m-d')): ?>
+                <div class="col-md-4 align-self-end text-end">
+                    <small class="text-muted">
+                        <i class="fas fa-history"></i> Historical view: <?php echo htmlspecialchars($selectedDate); ?>
+                    </small>
+                </div>
+                <?php endif; ?>
+            </form>
+            
+            <div id="warehouseChartsContainer" class="row"></div>
+        </div>
+    </div>
+</div>
 
 </div>
 
@@ -454,10 +483,10 @@ if ($selectedProject > 0) {
 <!-- Pass PHP data to JavaScript and load the external script -->
 <script>
   const phpData = {
-        placesDelivered: <?= json_encode($placesDelivered) ?>,
+       
         deliveryStatusOverview: <?= json_encode($deliveryStatusOverview) ?>,
         monthlyDeliveryTrend: <?= json_encode($monthlyDeliveryTrend) ?>,
-        todayUserActivity: <?= json_encode($todayUserActivity) ?>,
+       
         inventoryData: <?= json_encode($inventoryData) ?>,
         inventoryByWarehouse: <?= json_encode($inventoryByWarehouse) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>
