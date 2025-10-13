@@ -94,9 +94,9 @@ try {
         SELECT 
             COUNT(*) AS total,
             CASE d.status
-                WHEN 'pending'   THEN 'Factory'
-                WHEN 'accepted'  THEN 'Logistics'
-                WHEN 'delivered' THEN 'Schools'
+                WHEN 'pending'   THEN 'Pending'
+                WHEN 'accepted'  THEN 'Accepted'
+                WHEN 'delivered' THEN 'Delivered'
                 WHEN 'warehouse' THEN 'Warehouse'
                 ELSE d.status
             END AS status
@@ -104,9 +104,9 @@ try {
         " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
         GROUP BY 
             CASE d.status
-                WHEN 'pending'   THEN 'Factory'
-                WHEN 'accepted'  THEN 'Logistics'
-                WHEN 'delivered' THEN 'Schools'
+                WHEN 'pending'   THEN 'Pending'
+                WHEN 'accepted'  THEN 'Accepted'
+                WHEN 'delivered' THEN 'Delivered'
                 WHEN 'warehouse' THEN 'Warehouse'
                 ELSE d.status
             END
@@ -306,7 +306,7 @@ if ($selectedProject > 0) {
 <div id="draggable-dashboard" class="row">
   
   <!-- Chart 1: Delivery Status Overview -->
-  <div class="col-lg-3 col-md-6 mb-4 chart-item" data-chart-id="delivery-status">
+  <div class="col-lg-4 col-md-6 mb-4 chart-item" data-chart-id="delivery-status">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">📊 Delivery Status Overview</h6>
@@ -319,7 +319,7 @@ if ($selectedProject > 0) {
   </div>
 
     <!-- Chart 4: School Density -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
+  <!-- <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">📍 School Density</h6>
@@ -329,10 +329,10 @@ if ($selectedProject > 0) {
         <canvas id="placesDeliveredChart" height="300"></canvas>
       </div>
     </div>
-  </div>
+  </div> -->
 
   <!-- Chart 3: Today's User Activity -->
-  <div class="col-lg-3 col-md-6 mb-4 chart-item" data-chart-id="today-activity">
+  <!-- <div class="col-lg-3 col-md-6 mb-4 chart-item" data-chart-id="today-activity">
       <div class="card shadow-sm h-100">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h6 class="mb-0">🕜 Today's User Activity</h6>
@@ -342,7 +342,7 @@ if ($selectedProject > 0) {
               <canvas id="todayActivityChart" height="250"></canvas>
           </div>
       </div>
-  </div>
+  </div> -->
 
   <!-- Chart 2: Monthly Delivery Trend -->
   <div class="col-lg-8 col-md-12 mb-4 chart-item" data-chart-id="monthly-trend">
@@ -358,7 +358,7 @@ if ($selectedProject > 0) {
   </div>
 
   <!-- Chart: Inventory Quantities per Warehouse -->
-  <div class="col-lg-4 mb-4 chart-item" data-chart-id="inventory-quantities">
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-quantities">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">📦 Inventory Quantity</h6>

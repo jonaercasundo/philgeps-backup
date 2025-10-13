@@ -13,9 +13,9 @@ const {
 // Modern Professional Color Scheme
 const statusColors = {
     'Warehouse': 'rgba(59, 130, 246, 0.9)',   // Blue-600
-    'Schools': 'rgba(16, 185, 129, 0.9)',     // Emerald-500
-    'Logistics': 'rgba(139, 92, 246, 0.9)',   // Violet-500
-    'Factory': 'rgba(245, 158, 11, 0.9)'      // Amber-500
+    'Delivered': 'rgba(16, 185, 129, 0.9)',     // Emerald-500
+    'Accepted': 'rgba(139, 92, 246, 0.9)',   // Violet-500
+    'Pending': 'rgba(245, 158, 11, 0.9)'      // Amber-500
 };
 
 const primaryColors = [
@@ -33,15 +33,15 @@ const primaryColors = [
 const colorVariants = {
     light: {
         'Warehouse': 'rgba(59, 130, 246, 0.15)',
-        'Schools': 'rgba(16, 185, 129, 0.15)',
-        'Logistics': 'rgba(139, 92, 246, 0.15)',
-        'Factory': 'rgba(245, 158, 11, 0.15)'
+        'Delivered': 'rgba(16, 185, 129, 0.15)',
+        'Accepted': 'rgba(139, 92, 246, 0.15)',
+        'Pending': 'rgba(245, 158, 11, 0.15)'
     },
     border: {
         'Warehouse': 'rgba(59, 130, 246, 1)',
-        'Schools': 'rgba(16, 185, 129, 1)',
-        'Logistics': 'rgba(139, 92, 246, 1)',
-        'Factory': 'rgba(245, 158, 11, 1)'
+        'Delivered': 'rgba(16, 185, 129, 1)',
+        'Accepted': 'rgba(139, 92, 246, 1)',
+        'Pending': 'rgba(245, 158, 11, 1)'
     }
 };
 
@@ -524,26 +524,20 @@ document.addEventListener('DOMContentLoaded', function() {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                      legend: { position: 'bottom', 
-                      labels: {
-                            usePointStyle: true,
-                            padding: 10,
-                            font: {
-                                size: 10
-                            }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const item = items[context.dataIndex];
-                                const percentage = ((item.qty / totalQty) * 100).toFixed(1);
-                                return `${item.item_name}: ${item.qty} ${item.unit} (${percentage}%)`;
-                            }
-                        }
-                    }
-                }
-            }
+                      legend: {
+                        display: false
+                      },
+                      tooltip: {
+                          callbacks: {
+                              label: function(context) {
+                                  const item = items[context.dataIndex];
+                                  const percentage = ((item.qty / totalQty) * 100).toFixed(1);
+                                  return `${item.item_name}: ${item.qty} ${item.unit} (${percentage}%)`;
+                              }
+                          }
+                      }
+                  }
+              }
           });
       });
   } else {
