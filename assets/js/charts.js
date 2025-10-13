@@ -59,6 +59,30 @@ inventoryData.forEach(row => {
 const labels = Object.keys(itemGroups);
 const totals = labels.map(name => itemGroups[name].total);
 
+// to prevent page jump
+document.addEventListener('DOMContentLoaded', function() {
+    // Add anchor to form submission
+    const dateFilterForm = document.getElementById('dateFilterForm');
+    if (dateFilterForm) {
+        dateFilterForm.addEventListener('submit', function(e) {
+            // Add hash to URL to maintain scroll position
+            window.location.hash = 'inventory-warehouse';
+        });
+    }
+    
+    // Scroll to inventory section if hash exists
+    if (window.location.hash === '#inventory-warehouse') {
+        const inventorySection = document.querySelector('[data-chart-id="inventory-warehouse"]');
+        if (inventorySection) {
+            setTimeout(() => {
+                inventorySection.scrollIntoView({ behavior: 'smooth' });
+                // Remove hash from URL
+                history.replaceState(null, null, ' ');
+            }, 100);
+        }
+    }
+});
+
 // Document ready function to ensure the DOM is loaded before running scripts
 document.addEventListener('DOMContentLoaded', function() {
 

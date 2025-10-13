@@ -189,18 +189,28 @@ try {
             w.warehouse_name,
             i.item_name,
             i.unit,
-            inv.qty
+            COALESCE(
+                (SELECT ih.new_qty
+                FROM inventory_history ih
+                WHERE ih.item_id = i.item_id 
+                  AND ih.warehouse_id = w.warehouse_id 
+                  AND DATE(ih.changed_at) <= :selectedDate
+                ORDER BY ih.changed_at DESC 
+                LIMIT 1),
+                inv.qty
+            ) as qty
         FROM inventory inv
         JOIN item i ON inv.item_id = i.item_id
         JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
         WHERE inv.inventory_status = 'Approved'
-            AND inv.qty > 0
             " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+        HAVING qty > 0
         ORDER BY w.warehouse_name, i.item_name
     ";
 
-    $stmt = $pdo->query($inventoryByWarehouseQuery);
-    $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare($inventoryByWarehouseQuery);
+$stmt->execute(['selectedDate' => $selectedDate]);
+$inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 // Add missing variables with empty data for now
 // $projectsPerYear = [];
@@ -249,24 +259,21 @@ if ($selectedProject > 0) {
       <div class="card-body">
         <h6 class="card-title mb-3">🎯 Filter by Project</h6>
         <form method="GET" id="projectFilterForm">
-          <div class="input-group">
-            <select class="form-select" name="project_id" id="projectSelect">
-              <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
-              <?php foreach($allProjects as $project): ?>
-                <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($project['project_name']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-            <button class="btn btn-primary" type="submit">
-              🔍 Filter
-            </button>
-            <?php if($selectedProject > 0): ?>
-            <a href="?" class="btn btn-outline-secondary">
-              ❌ Clear Filter
-            </a>
-            <?php endif; ?>
-          </div>
+            <div class="input-group">
+                <select class="form-select" name="project_id" id="projectSelect">
+                    <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
+                    <?php foreach($allProjects as $project): ?>
+                        <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($project['project_name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if($selectedProject > 0): ?>
+                    <a href="?" class="btn btn-outline-secondary">
+                        ❌ Clear Filter
+                    </a>
+                <?php endif; ?>
+            </div>
         </form>
       </div>
     </div>
@@ -383,25 +390,27 @@ if ($selectedProject > 0) {
         </div>
         <div class="card-body">
             <!-- Date Filter Form -->
-            <form method="GET" class="row mb-3">
+            <form method="GET" class="row mb-3" id="dateFilterForm">
                 <!-- Preserve project_id if it exists -->
                 <?php if($selectedProject > 0): ?>
                     <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
                 <?php endif; ?>
                 
                 <div class="col-md-4">
-                    <label for="dateFilter" class="form-label"><small><strong>Filter by Date</strong></small></label>
+                    <!-- <label for="dateFilter" class="form-label"><small><strong>Filter by Date</strong></small></label> -->
                     <input type="date" class="form-control form-control-sm" id="dateFilter" name="selectedDate" 
                           value="<?php echo htmlspecialchars($selectedDate); ?>">
                 </div>
                 <div class="col-md-4 align-self-end">
                     <button type="submit" class="btn btn-primary btn-sm">Apply Date Filter</button>
-                    <a href="?" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    <a href="?#inventory-warehouse" class="btn btn-outline-secondary btn-sm">
+                        ❌ Clear Filter
+                    </a>
                 </div>
                 <?php if(isset($selectedDate) && $selectedDate !== date('Y-m-d')): ?>
                 <div class="col-md-4 align-self-end text-end">
                     <small class="text-muted">
-                        <i class="fas fa-history"></i> Historical view: <?php echo htmlspecialchars($selectedDate); ?>
+                        <i class="fas fa-history"></i> Date: <?php echo htmlspecialchars($selectedDate); ?>
                     </small>
                 </div>
                 <?php endif; ?>
