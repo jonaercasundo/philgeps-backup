@@ -167,6 +167,7 @@ LIMIT :limit OFFSET :offset;
 <table class="table table-bordered shadow-sm"  id="resultTable">
     <thead class="table-dark">
         <tr>
+            <th></th>
             <th>Delivery Details</th>
             <th>Items</th>
             <th>Date</th>
@@ -177,13 +178,16 @@ LIMIT :limit OFFSET :offset;
         <tbody>
 <?php foreach ($grouped_deliveries as $dr_group): ?>
     <tr class="table-secondary fw-bold">
-        <td colspan="3">
+         <td class="text-center align-middle"colspan ="1">
+           <input type="checkbox" class="form-check-input dr-checkbox" value="<?= htmlspecialchars($dr_group['dr_no']) ?>">
+        </td>
+        <td class="align-middle"colspan="3">
             DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> — 
             Project: <?= htmlspecialchars($dr_group['project_name']) ?> — 
             School: <?= htmlspecialchars($dr_group['school_name']) ?>
         </td>
         <td colspan ="1">
-            <a class="btn btn-secondary mb-1" href="generate_qr.php?id=<?= htmlspecialchars($dr_group['dr_no']) ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
+            <button class="btn btn-secondary mb-1" onclick="generateARs()"><i class="bi bi-qr-code fs-4"></i></button>
         </td>
     </tr>
 
@@ -200,6 +204,7 @@ LIMIT :limit OFFSET :offset;
             $has_photos = ($stmt_check->fetchColumn() > 0);
         ?>
         <tr>
+            <td></td>
             <td>LOT <?= htmlspecialchars($d['lot_name'])?> <?= !empty($d['keystage_num']) ? "Keystage ".$d['keystage_num']." ".$d['description'] : ' ' ?></td>
             <td><?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
@@ -268,3 +273,21 @@ LIMIT :limit OFFSET :offset;
 <script src="assets/js/deliveriesModalSelect.js"></script>
 <script src="assets/js/deliveriesFilter.js"></script>
 <?php require "template/footer.php"; ?>
+
+<script>
+function generateARs() {
+    const checkboxes = document.querySelectorAll('.dr-checkbox:checked');
+    const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
+
+    if (selectedDrs.length === 0) {
+        alert('Please select at least one DR.');
+        return;
+    }
+
+    // Example: open your batch generate page with selected DRs and input
+    const params = new URLSearchParams();
+    params.append('ids', selectedDrs.join(','));
+
+    window.open('generate_qr.php?' + params.toString(), '_blank');
+};
+</script>
