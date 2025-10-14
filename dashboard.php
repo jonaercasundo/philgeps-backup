@@ -501,7 +501,6 @@ if ($selectedProject > 0) {
         selectedProject: <?= json_encode($selectedProject) ?>
     };
 </script>
-
-<script src="assets/js/charts.js"></script>
+<script src="assets/js/charts.js?v=2"></script>
 
 <?php require "template/footer.php"; ?>
