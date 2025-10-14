@@ -649,9 +649,11 @@ document.addEventListener("DOMContentLoaded", function () {
   if (!mapContainer) return;
 
   // Initialize the map centered on the Philippines
+  const defaultCenter = [12.8797, 121.7740];
+  const defaultZoom = 6;
   const map = L.map(mapContainer, {
-    center: [12.8797, 121.7740],
-    zoom: 6,
+    center: defaultCenter,
+    zoom: defaultZoom,
     zoomControl: true
   });
 
@@ -663,7 +665,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 19,
-    attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    attribution: 'Tiles © Esri'
   });
 
   const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
@@ -676,92 +678,82 @@ document.addEventListener("DOMContentLoaded", function () {
     attribution: '© OpenStreetMap, © CartoDB'
   });
 
-  // Set default layer
   osm.addTo(map);
 
   // --- 🔍 Add Search Bar ---
-  const geocoder = L.Control.geocoder({
-    defaultMarkGeocode: false
-  })
-  .on('markgeocode', function(e) {
-    const center = e.geocode.center;
-    L.marker(center).addTo(map)
-      .bindPopup(`<b>${e.geocode.name}</b>`).openPopup();
-    map.setView(center, 10);
-  })
-  .addTo(map);
+  const geocoder = L.Control.geocoder({ defaultMarkGeocode: false })
+    .on('markgeocode', function(e) {
+      const center = e.geocode.center;
+      L.marker(center).addTo(map)
+        .bindPopup(`<b>${e.geocode.name}</b>`).openPopup();
+      map.setView(center, 10);
+    })
+    .addTo(map);
 
+  // --- 📦 Choropleth Data ---
   fetch("ph.json")
-  .then(response => response.json())
-  .then(geoData => {
-    const maxValue = Math.max(...Object.values(deliveriesByDivision));
-    
-const maxPercent = Math.max(...Object.values(deliveriesByDivision).map(v => v.percentage));
+    .then(response => response.json())
+    .then(geoData => {
+      const maxPercent = Math.max(...Object.values(deliveriesByDivision).map(v => v.percentage));
 
-function getColor(value) {
-  if (value === 0 || isNaN(value)) return "#f0f0f0";
-  const intensity = value / maxPercent;
-  const r = Math.floor(255 - (intensity * 150));
-  const g = Math.floor(230 - (intensity * 150));
-  const b = 255 - Math.floor(intensity * 50);
-  return `rgb(${r},${g},${b})`;
-}
+      function getColor(value) {
+        if (value === 0 || isNaN(value)) return "#f0f0f0";
+        const intensity = value / maxPercent;
+        const r = Math.floor(255 - (intensity * 150));
+        const g = Math.floor(230 - (intensity * 150));
+        const b = 255 - Math.floor(intensity * 50);
+        return `rgb(${r},${g},${b})`;
+      }
 
-const geoLayer = L.geoJSON(geoData, {
-  style: function (feature) {
-    const name = feature.properties.name;
-    const data = deliveriesByDivision[name];
-    const percent = data ? data.percentage : 0;
-    return {
-      color: "#444",
-      weight: 1,
-      fillColor: getColor(percent),
-      fillOpacity: 0.7
-    };
-  },
-  onEachFeature: function (feature, layer) {
-    const name = feature.properties.name;
-    const data = deliveriesByDivision[name];
-    const count = data ? data.count : 0;
-    const percent = data ? data.percentage : 0;
-    layer.bindPopup(`<b>${name}</b><br>Deliveries: ${count}<br>Share: ${percent}%`);
-  }
-}).addTo(map);
+      const geoLayer = L.geoJSON(geoData, {
+        style: function (feature) {
+          const name = feature.properties.name;
+          const data = deliveriesByDivision[name];
+          const percent = data ? data.percentage : 0;
+          return {
+            color: "#444",
+            weight: 1,
+            fillColor: getColor(percent),
+            fillOpacity: 0.7
+          };
+        },
+        onEachFeature: function (feature, layer) {
+          const name = feature.properties.name;
+          const data = deliveriesByDivision[name];
+          const count = data ? data.count : 0;
+          const percent = data ? data.percentage : 0;
+          layer.bindPopup(`<b>${name}</b><br>Deliveries: ${count}<br>Share: ${percent}%`);
+        }
+      }).addTo(map);
 
+      map.fitBounds(geoLayer.getBounds());
 
-    map.fitBounds(geoLayer.getBounds());
+      // Layer Controls
+      const baseMaps = {
+        "🗺️ OpenStreetMap": osm,
+        "🛰️ Satellite": satellite,
+        "🏔️ Terrain": terrain,
+        "🌙 Dark Mode": dark
+      };
+      const overlayMaps = { "📦 Deliveries by Province": geoLayer };
+      L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
 
-    // Add Layer Controls
-    const baseMaps = {
-      "🗺️ OpenStreetMap": osm,
-      "🛰️ Satellite": satellite,
-      "🏔️ Terrain": terrain,
-      "🌙 Dark Mode": dark
-    };
-
-    const overlayMaps = {
-      "📦 Deliveries by Province": geoLayer
-    };
-
-    L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
-  })
-  .catch(error => console.error("Error loading GeoJSON:", error));
-
-  const legend = L.control({ position: 'bottomright' });
-legend.onAdd = function (map) {
-  const div = L.DomUtil.create('div', 'info legend');
-  div.innerHTML = '<h6>Deliveries</h6>';
-  const grades = [0, 10, 20, 50, 100];
-  for (let i = 0; i < grades.length; i++) {
-    const next = grades[i + 1];
-    const color = getColor(grades[i]);
-    div.innerHTML +=
-      `<i style="background:${color}"></i> ${grades[i]}${next ? '&ndash;' + next + '<br>' : '+'}`;
-  }
-  return div;
-};
-legend.addTo(map);
-
+      // --- 🧭 Reset Button ---
+      const resetControl = L.control({ position: 'topleft' });
+      resetControl.onAdd = function () {
+        const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+        div.innerHTML = '<button class="btn btn-sm btn-light fw-bold px-2 py-1">↻ Reset</button>';
+        div.title = "Reset to Default View";
+        div.style.cursor = 'pointer';
+        div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+        div.onclick = function () {
+          map.setView(defaultCenter, defaultZoom);
+        };
+        return div;
+      };
+      resetControl.addTo(map);
+    })
+    .catch(error => console.error("Error loading GeoJSON:", error));
 });
 </script>
 
