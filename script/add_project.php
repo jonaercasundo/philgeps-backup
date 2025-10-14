@@ -28,7 +28,7 @@ try {
         $_SESSION['user_id'],
         $_SESSION['name']." Added Project ".$_POST['project_name']
     ]);
-    echo json_encode(["success" => true, "message" => "Project added successfully"]);
+    echo json_encode(["success" => true]);
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
 }
