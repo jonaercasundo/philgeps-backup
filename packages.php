@@ -128,30 +128,6 @@ try {
             </tbody>
         </table>
         <script>
-
-        document.getElementById("addItemForm").addEventListener("submit", function(e) {
-            e.preventDefault(); // stop normal form submit
-            
-            let formData = new FormData(this);
-
-            fetch("script/add_items.php", {
-                method: "POST",
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // show toast and refresh items if needed
-                    alert("✅ Package added!");
-                    location.reload(); // or close modal
-                } else {
-                    alert("❌ Error: " + data.message);
-                }
-            })
-            .catch(err => console.log("Server error: " + err));
-        });
-
-
            // Add More Items Button (for Add Modal)
             document.getElementById("addMoreItem").addEventListener("click", function () {
                 let container = document.getElementById("itemsContainer");

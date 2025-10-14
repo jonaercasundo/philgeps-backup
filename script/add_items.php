@@ -49,18 +49,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $dimStr = strtolower($dimStr);
-            $dimStr = preg_replace('/\s*[x×]\s*/i', 'x', $dimStr);
+            // Normalize dimension separators: x, ×, *, or "by"
+            $dimStr = preg_replace('/\s*(x|×|\*|by)\s*/i', 'x', $dimStr);
+
+            // Remove all spaces just in case
             $dimStr = preg_replace('/\s+/', '', $dimStr);
 
-            if (preg_match('/([\d\.]+)x([\d\.]+)x([\d\.]+)/', $dimStr, $m)) {
+            // Match 2D (HxW) or 3D (HxWxL) formats
+            if (preg_match('/^([\d\.]+)x([\d\.]+)x([\d\.]+)$/', $dimStr, $m)) {
                 $h = (float)$m[1];
                 $w = (float)$m[2];
                 $l = (float)$m[3];
                 $dimKey = "{$h}x{$w}x{$l}";
+            } elseif (preg_match('/^([\d\.]+)x([\d\.]+)$/', $dimStr, $m)) {
+                // If only 2 dimensions are given, assume L = 0
+                $h = (float)$m[1];
+                $w = (float)$m[2];
+                $l = 0;
+                $dimKey = "{$h}x{$w}x{$l}";
             } else {
+                // Invalid or missing dimensions
                 $h = $w = $l = 0;
                 $dimKey = "0x0x0";
             }
+
 
             $lastDim = $dimKey;
 

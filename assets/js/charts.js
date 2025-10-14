@@ -439,66 +439,70 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 5. Inventory Quantities per Warehouse (Vertical Bar)
   if (inventoryData.length > 0) {
-    // Group by item and calculate totals
-    const itemTotals = {};
-    inventoryData.forEach(item => {
-      itemTotals[item.item_name] = (itemTotals[item.item_name] || 0) + parseInt(item.total_qty);
-    });
+  // Group by item and calculate totals
+  const itemTotals = {};
+  inventoryData.forEach(item => {
+    itemTotals[item.item_name] = (itemTotals[item.item_name] || 0) + parseInt(item.total_qty);
+  });
 
-    const labels = Object.keys(itemTotals);
-    const totals = Object.values(itemTotals);
+  const labels = Object.keys(itemTotals);
+  const totals = Object.values(itemTotals);
 
-    const ctx = document.getElementById('inventoryChart');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Total Quantity',
-          data: totals,
-          backgroundColor: labels.map((_, i) => primaryColors[i % primaryColors.length]),
-          borderColor: labels.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+  const ctx = document.getElementById('inventoryChart');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Total Quantity',
+        data: totals,
+        backgroundColor: labels.map((_, i) => primaryColors[i % primaryColors.length]),
+        borderColor: labels.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+        borderWidth: 2,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y', // ✅ Makes it horizontal
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#333',
+          bodyColor: '#666',
+          borderColor: '#ddd',
           borderWidth: 2,
-          borderRadius: 4,
-          borderSkipped: false
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          tooltip: {
-            backgroundColor: '#fff',
-            titleColor: '#333',
-            bodyColor: '#666',
-            borderColor: '#ddd',
-            borderWidth: 2,
-            padding: 12,
-            titleFont: { size: 13, weight: 'bold' },
-            bodyFont: { size: 12 },
-            callbacks: {
-              label: function(context) {
-                return `Total: ${context.parsed.y}`;
-              }
+          padding: 12,
+          titleFont: { size: 13, weight: 'bold' },
+          bodyFont: { size: 12 },
+          callbacks: {
+            label: function (context) {
+              return `Total: ${context.parsed.x}`;
             }
-          },
-          legend: { display: false }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: { display: true, text: 'Quantity' }
-          },
-          x: {
-            title: { display: true, text: 'Item' }
           }
+        },
+        legend: { display: false }
+      },
+      scales: {
+        x: { 
+          beginAtZero: true,
+          title: { display: true, text: 'Total Quantity' },
+          grid: { color: '#eee' },
+          ticks: { precision: 0 }
+        },
+        y: { 
+          title: { display: true, text: 'Item Name' },
+          grid: { display: false }
         }
       }
-    });
-  } else {
-    createEmptyChart(document.getElementById('inventoryChart'), 'No inventory data available');
-  }
+    }
+  });
+} else {
+  createEmptyChart(document.getElementById('inventoryChart'), 'No inventory data available');
+}
+
 
   // Inventory by Warehouse - Separate Charts
   if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {

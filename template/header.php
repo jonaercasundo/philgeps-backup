@@ -38,6 +38,14 @@ if (!isset($_SESSION['user_id']) ||
 <!-- Optional: Theme color for Android address bar -->
 <meta name="theme-color" content="#ffffff">
 
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Leaflet Geocoder Plugin -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
   <style>
     a.disabled {
       pointer-events: none;

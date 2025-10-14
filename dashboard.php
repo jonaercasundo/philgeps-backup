@@ -177,6 +177,7 @@ try {
         JOIN warehouse w ON i.warehouse_id = w.warehouse_id
         WHERE inventory_status = 'Approved'
         GROUP BY ii.item_id, ii.item_name
+        HAVING SUM(i.qty) > 0
     ";
     $stmt = $pdo->query($inventoryQuery);
     $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -421,6 +422,19 @@ if ($selectedProject > 0) {
     </div>
 </div>
 
+<!-- Leaflet Map Placeholder -->
+<div class="col-6 mb-4 chart-item" data-chart-id="map-overview">
+  <div class="card shadow-sm h-100">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">🗺️ Map Overview</h6>
+      <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+    </div>
+    <div class="card-body p-0">
+      <div id="leafletMap" style="height: 500px; width: 100%;"></div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <!-- Chart.js -->
@@ -505,3 +519,104 @@ if ($selectedProject > 0) {
 <script src="assets/js/charts.js"></script>
 
 <?php require "template/footer.php"; ?>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const mapContainer = document.getElementById('leafletMap');
+  if (!mapContainer) return;
+
+  // Initialize the map centered on the Philippines
+  const map = L.map(mapContainer, {
+    center: [12.8797, 121.7740],
+    zoom: 6,
+    zoomControl: true
+  });
+
+  // --- 🗺️ Base Layers ---
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  });
+
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+  });
+
+  const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 17,
+    attribution: '© OpenTopoMap contributors'
+  });
+
+  const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap, © CartoDB'
+  });
+
+  // Set default layer
+  osm.addTo(map);
+
+  // --- 🔍 Add Search Bar ---
+  const geocoder = L.Control.geocoder({
+    defaultMarkGeocode: false
+  })
+  .on('markgeocode', function(e) {
+    const center = e.geocode.center;
+    L.marker(center).addTo(map)
+      .bindPopup(`<b>${e.geocode.name}</b>`).openPopup();
+    map.setView(center, 10);
+  })
+  .addTo(map);
+
+  // --- 🇵🇭 Load GeoJSON (Philippines provinces) ---
+  fetch("ph.json") // adjust path if needed
+    .then(response => response.json())
+    .then(geoData => {
+      const geoLayer = L.geoJSON(geoData, {
+        style: {
+          color: "#007bff",
+          weight: 1,
+          fillColor: "#74b9ff",
+          fillOpacity: 0.5
+        },
+        onEachFeature: function (feature, layer) {
+          const name = feature.properties.name || "Unknown Area";
+          layer.bindPopup(`<b>${name}</b>`);
+          layer.on({
+            mouseover: function(e) {
+              e.target.setStyle({
+                fillColor: "#0984e3",
+                fillOpacity: 0.7
+              });
+            },
+            mouseout: function(e) {
+              geoLayer.resetStyle(e.target);
+            }
+          });
+        }
+      }).addTo(map);
+
+      // Fit map to the GeoJSON bounds
+      map.fitBounds(geoLayer.getBounds());
+
+      // --- 🧭 Add Layer Controls ---
+      const baseMaps = {
+        "🗺️ OpenStreetMap": osm,
+        "🛰️ Satellite": satellite,
+        "🏔️ Terrain": terrain,
+        "🌙 Dark Mode": dark
+      };
+
+      const overlayMaps = {
+        "📍 Provinces": geoLayer
+      };
+
+      L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
+    })
+    .catch(error => console.error("Error loading GeoJSON:", error));
+});
+</script>
+
+
+
