@@ -237,6 +237,43 @@ if ($selectedProject > 0) {
         }
     }
 }
+
+// 🗺️ Deliveries per Division (for Choropleth)
+$divisionDeliveriesQuery = "
+    SELECT 
+        s.division AS province,
+        COUNT(d.delivery_id) AS deliveries_count,
+        ROUND(
+            (COUNT(d.delivery_id) / (
+                SELECT COUNT(*) 
+                FROM deliveries 
+                WHERE status = 'delivered'
+            ) * 100),
+            2
+        ) AS percentage
+    FROM deliveries d
+    JOIN school s ON d.school_id = s.school_id
+    WHERE d.status = 'delivered'
+    GROUP BY s.division
+    ORDER BY percentage DESC
+";
+
+$stmt = $pdo->query($divisionDeliveriesQuery);
+$divisionDeliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Convert to associative array for JS
+$deliveriesByDivision = [];
+foreach ($divisionDeliveries as $row) {
+    $deliveriesByDivision[$row['province']] = [
+        'count' => (int)$row['deliveries_count'],
+        'percentage' => (float)$row['percentage']
+    ];
+}
+
+// Pass to JS
+echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision) . ";</script>";
+
+
 ?>
 
 <!-- Dashboard Header with Controls -->
@@ -569,52 +606,77 @@ document.addEventListener("DOMContentLoaded", function () {
   })
   .addTo(map);
 
-  // --- 🇵🇭 Load GeoJSON (Philippines provinces) ---
-  fetch("ph.json") // adjust path if needed
-    .then(response => response.json())
-    .then(geoData => {
-      const geoLayer = L.geoJSON(geoData, {
-        style: {
-          color: "#007bff",
-          weight: 1,
-          fillColor: "#74b9ff",
-          fillOpacity: 0.5
-        },
-        onEachFeature: function (feature, layer) {
-          const name = feature.properties.name || "Unknown Area";
-          layer.bindPopup(`<b>${name}</b>`);
-          layer.on({
-            mouseover: function(e) {
-              e.target.setStyle({
-                fillColor: "#0984e3",
-                fillOpacity: 0.7
-              });
-            },
-            mouseout: function(e) {
-              geoLayer.resetStyle(e.target);
-            }
-          });
-        }
-      }).addTo(map);
+  fetch("ph.json")
+  .then(response => response.json())
+  .then(geoData => {
+    const maxValue = Math.max(...Object.values(deliveriesByDivision));
+    
+const maxPercent = Math.max(...Object.values(deliveriesByDivision).map(v => v.percentage));
 
-      // Fit map to the GeoJSON bounds
-      map.fitBounds(geoLayer.getBounds());
+function getColor(value) {
+  if (value === 0 || isNaN(value)) return "#f0f0f0";
+  const intensity = value / maxPercent;
+  const r = Math.floor(255 - (intensity * 150));
+  const g = Math.floor(230 - (intensity * 150));
+  const b = 255 - Math.floor(intensity * 50);
+  return `rgb(${r},${g},${b})`;
+}
 
-      // --- 🧭 Add Layer Controls ---
-      const baseMaps = {
-        "🗺️ OpenStreetMap": osm,
-        "🛰️ Satellite": satellite,
-        "🏔️ Terrain": terrain,
-        "🌙 Dark Mode": dark
-      };
+const geoLayer = L.geoJSON(geoData, {
+  style: function (feature) {
+    const name = feature.properties.name;
+    const data = deliveriesByDivision[name];
+    const percent = data ? data.percentage : 0;
+    return {
+      color: "#444",
+      weight: 1,
+      fillColor: getColor(percent),
+      fillOpacity: 0.7
+    };
+  },
+  onEachFeature: function (feature, layer) {
+    const name = feature.properties.name;
+    const data = deliveriesByDivision[name];
+    const count = data ? data.count : 0;
+    const percent = data ? data.percentage : 0;
+    layer.bindPopup(`<b>${name}</b><br>Deliveries: ${count}<br>Share: ${percent}%`);
+  }
+}).addTo(map);
 
-      const overlayMaps = {
-        "📍 Provinces": geoLayer
-      };
 
-      L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
-    })
-    .catch(error => console.error("Error loading GeoJSON:", error));
+    map.fitBounds(geoLayer.getBounds());
+
+    // Add Layer Controls
+    const baseMaps = {
+      "🗺️ OpenStreetMap": osm,
+      "🛰️ Satellite": satellite,
+      "🏔️ Terrain": terrain,
+      "🌙 Dark Mode": dark
+    };
+
+    const overlayMaps = {
+      "📦 Deliveries by Province": geoLayer
+    };
+
+    L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
+  })
+  .catch(error => console.error("Error loading GeoJSON:", error));
+
+  const legend = L.control({ position: 'bottomright' });
+legend.onAdd = function (map) {
+  const div = L.DomUtil.create('div', 'info legend');
+  div.innerHTML = '<h6>Deliveries</h6>';
+  const grades = [0, 10, 20, 50, 100];
+  for (let i = 0; i < grades.length; i++) {
+    const next = grades[i + 1];
+    const color = getColor(grades[i]);
+    div.innerHTML +=
+      `<i style="background:${color}"></i> ${grades[i]}${next ? '&ndash;' + next + '<br>' : '+'}`;
+  }
+  return div;
+};
+legend.addTo(map);
+
 });
 </script>
 
