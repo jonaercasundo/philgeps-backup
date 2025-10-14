@@ -73,7 +73,7 @@ try {
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
 }
-$warehouse_id = $_SESSION['warehouse_id'];
+$warehouse_id = $_SESSION['warehouse_id'] ?? null;
 if($deliveries['package_status'] == 'pending' && isset($warehouse_id) == false && empty($warehouse_id)){
   header("Location: index.php");
 }
