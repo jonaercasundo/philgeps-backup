@@ -63,7 +63,7 @@ $mainNav = [
     "inventory.php" => "Warehouse",
     "logistics.php" => "Logistics",
     "billing.php" => "<span class='text-decoration-line-through'>Billing</span>",
-    "reports.php" => "Reports",
+    "reports.php" => "<span class='text-decoration-line-through'>Reports</span>",
     "users.php" => "Users"
 ];
 // Define main navigation links
@@ -75,7 +75,6 @@ switch($_SESSION['role']){
     "deliveries.php" => "Deliveries",
     "inventory.php" => "Warehouse",
     "logistics.php" => "Logistics",
-    "reports.php" => "Reports",
     ];
   break;
   case "Warehouse Admin":
@@ -120,7 +119,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       <ul class="navbar-nav me-auto">
         <?php foreach($mainNav as $file => $label): ?>
           <li class="nav-item">
-            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "billing.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
+            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "billing.php" || $file === "reports.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
           </li>
         <?php endforeach; ?>
       </ul>
