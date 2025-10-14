@@ -183,7 +183,7 @@ LIMIT :limit OFFSET :offset;
             School: <?= htmlspecialchars($dr_group['school_name']) ?>
         </td>
         <td colspan ="1">
-            <a class="btn btn-secondary mb-1" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
+            <a class="btn btn-secondary mb-1" href="generate_qr.php?id=<?= htmlspecialchars($dr_group['dr_no']) ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
         </td>
     </tr>
 
