@@ -54,7 +54,7 @@ function getFilters() {
                         Project: ${group.project_name} — 
                         School: ${group.school_name}
                     </td>
-                    <td>
+                    <td class="text-center"  colspan ="1">
                         <a class="btn btn-secondary mb-1" href="generate_qr.php?id=${group.dr_no}" target="_blank">
                             <i class="bi bi-qr-code fs-4"></i>
                         </a>
@@ -80,6 +80,8 @@ function getFilters() {
                                 <i class="bi bi-pencil-square fs-4"></i>
                             </button>
                             ${d.has_photos ? `<a class="btn btn-primary mb-1" href="deliveries_details.php?id=${d.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
+                            ${d.status === 'delivered' ? `
+                                <a class="btn btn-success mb-1" href="manual_checking.php" target="_blank"><i class="bi bi-clipboard-check fs-4"></i></a>` : ""}
                         </td>
                     </tr>
                 `).join("")}
