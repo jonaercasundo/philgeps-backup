@@ -9,64 +9,297 @@ $allowed_roles = ['Super Admin', 'Admin', 'Office Coordinator', 'Office Admin'];
 
 // redirect
 redirectIfNotAuthorized($allowed_roles, 'index.php');
+
+try {
+    $limit = 10;
+    $page = max(1, intval($_GET['page'] ?? 1));
+    $offset = ($page - 1) * $limit;
+
+    // Count total deliveries with status 'delivered'
+    $stmt = $pdo->query("SELECT COUNT(*) FROM deliveries WHERE status = 'delivered'");
+    $total_rows = $stmt->fetchColumn();
+    $total_pages = ceil($total_rows / $limit);
+
+    // Fetch deliveries with status 'delivered'
+    $stmt = $pdo->prepare("
+    SELECT 
+        d.delivery_id,
+        p.project_name,
+        s.school_id,
+        s.school_name,
+        s.address,
+        d.dr_no,
+        d.delivery_date,
+        d.status,
+        k.keystage_num,
+        k.description,
+        l.lot_name,
+        COALESCE(pkg_items.items_contents, '') AS items_contents
+    FROM deliveries d
+    LEFT JOIN keystage k ON k.keystage_id = d.keystage_id
+    JOIN lot l ON l.lot_id = d.lot_id
+    JOIN projects p ON d.project_id = p.project_id
+    JOIN school s ON d.school_id = s.school_id
+    LEFT JOIN billing_grouped bg 
+      ON CONVERT(d.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci = 
+         CONVERT(bg.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci
+    LEFT JOIN (
+        SELECT 
+            x.delivery_id,
+            GROUP_CONCAT(
+                CONCAT(
+                    'Package ', x.rn, ' out of ', x.total_packages, 
+                    ' — ', x.colored_pkg_status, '<br>', 
+                    x.items
+                )
+                SEPARATOR '<br><br>'
+            ) AS items_contents
+        FROM (
+            SELECT 
+                d.delivery_id,
+                p.package_id,
+                ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
+                COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
+                GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items,
+                CASE 
+                    WHEN COALESCE(MAX(dp.status), 'PENDING') = 'DELIVERED' THEN
+                        CONCAT('<span class=\"text-success font-weight-bold\">DELIVERED</span>')
+                    WHEN COALESCE(MAX(dp.status), 'PENDING') = 'ACCEPTED' THEN
+                        CONCAT('<span class=\"text-primary font-weight-bold\">ACCEPTED</span>')
+                    WHEN COALESCE(MAX(dp.status), 'PENDING') = 'WAREHOUSE' THEN
+                        CONCAT('<span class=\"text-info font-weight-bold\">WAREHOUSE</span>')
+                    ELSE
+                        CONCAT('<span class=\"text-warning font-weight-bold\">PENDING</span>')
+                END AS colored_pkg_status
+            FROM deliveries d
+            LEFT JOIN package p 
+                ON (
+                    (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
+                    OR (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
+                )
+            JOIN package_content pc ON pc.package_id = p.package_id
+            JOIN item i ON pc.item_id = i.item_id
+            LEFT JOIN package_status dp 
+                ON dp.delivery_id = d.delivery_id 
+                AND dp.package_id = p.package_id
+            WHERE d.status = 'delivered'
+            GROUP BY d.delivery_id, p.package_id
+        ) x
+        GROUP BY x.delivery_id
+    ) pkg_items ON pkg_items.delivery_id = d.delivery_id
+    WHERE d.status = 'delivered'
+      AND bg.dr_no IS NULL
+    ORDER BY d.delivery_date DESC
+    LIMIT :limit OFFSET :offset
+");
+
+    $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
+    $stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Group deliveries by dr_no
+    $grouped_deliveries = [];
+    foreach ($deliveries as $row) {
+        $dr = $row['dr_no'];
+        if (!isset($grouped_deliveries[$dr])) {
+            $grouped_deliveries[$dr] = [
+                'dr_no' => $dr,
+                'project_name' => $row['project_name'],
+                'school_name' => $row['school_name'],
+                'delivery_date' => $row['delivery_date'],
+                'deliveries' => []
+            ];
+        }
+        $grouped_deliveries[$dr]['deliveries'][] = $row;
+    }
+
+} catch (PDOException $e) {
+    die("DB Error: " . $e->getMessage());
+}
+
+// After your existing try-catch block for deliveries
+require "script/get_billing_grouped_summary.php";
+$grouped_summary = getBillingGroupSummary($pdo);
 ?>
 
 <!-- Main Full-Screen Container -->
 <div class="row g-0 h-100">
-    <!-- 1. LEFT SIDEBAR (3 Columns wide on medium/large screens) -->
-    <div class="col-md-3 border-end d-flex flex-column">
-        <div class="px-3">
-                <h5 class="mb-0 text-dark opacity-75">Summary</h5>
-        </div>
-        
-        <div class="flex-fill p-3 border-top d-flex flex-column">
-            <!-- 'h-100' ensures the chart container fills the height of the flex-fill parent -->
-            <div class="chart-container h-100">
-                <!-- 'h-100' ensures the canvas fills the height of the chart-container -->
-                <canvas id="logisticsStockLevelsChart" class="h-100"></canvas>
+<!-- LEFT SIDEBAR -->
+<div class="col-md-3 border-end d-flex flex-column bg-light">
+    <div class="p-3 border-bottom bg-dark text-white">
+        <h5 class="mb-0">Billing Groups</h5>
+    </div>
+
+    <div class="flex-fill d-flex flex-column">
+        <!-- Scrollable content area -->
+        <div class="flex-fill" style="max-height: 68vh; overflow-y: auto;">
+            <div class="p-3">
+                <?php if (empty($grouped_summary)): ?>
+                    <div class="text-center text-muted py-4">
+                        <small>No billing groups yet</small>
+                    </div>
+                <?php else: ?>
+                    <div class="list-group">
+                        <?php foreach ($grouped_summary as $group): ?>
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong><?= htmlspecialchars($group['group_name']) ?></strong>
+                                    <span class="badge bg-primary"><?= $group['dr_count'] ?></span>
+                                </div>
+
+                                <?php if (!empty($group['dr_numbers'])): ?>
+                                    <div class="table table-sm mb-0">
+                                        <?php foreach ($group['dr_numbers'] as $dr_no): ?>
+                                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                                <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
+                                                <div>
+                                                    <button class="btn btn-warning btn-sm" data-dr="<?= htmlspecialchars($dr_no) ?>">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm" data-dr="<?= htmlspecialchars($dr_no) ?>">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
 
-         <!-- <div class="flex-fill p-3 border-top d-flex flex-column">
-            <a href="#" class="btn btn-outline-secondary w-100 mb-2">
-                View Something
-            </a>
-        </div> -->
+        <!-- Quick Stats - Fixed at bottom -->
+        <div class="border-top p-3 bg-white">
+            <div class="row text-center">
+                <div class="col-6">
+                    <div class="fw-bold text-primary"><?= count($grouped_summary) ?></div>
+                    <small class="text-muted">Groups</small>
+                </div>
+                <div class="col-6">
+                    <div class="fw-bold text-success"><?= array_sum(array_column($grouped_summary, 'dr_count')) ?></div>
+                    <small class="text-muted">Total DRs</small>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 
     <!-- 2. RIGHT MAIN CONTENT AREA (9 Columns wide on medium/large screens) -->
     <div class="col-md-9 d-flex flex-column">
-                
-
-
         <!-- Large Main Content/Display Area -->
-        <div class="flex-grow-1">
-            <div class="bg-white px-4 rounded shadow-sm h-100">
+        <div class="flex-grow-1 p-4">
+            <div class="bg-white rounded shadow-sm h-100">
                 <div class="d-flex align-items-center mb-3">
                     <h5 class="mb-0 text-dark">Manual Checking Page</h5>
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success ms-auto">
+                    <button class="btn btn-success ms-auto" id="addToGroupBtn">
                         + Add to Group
-                    </a>
+                    </button>
                 </div>
 
-                <table id="logisticsTable" class="table table-bordered table-striped">
-                    <thead class="table-dark text-center">
-                    <tr>
-                        <th><input type="checkbox" id="selectAll"></th>
-                        <th>Delivery ID</th>
-                        <th>Project</th>
-                        <th>School</th>
-                        <th>DR No.</th>
-                        <th>Delivery Date</th>
-                        <th>Package Type</th>
-                        <th>Warehouse</th>
-                        <th>Contents</th>
-                    </tr>
-                    </thead>
+                <!-- Table - EXACT SAME STRUCTURE as deliveries.php -->
+                <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+                    <table class="table table-bordered shadow-sm">
+                        <thead class="table-dark">
+                            <tr>
+                                <th></th>
+                                <th>Delivery Details</th>
+                                <th>Items</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($grouped_deliveries as $dr_group): ?>
+                                <tr class="table-secondary fw-bold">
+                                    <td class="text-center">
+                                        <input type="checkbox" class="dr-checkbox" 
+                                               name="selected_dr[]" 
+                                               value="<?= htmlspecialchars($dr_group['dr_no']) ?>"
+                                               data-dr="<?= htmlspecialchars($dr_group['dr_no']) ?>">
+                                    </td>
+                                    <td colspan="3">
+                                        DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> — 
+                                        Project: <?= htmlspecialchars($dr_group['project_name']) ?> — 
+                                        School: <?= htmlspecialchars($dr_group['school_name']) ?>
+                                    </td>
+                                </tr>
 
-                    <tbody>
-                    </tbody>
-                </table>
+                                <?php foreach ($dr_group['deliveries'] as $d): ?>
+                                    <tr>
+                                        <td></td>
+                                        <td>
+                                            LOT <?= htmlspecialchars($d['lot_name']) ?> 
+                                            <?= !empty($d['keystage_num']) ? "Keystage " . $d['keystage_num'] . " " . $d['description'] : '' ?>
+                                        </td>
+                                        <td>
+                                            <?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?>
+                                        </td>
+                                        <td><?= htmlspecialchars($d['delivery_date']) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <nav class="mt-3">
+                    <ul class="pagination justify-content-center">
+                        <!-- Previous -->
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="?page=<?= max(1, $page - 1) ?>&limit=<?= $limit ?>">Previous</a>
+                        </li>
+
+                        <?php
+                        $window = 9;
+                        $start = max(1, $page - floor($window / 2));
+                        $end = min($total_pages, $start + $window - 1);
+
+                        if ($end - $start + 1 < $window) {
+                            $start = max(1, $end - $window + 1);
+                        }
+
+                        for ($i = $start; $i <= $end; $i++): ?>
+                            <li class="page-item <?= ($i == $page) ? 'active' : '' ?>">
+                                <a class="page-link" href="?page=<?= $i ?>&limit=<?= $limit ?>"><?= $i ?></a>
+                            </li>
+                        <?php endfor; ?>
+
+                        <!-- Next -->
+                        <li class="page-item <?= ($page >= $total_pages) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="?page=<?= min($total_pages, $page + 1) ?>&limit=<?= $limit ?>">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add to Group Modal -->
+<div class="modal fade" id="addToGroupModal" tabindex="-1" aria-labelledby="addToGroupModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addToGroupModalLabel">Add to Billing Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+           <div class="modal-body">
+                <div class="mb-3">
+                    <label for="groupNameInput" class="form-label">Group Name</label>
+                    <input type="text" class="form-control" id="groupNameInput" placeholder="Enter group name (e.g., Week 1, March Batch)" required>
+                </div>
+                <div id="selectedDRList" class="mb-3">
+                    <strong>Selected Deliveries:</strong>
+                    <ul id="drList" class="mt-2"></ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmAddToGroup">Confirm Add to Group</button>
             </div>
         </div>
     </div>
@@ -76,255 +309,117 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- Table Scripts -->
 <script>
-$(document).ready(function () {
-  const table = $('#logisticsTable').DataTable({
-    processing: true,
-    serverSide: true,
-    ajax: {
-      url: "script/get_logistics_deliveries.php", // your PHP backend
-      type: "GET"
-    },
-    columns: [
-      {
-        data: "delivery_id",
-        className: "text-center",
-        render: function (data, type, row) {
-          return `<input type="checkbox" name="selected_deliveries[]" value="${data}">`;
-        },
-        orderable: false
-      },
-      { data: "delivery_id", className: "text-center" },
-      { data: "project_name", className: "text-center" },
-      { data: "school_name", className: "text-center" },
-      { data: "dr_no", className: "text-center" },
-      { data: "delivery_date", className: "text-center" },
-      { data: "package_type", className: "text-center" },
-      { data: "warehouse_name", className: "text-center" },
-      {
-        data: "items_contents",
-        orderable: false,
-        render: function (data, type, row) {
-          if (type === 'display' && data) {
-            const needsTruncation = data.length > 100 || data.split('<br>').length > 3;
-            const uniqueId = 'content-' + row.delivery_id;
-
-            if (needsTruncation) {
-              return `
-                <div class="content-wrapper">
-                  <div id="${uniqueId}-short" class="short-content">
-                    ${truncateContent(data)}
-                  </div>
-                  <div id="${uniqueId}-full" class="full-content" style="display: none;">
-                    ${data}
-                  </div>
-                  <button type="button" class="btn btn-link btn-sm p-0 mt-1 see-more-btn" 
-                          onclick="toggleContent('${uniqueId}')">
-                      See More
-                  </button>
-                </div>
-              `;
-            }
-            return data;
-          }
-          return data || '';
-        }
-      }
-    ],
-    order: [[4, 'asc']], // order by DR No
-    rowGroup: {
-      dataSrc: 'dr_no', // group rows by dr_no
-      startRender: function (rows, group) {
-        const project = rows.data()[0].project_name;
-        const school = rows.data()[0].school_name;
-        return `
-          <span class="fw-bold">DR No: ${group}</span> — 
-          Project: ${project} — 
-          School: ${school}
-        `;
-      }
-    },
-    scrollY: "53vh",
-    scrollCollapse: true,
-    paging: true,
-    responsive: true
-  });
-
-  // Select all checkbox
-  $('#selectAll').on('click', function () {
-    const rows = table.rows({ 'search': 'applied' }).nodes();
-    $('input[type="checkbox"]', rows).prop('checked', this.checked);
-  });
-});
-
-// Helper function for truncating text
-function truncateContent(text) {
-  if (!text) return '';
-  const parts = text.split('<br>');
-  if (parts.length > 3) {
-    return parts.slice(0, 3).join('<br>') + '...';
-  }
-  if (text.length > 100) {
-    return text.substring(0, 100) + '...';
-  }
-  return text;
-}
-
-function toggleContent(uniqueId) {
-  const shortContent = document.getElementById(uniqueId + '-short');
-  const fullContent = document.getElementById(uniqueId + '-full');
-  const button = shortContent.parentElement.querySelector('.see-more-btn');
-  if (shortContent.style.display !== 'none') {
-    shortContent.style.display = 'none';
-    fullContent.style.display = 'block';
-    button.textContent = 'See Less';
-  } else {
-    fullContent.style.display = 'none';
-    shortContent.style.display = 'block';
-    button.textContent = 'See More';
-  }
-}
-</script>
-
-
-<!-- Summary Scripts -->
-<!-- <script>
-    $(document).ready(function () {
-        $.getJSON("script/get_warehouse_summary.php", function (data) {
-            $("#warehouse_count").text(data.warehouse_count);
-            $("#logistics_count").text(data.logistics_count);
-        }).fail(function () {
-            $("#warehouse_count").text("ERROR");
-            $("#logistics_count").text("ERROR");
+    // Get selected DR numbers
+    function getSelectedDRs() {
+        const selected = [];
+        document.querySelectorAll('.dr-checkbox:checked').forEach(checkbox => {
+            selected.push(checkbox.value);
         });
-    });
-</script> -->
+        return selected;
+    }
 
-<!-- Logistics Stock Levels Graph -->
-<!-- <script>
-    // Fetch data and render chart
-    fetch('script/get_logistics_summary.php')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
+    // Show modal with selected deliveries
+    document.getElementById('addToGroupBtn').addEventListener('click', function() {
+        const selectedDRs = getSelectedDRs();
+        
+        if (selectedDRs.length === 0) {
+            window.location.href = '?toast=Please select at least one delivery to add to the billing group&type=danger';
+            return;
+        }
+        
+        // Populate the list in modal
+        const drList = document.getElementById('drList');
+        drList.innerHTML = '';
+        selectedDRs.forEach(dr => {
+            const li = document.createElement('li');
+            li.textContent = `DR No: ${dr}`;
+            drList.appendChild(li);
+        });
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('addToGroupModal'));
+        modal.show();
+    });
+
+    // Handle confirm button
+    document.getElementById('confirmAddToGroup').addEventListener('click', function() {
+        const selectedDRs = getSelectedDRs();
+        const groupName = document.getElementById('groupNameInput').value.trim();
+        
+        if (selectedDRs.length === 0) {
+            window.location.href = '?toast=No deliveries selected&type=danger';
+            return;
+        }
+        
+        if (groupName === '') {
+            alert('Please enter a group name');
+            return;
+        }
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('group_name', groupName);
+        selectedDRs.forEach(dr => {
+            formData.append('selected_dr[]', dr);
+        });
+        
+        // Disable button during request
+        const confirmBtn = this;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Processing...';
+        
+        // Send AJAX request
+        fetch('script/add_billing_grouped.php', {
+            method: 'POST',
+            body: formData
         })
+        .then(response => response.json())
         .then(data => {
-            
-            if (data.accepted_by_logistics && data.accepted_by_logistics.logistics_names.length > 0) {
-                renderLogisticsStockLevelsChart(data.accepted_by_logistics);
+            if (data.success) {
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('addToGroupModal')).hide();
+                // Clear group name input
+                document.getElementById('groupNameInput').value = '';
+                // Uncheck all checkboxes
+                document.querySelectorAll('.dr-checkbox:checked').forEach(cb => cb.checked = false);
+                // Redirect with success message
+                window.location.href = `?toast=${encodeURIComponent(data.toast)}&type=${data.type}`;
             } else {
-                document.getElementById('logisticsStockLevelsChart').parentElement.innerHTML = 
-                    '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-muted text-center">No delivery data available</p></div>';
+                window.location.href = `?toast=${encodeURIComponent(data.toast)}&type=${data.type}`;
             }
         })
         .catch(error => {
-            console.error('Error fetching logistics delivery data:', error);
-            document.getElementById('logisticsStockLevelsChart').parentElement.innerHTML = 
-                '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-danger text-center">Error loading chart data</p></div>';
+            console.error('Error:', error);
+            window.location.href = '?toast=An error occurred while processing your request&type=danger';
+        })
+        .finally(() => {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirm Add to Group';
         });
+    });
 
-    function renderLogisticsStockLevelsChart(chartData) {
-        const ctx = document.getElementById('logisticsStockLevelsChart').getContext('2d');
-        
-        // Use consistent indigo color palette
-        const backgroundColors = [
-            'rgba(79, 70, 229, 0.8)',   // indigo-600
-            'rgba(99, 102, 241, 0.8)',  // indigo-500
-            'rgba(129, 140, 248, 0.8)', // indigo-400
-            'rgba(67, 56, 202, 0.8)',   // indigo-700
-            'rgba(165, 180, 252, 0.8)', // indigo-300
-            'rgba(49, 46, 129, 0.8)'    // indigo-800
-        ];
-        
-        const borderColors = [
-            'rgba(79, 70, 229, 1)',
-            'rgba(99, 102, 241, 1)',
-            'rgba(129, 140, 248, 1)',
-            'rgba(67, 56, 202, 1)',
-            'rgba(165, 180, 252, 1)',
-            'rgba(49, 46, 129, 1)'
-        ];
+document.addEventListener('click', function(e) {
+  const editBtn = e.target.closest('.edit-dr');
+  const removeBtn = e.target.closest('.remove-dr');
 
-        // Create the chart with horizontal layout for better fit in sidebar
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: chartData.logistics_names,
-                datasets: [{
-                    label: 'Accepted Deliveries',
-                    data: chartData.delivery_counts,
-                    backgroundColor: backgroundColors.slice(0, chartData.logistics_names.length),
-                    borderColor: borderColors.slice(0, chartData.logistics_names.length),
-                    borderWidth: 1,
-                    borderRadius: 4, 
-                }]
-            },
-            options: {
-                indexAxis: 'y', 
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    title: {
-                        display: true,
-                        text: 'Logistics Stock Levels',
-                        font: {
-                            size: 14,
-                            weight: '600'
-                        },
-                        color: '#1f2937',
-                        padding: {
-                            bottom: 15
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(31, 41, 55, 0.9)',
-                        titleFont: { size: 12 },
-                        bodyFont: { size: 12 },
-                        callbacks: {
-                            label: function(context) {
-                                return `Deliveries: ${context.parsed.x}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        title: {
-                            display: false,
-                        },
-                        ticks: {
-                            font: { size: 10 },
-                            precision: 0
-                        },
-                        grid: {
-                            color: '#e5e7eb'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: false,
-                        },
-                        ticks: {
-                            font: { size: 10 }
-                        },
-                        grid: {
-                            display: false
-                        }
-                    }
-                },
-                animation: {
-                    duration: 750,
-                    easing: 'easeOutQuart'
-                }
-            }
-        });
+  if (editBtn) {
+    const drNo = editBtn.dataset.dr;
+    const checkbox = document.querySelector(`.dr-checkbox[value="${drNo}"]`);
+    if (!checkbox) return alert(`DR ${drNo} not found on this page`);
+    const row = checkbox.closest('tr');
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.add('table-warning');
+    setTimeout(() => row.classList.remove('table-warning'), 2000);
+  }
+
+  if (removeBtn) {
+    const drNo = removeBtn.dataset.dr;
+    if (confirm(`Are you sure you want to remove DR ${drNo} from this group?`)) {
+      // TODO: Add AJAX or PHP call to remove DR from group
+      alert(`Removed DR ${drNo}`);
     }
-</script> -->
+  }
+});
 
+</script>
