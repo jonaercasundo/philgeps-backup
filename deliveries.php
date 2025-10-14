@@ -1,8 +1,8 @@
 <?php 
+$is_deliveries_page = true;
 require "template/header.php"; 
 require "config/db.php";
 require "script/role_auth.php";
-
 // roles allowed to access this page
 $allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator', 'Warehouse Coordinator', 'Warehouse Admin'];
 

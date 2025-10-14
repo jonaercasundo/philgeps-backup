@@ -1,5 +1,5 @@
 <?php 
-$is_logistics_page = false;
+$is_deliveries_page = true;
 require "template/header.php"; 
 require "script/role_auth.php";
 require "config/db.php";
