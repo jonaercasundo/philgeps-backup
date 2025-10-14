@@ -30,10 +30,15 @@ SELECT
     d.dr_no,
     d.delivery_date,
     d.status,
+    k.keystage_num,
+    k.description,
+    l.lot_name,
     COALESCE(pkg_items.items_contents, '') AS items_contents
-FROM deliveries d
-JOIN projects p ON d.project_id = p.project_id
-JOIN school s   ON d.school_id = s.school_id
+        FROM deliveries d
+        LEFT JOIN keystage k ON k.keystage_id = d.keystage_id
+        JOIN lot l ON l.lot_id = d.lot_id
+        JOIN projects p ON d.project_id = p.project_id
+        JOIN school s   ON d.school_id = s.school_id
 
 LEFT JOIN (
     SELECT 
@@ -90,6 +95,27 @@ LIMIT :limit OFFSET :offset;
     $stmt->execute();
     $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $grouped_deliveries = [];
+    foreach ($deliveries as $row) {
+        $dr = $row['dr_no'];
+        if (!isset($grouped_deliveries[$dr])) {
+            $grouped_deliveries[$dr] = [
+                'dr_no' => $dr,
+                'keystage_name' => $row['keystage_num'],
+                'description' => $row['description'],
+                'lot_name' => $row['lot_name'],
+                'project_name' => $row['project_name'],
+                'school_id' => $row['school_id'],
+                'school_name' => $row['school_name'],
+                'address' => $row['address'],
+                'delivery_date' => $row['delivery_date'],
+                'status' => $row['status'],
+                'deliveries' => []
+            ];
+        }
+        $grouped_deliveries[$dr]['deliveries'][] = $row;
+    }
+
     // Fetch deliveries with project name
     $stmt = $pdo->prepare("
         SELECT *
@@ -141,44 +167,44 @@ LIMIT :limit OFFSET :offset;
 <table class="table table-bordered shadow-sm"  id="resultTable">
     <thead class="table-dark">
         <tr>
-           <th>Project</th>
-            <th>School</th>
-            <th>Address</th>
+            <th>Delivery Details</th>
             <th>Items</th>
-            <th>DR No</th>
             <th>Date</th>
             <th>Actions</th>
         </tr>
     </thead>
    <tbody>
-        <?php foreach($deliveries as $d): ?>
-            <?php
-                // Use a single query to check if any photo exists for the dr_no
-                $stmt_check = $pdo->prepare("
-                    SELECT COUNT(dp.delivery_photo_id)
-                    FROM deliveries d
-                    JOIN package_status ps ON d.delivery_id = ps.delivery_id
-                    JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
-                    WHERE d.dr_no = :dr_no AND dp.status IN ('accepted', 'delivered')
-                ");
-                $stmt_check->execute([':dr_no' => $d['dr_no']]);
-                $has_photos = ($stmt_check->fetchColumn() > 0);
-            ?>
+        <tbody>
+<?php foreach ($grouped_deliveries as $dr_group): ?>
+    <tr class="table-secondary fw-bold">
+        <td colspan="3">
+            DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> — 
+            Project: <?= htmlspecialchars($dr_group['project_name']) ?> — 
+            School: <?= htmlspecialchars($dr_group['school_name']) ?>
+        </td>
+        <td colspan ="1">
+            <a class="btn btn-secondary mb-1" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
+        </td>
+    </tr>
+
+    <?php foreach ($dr_group['deliveries'] as $d): ?>
+        <?php
+            $stmt_check = $pdo->prepare("
+                SELECT COUNT(dp.delivery_photo_id)
+                FROM deliveries d
+                JOIN package_status ps ON d.delivery_id = ps.delivery_id
+                JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
+                WHERE d.delivery_id = :delivery_id AND dp.status IN ('accepted', 'delivered')
+            ");
+            $stmt_check->execute([':delivery_id' => $d['delivery_id']]);
+            $has_photos = ($stmt_check->fetchColumn() > 0);
+        ?>
         <tr>
-            <td><?= htmlspecialchars(mb_strimwidth($d['project_name'], 0, 50, '...')) ?></td>
-            <td><?= htmlspecialchars($d['school_id']). ' ' . htmlspecialchars($d['school_name']) ?></td>
-            <td><?= htmlspecialchars($d['address']) ?></td>
-            <td>
-                <?php if (!empty($d['items_contents'])): ?>
-                    <?= nl2br($d['items_contents']) ?>
-                <?php else: ?>
-                    <em>No items</em>
-                <?php endif; ?>
-            </td>
-            <td><?= htmlspecialchars($d['dr_no']) ?></td>
+            <td>LOT <?= htmlspecialchars($d['lot_name'])?> <?= !empty($d['keystage_num']) ? "Keystage ".$d['keystage_num']." ".$d['description'] : ' ' ?></td>
+            <td><?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
-            <td class="text-center">
-                <?php if($_SESSION['role'] == "Super Admin" || $_SESSION['role'] == "Office Admin" || $_SESSION['role'] == "Office Coordinator"):?>
+            <td>
+                 <?php if($_SESSION['role'] == "Super Admin" || $_SESSION['role'] == "Office Admin" || $_SESSION['role'] == "Office Coordinator"):?>
                 <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                         data-id="<?= $d['delivery_id'] ?>"
                         data-project="<?= htmlspecialchars($d['project_name']) ?>"
@@ -190,13 +216,15 @@ LIMIT :limit OFFSET :offset;
                         data-status="<?= htmlspecialchars($d['status']) ?>"
                 ><i class="bi bi-pencil-square fs-4"></i></button>
                 <?php endif;?>
-                <a class="btn btn-secondary mb-1" href="generate_qr.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-qr-code fs-4"></i></a>
-                <?php if ($has_photos): ?> <br>
-                    <a class="btn btn-info" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
+                <?php if ($has_photos): ?>
+                    <a class="btn btn-info mb-1" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
                 <?php endif; ?>
             </td>
         </tr>
-        <?php endforeach; ?>
+    <?php endforeach; ?>
+<?php endforeach; ?>
+</tbody>
+
     </tbody>
 </table>
 

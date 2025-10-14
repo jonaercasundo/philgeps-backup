@@ -86,8 +86,13 @@ $sql = "SELECT
             d.dr_no,
             d.delivery_date,
             d.status,
+            k.keystage_num,
+            k.description,
+            l.lot_name,
             COALESCE(pkg_items.items_contents, '') AS items_contents
         FROM deliveries d
+        LEFT JOIN keystage k ON k.keystage_id = d.keystage_id
+        JOIN lot l ON l.lot_id = d.lot_id
         JOIN projects p ON d.project_id = p.project_id
         JOIN school s   ON d.school_id = s.school_id
         LEFT JOIN (
@@ -170,8 +175,15 @@ $countStmt->execute();
 $total_rows = $countStmt->fetchColumn();
 $total_pages = ceil($total_rows / $limit);
 
+$grouped = [];
+foreach ($rows as $r) {
+    $grouped[$r['dr_no']]['dr_no'] = $r['dr_no'];
+    $grouped[$r['dr_no']]['project_name'] = $r['project_name'];
+    $grouped[$r['dr_no']]['school_name'] = $r['school_name'];
+    $grouped[$r['dr_no']]['deliveries'][] = $r;
+}
 echo json_encode([
-    "rows" => $rows,
-    "total_pages" => $total_pages,
+    'rows' => array_values($grouped), 
+    'total_pages' => $total_pages,
     "current_page" => $page
 ]);

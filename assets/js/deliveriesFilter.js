@@ -19,62 +19,78 @@ function getFilters() {
     return params.toString();
 }
 
-// Update table via AJAX
-async function updateTable(page = 1) {
-    const tbody = document.getElementById("resultTable");
-    tbody.innerHTML = "";
-    showLoading();
+        // Update table via AJAX
+        async function updateTable(page = 1) {
+            const tbody = document.getElementById("resultTable");
+            tbody.innerHTML = "";
+            showLoading();
 
-    try {
-        const res = await fetch("script/filterDeliveries.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: `${getFilters()}&page=${page}&limit=10`
-        });
-        const data = await res.json();
+            try {
+                const res = await fetch("script/filterDeliveries.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `${getFilters()}&page=${page}&limit=10`
+                });
+                const data = await res.json();
 
-        if (data.rows?.length) {
-            tbody.innerHTML = `
+            if (data.rows?.length) {
+                tbody.innerHTML =
+                `
                 <thead class="table-dark">
-                    <tr>
-                        <th>School</th>
-                        <th>Address</th>
-                        <th>Items</th>
-                        <th>DR No</th>
-                        <th>Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.rows.map(row => `
                         <tr>
-                            <td>${row.school_name}</td>
-                            <td>${row.address}</td>
-                            <td>${row.items_contents}</td>
-                            <td>${row.dr_no}</td>
-                            <td>${row.delivery_date}</td>
-                            <td class="text-center">
-                                <button class="btn btn-warning mb-1" 
-                                    data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
-                                    data-id="${row.delivery_id}" 
-                                    data-project="${row.project_name}"
-                                    data-school="${row.school_name}" 
-                                    data-address="${row.address}"
-                                    data-items_contents="${row.items_contents}" 
-                                    data-remarks="${row.items_contents}"
-                                    data-drno="${row.dr_no}"
-                                    data-date="${row.delivery_date}" 
-                                    data-status="${row.status}">
-                                    <i class="bi bi-pencil-square fs-4"></i>
-                                </button> <br>
-                                <a class="btn btn-secondary mb-1" href="generate_qr.php?id=${row.dr_no}" target="_blank"><i class="bi bi-qr-code fs-4"></i></a><br>
-                                ${row.has_photos ? `<a class="btn btn-primary mb-1" href="deliveries_details.php?id=${row.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
-                            </td>
+                            <th>Delivery Details</th>
+                            <th>Items</th>
+                            <th>Date</th>
+                            <th>Actions</th>
                         </tr>
-                    `).join("")}
-                </tbody>
-            `;
+                    </thead>
+                <tbody>
+                        <tbody>
+                `;
+            tbody.innerHTML += data.rows.map(group => `
+                <tr class="table-secondary fw-bold">
+                    <td colspan="3">
+                        DR No: ${group.dr_no} — 
+                        Project: ${group.project_name} — 
+                        School: ${group.school_name}
+                    </td>
+                    <td>
+                        <a class="btn btn-secondary mb-1" href="generate_qr.php?id=${group.dr_no}" target="_blank">
+                            <i class="bi bi-qr-code fs-4"></i>
+                        </a>
+                    </td>
+                </tr>
+                ${group.deliveries.map(d => `
+                    <tr>
+                        <td>LOT ${d.lot_name} Keystage ${d.keystage_num} ${d.description}</td>
+                        <td>${d.items_contents}</td>
+                        <td>${d.delivery_date}</td>
+                        <td class="text-center">
+                            <button class="btn btn-warning mb-1" data-bs-toggle="modal"
+                                data-bs-target="#editDeliveryModal"
+                                data-id="${d.delivery_id}" 
+                                data-project="${d.project_name}"
+                                data-school="${d.school_name}"
+                                data-address="${d.address}"
+                                data-remarks="${d.items_contents}"
+                                data-drno="${d.dr_no}"
+                                data-date="${d.delivery_date}" 
+                                data-status="${d.status}">
+                                <i class="bi bi-pencil-square fs-4"></i>
+                            </button>
+                            ${d.has_photos ? `<a class="btn btn-primary mb-1" href="deliveries_details.php?id=${d.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
+                        </td>
+                    </tr>
+                `).join("")}
+            `).join("");
         }
+        tbody.innerHTML +=
+        `
+        </tbody>
+
+            </tbody>
+        </table>
+        `;
         renderPagination(data, page);
     } finally {
         hideLoading();
