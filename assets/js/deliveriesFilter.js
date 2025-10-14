@@ -65,14 +65,15 @@ function getFilters() {
                         <td>LOT ${d.lot_name} Keystage ${d.keystage_num} ${d.description}</td>
                         <td>${d.items_contents}</td>
                         <td>${d.delivery_date}</td>
-                        <td class="text-center">
-                            <button class="btn btn-warning mb-1" data-bs-toggle="modal"
+                        <td>
+                            <button class="btn btn-warning mb-1"
+                                data-bs-toggle="modal"
                                 data-bs-target="#editDeliveryModal"
                                 data-id="${d.delivery_id}" 
                                 data-project="${d.project_name}"
                                 data-school="${d.school_name}"
                                 data-address="${d.address}"
-                                data-remarks="${d.items_contents}"
+                                data-remarks='${d.items_contents}'
                                 data-drno="${d.dr_no}"
                                 data-date="${d.delivery_date}" 
                                 data-status="${d.status}">

@@ -76,59 +76,72 @@ $page = isset($_POST['page']) ? (int)$_POST['page'] : 1;
 $limit = isset($_POST['limit']) ? (int)$_POST['limit'] : 10;
 $offset = ($page - 1) * $limit;
 
-$sql = "SELECT 
-            d.delivery_id,
-            p.project_name,
-            s.school_id,
-            s.school_name,
-            s.address,
-            d.package_type,
-            d.dr_no,
-            d.delivery_date,
-            d.status,
-            k.keystage_num,
-            k.description,
-            l.lot_name,
-            COALESCE(pkg_items.items_contents, '') AS items_contents
+$sql = "
+SELECT 
+    d.delivery_id,
+    p.project_name,
+    s.school_id,
+    s.school_name,
+    s.address,
+    d.package_type,
+    d.dr_no,
+    d.delivery_date,
+    d.status,
+    k.keystage_num,
+    k.description,
+    l.lot_name,
+    COALESCE(pkg_items.items_contents, '') AS items_contents
         FROM deliveries d
         LEFT JOIN keystage k ON k.keystage_id = d.keystage_id
         JOIN lot l ON l.lot_id = d.lot_id
         JOIN projects p ON d.project_id = p.project_id
         JOIN school s   ON d.school_id = s.school_id
-        LEFT JOIN (
-            SELECT 
-                x.delivery_id,
-                GROUP_CONCAT(
-                    CONCAT(
-                        'Package ', x.rn, ' out of ', x.total_packages, 
-                        ' — ', COALESCE(x.pkg_status, 'Pending'), '<br>',
-                        x.items
-                    )
-                    SEPARATOR '<br><br>'
-                ) AS items_contents
-            FROM (
-                SELECT 
-                    d.delivery_id,
-                    p.package_id,
-                    ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
-                    COUNT(p.package_id) OVER (PARTITION BY d.delivery_id) AS total_packages,
-                    GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items,
-                    MAX(dp.status) AS pkg_status
-                FROM deliveries d
-                LEFT JOIN package p 
-                ON (
-                    (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
-                    OR (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
-                )
-                JOIN package_content pc ON pc.package_id = p.package_id
-                JOIN item i ON pc.item_id = i.item_id
-                LEFT JOIN package_status dp 
-                ON dp.delivery_id = d.delivery_id 
-                AND dp.package_id = p.package_id
-                GROUP BY d.delivery_id, p.package_id
-            ) x
-            GROUP BY x.delivery_id
-        ) pkg_items ON pkg_items.delivery_id = d.delivery_id
+
+LEFT JOIN (
+    SELECT 
+        x.delivery_id,
+        GROUP_CONCAT(
+            CONCAT(
+                'Package ', x.rn, ' out of ', x.total_packages, 
+                ' — ', x.colored_pkg_status, '<br>', 
+                x.items
+            )
+            SEPARATOR '<br><br>'
+        ) AS items_contents
+    FROM (
+        SELECT 
+            d.delivery_id,
+            p.package_id,
+            ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
+            COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
+            GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items,
+            
+           CASE 
+                WHEN COALESCE(MAX(dp.status), 'PENDING') = 'DELIVERED' THEN
+                    CONCAT('<span class=\"text-success font-weight-bold\">DELIVERED</span>')
+                WHEN COALESCE(MAX(dp.status), 'PENDING') = 'ACCEPTED' THEN
+                    CONCAT('<span class=\"text-primary font-weight-bold\">ACCEPTED</span>')
+                WHEN COALESCE(MAX(dp.status), 'PENDING') = 'WAREHOUSE' THEN
+                    CONCAT('<span class=\"text-info font-weight-bold\">WAREHOUSE</span>')
+                ELSE
+                    CONCAT('<span class=\"text-warning font-weight-bold\">PENDING</span>')
+            END AS colored_pkg_status
+
+        FROM deliveries d
+        LEFT JOIN package p 
+            ON (
+                (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
+                OR (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
+            )
+        JOIN package_content pc ON pc.package_id = p.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        LEFT JOIN package_status dp 
+            ON dp.delivery_id = d.delivery_id 
+           AND dp.package_id = p.package_id
+        GROUP BY d.delivery_id, p.package_id
+    ) x
+    GROUP BY x.delivery_id
+) pkg_items ON pkg_items.delivery_id = d.delivery_id
         ";
 
 
