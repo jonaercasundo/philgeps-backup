@@ -133,7 +133,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
 
     <div class="flex-fill d-flex flex-column">
         <!-- Scrollable content area -->
-        <div class="flex-fill" style="max-height: 68vh; overflow-y: auto;">
+        <div class="flex-fill" style="max-height: 60vh; overflow-y: auto;">
             <div class="p-3">
                 <?php if (empty($grouped_summary)): ?>
                     <div class="text-center text-muted py-4">

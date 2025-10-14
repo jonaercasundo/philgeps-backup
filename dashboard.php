@@ -213,13 +213,42 @@ $stmt = $pdo->prepare($inventoryByWarehouseQuery);
 $stmt->execute(['selectedDate' => $selectedDate]);
 $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-// Add missing variables with empty data for now
-// $projectsPerYear = [];
-// $projectsByAgency = [];
-// $amountPerYear = [];
-// $projectProgress = [];
-// $topPackageTypes = [];
-// $deliveriesPerProject = [];
+// Progress per Region
+$progressPerRegionQuery = "
+    SELECT 
+        s.region,
+        COUNT(*) AS total,
+        SUM(CASE WHEN d.status = 'pending' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN d.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
+        SUM(CASE WHEN d.status = 'accepted' THEN 1 ELSE 0 END) AS accepted
+    FROM deliveries d
+    JOIN school s ON s.school_id = d.school_id
+    " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
+    GROUP BY s.region
+    ORDER BY s.region
+";
+
+$stmt = $pdo->query($progressPerRegionQuery);
+$progressPerRegion = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Progress per Lot
+$progressPerLotQuery = "
+    SELECT 
+        l.lot_name,
+        COUNT(*) AS total,
+        SUM(CASE WHEN d.status = 'pending' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN d.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
+        SUM(CASE WHEN d.status = 'accepted' THEN 1 ELSE 0 END) AS accepted
+    FROM deliveries d
+    LEFT JOIN keystage k ON d.keystage_id = k.keystage_id
+    JOIN lot l ON l.lot_id = COALESCE(d.lot_id, k.lot_id)
+    " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
+    GROUP BY l.lot_name
+    ORDER BY l.lot_name
+";
+
+$stmt = $pdo->query($progressPerLotQuery);
+$progressPerLot = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
 } catch (PDOException $e) {
@@ -406,20 +435,7 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
     </div>
   </div>
 
-  <!-- Chart: Inventory Quantities per Warehouse -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-quantities">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">📦 Inventory Quantity</h6>
-        <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-      </div>
-      <div class="card-body">
-        <canvas id="inventoryChart" height="300"></canvas>
-      </div>
-    </div>
-  </div>
-
- <!-- Inventory by Warehouse -->
+   <!-- Inventory by Warehouse -->
 <div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
     <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -459,7 +475,20 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
     </div>
 </div>
 
-<!-- Leaflet Map Placeholder -->
+  <!-- Chart: Inventory Quantities per Warehouse -->
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-quantities">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">📦 Inventory Quantity</h6>
+        <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+      </div>
+      <div class="card-body">
+        <canvas id="inventoryChart" height="300"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Map Placeholder -->
 <div class="col-6 mb-4 chart-item" data-chart-id="map-overview">
   <div class="card shadow-sm h-100">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -471,6 +500,62 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
     </div>
   </div>
 </div>
+
+  <!-- Progress by Region - Accepted -->
+<div class="col-lg-6 mb-4 chart-item" data-chart-id="accepted-per-region">
+    <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">✅ Accepted by Region (%)</h6>
+            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body">
+            <canvas id="acceptedPerRegionChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Progress by Region - Delivered -->
+<div class="col-lg-6 mb-4 chart-item" data-chart-id="delivered-per-region">
+    <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">🚚 Delivered by Region (%)</h6>
+            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body">
+            <canvas id="deliveredPerRegionChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Progress by Lot - Accepted -->
+<div class="col-lg-6 mb-4 chart-item" data-chart-id="accepted-per-lot">
+    <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">✅ Accepted by Lot (%)</h6>
+            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body">
+            <canvas id="acceptedPerLotChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Progress by Lot - Delivered -->
+<div class="col-lg-6 mb-4 chart-item" data-chart-id="delivered-per-lot">
+    <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">🚚 Delivered by Lot (%)</h6>
+            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body">
+            <canvas id="deliveredPerLotChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+
+
+
 
 </div>
 
@@ -542,14 +627,14 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
 
 <!-- Pass PHP data to JavaScript and load the external script -->
 <script>
-  const phpData = {
-       
+  const phpData = {      
         deliveryStatusOverview: <?= json_encode($deliveryStatusOverview) ?>,
         monthlyDeliveryTrend: <?= json_encode($monthlyDeliveryTrend) ?>,
-       
         inventoryData: <?= json_encode($inventoryData) ?>,
         inventoryByWarehouse: <?= json_encode($inventoryByWarehouse) ?>,
-        selectedProject: <?= json_encode($selectedProject) ?>
+        selectedProject: <?= json_encode($selectedProject) ?>,
+        progressPerRegion: <?= json_encode($progressPerRegion) ?>,
+        progressPerLot: <?= json_encode($progressPerLot) ?> 
     };
 </script>
 

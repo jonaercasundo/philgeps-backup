@@ -1,13 +1,13 @@
 // Access the global phpData object created in the main PHP file.
 const {
-  // placesDelivered,
   deliveryStatusOverview,
   monthlyDeliveryTrend,
-  // todayUserActivity,
   selectedProject,
   inventoryData,
   stockLevelData,
-  inventoryByWarehouse
+  inventoryByWarehouse,
+  progressPerRegion,
+  progressPerLot
 } = phpData;
 
 // Modern Professional Color Scheme
@@ -575,5 +575,225 @@ document.addEventListener('DOMContentLoaded', function() {
       const container = document.getElementById('warehouseChartsContainer');
       container.innerHTML = '<div class="col-12 text-center text-muted py-5"><p>No inventory data available</p></div>';
   }
+
+  // Progress by Region - Accepted Percentage
+if (phpData.progressPerRegion && phpData.progressPerRegion.length > 0) {
+    const regions = phpData.progressPerRegion.map(r => r.region);
+    const acceptedData = phpData.progressPerRegion.map(r => {
+        const total = r.total || 1; // Avoid division by zero
+        return Math.round((r.accepted / total) * 100);
+    });
+
+    new Chart(document.getElementById('acceptedPerRegionChart'), {
+        type: 'bar',
+        data: {
+            labels: regions,
+            datasets: [{
+                label: 'Accepted %',
+                data: acceptedData,
+                backgroundColor: '#28a745',
+                borderColor: '#218838',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage (%)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Regions'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const regionData = phpData.progressPerRegion[context.dataIndex];
+                            return `Accepted: ${regionData.accepted}/${regionData.total} (${context.parsed.y}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+} else {
+    createEmptyChart(document.getElementById('acceptedPerRegionChart'), 'No region data available');
+}
+
+// Progress by Region - Delivered Percentage
+if (phpData.progressPerRegion && phpData.progressPerRegion.length > 0) {
+    const regions = phpData.progressPerRegion.map(r => r.region);
+    const deliveredData = phpData.progressPerRegion.map(r => {
+        const total = r.total || 1;
+        return Math.round((r.delivered / total) * 100);
+    });
+
+    new Chart(document.getElementById('deliveredPerRegionChart'), {
+        type: 'bar',
+        data: {
+            labels: regions,
+            datasets: [{
+                label: 'Delivered %',
+                data: deliveredData,
+                backgroundColor: '#17a2b8',
+                borderColor: '#138496',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage (%)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Regions'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const regionData = phpData.progressPerRegion[context.dataIndex];
+                            return `Delivered: ${regionData.delivered}/${regionData.total} (${context.parsed.y}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+} else {
+    createEmptyChart(document.getElementById('deliveredPerRegionChart'), 'No region data available');
+}
+
+// Progress by Lot - Accepted Percentage
+if (phpData.progressPerLot && phpData.progressPerLot.length > 0) {
+    const lots = phpData.progressPerLot.map(l => l.lot_name);
+    const acceptedData = phpData.progressPerLot.map(l => {
+        const total = l.total || 1;
+        return Math.round((l.accepted / total) * 100);
+    });
+
+    new Chart(document.getElementById('acceptedPerLotChart'), {
+        type: 'bar',
+        data: {
+            labels: lots,
+            datasets: [{
+                label: 'Accepted %',
+                data: acceptedData,
+                backgroundColor: '#ffc107',
+                borderColor: '#e0a800',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage (%)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Lots'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const lotData = phpData.progressPerLot[context.dataIndex];
+                            return `Accepted: ${lotData.accepted}/${lotData.total} (${context.parsed.y}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+} else {
+    createEmptyChart(document.getElementById('acceptedPerLotChart'), 'No lot data available');
+}
+
+// Progress by Lot - Delivered Percentage
+if (phpData.progressPerLot && phpData.progressPerLot.length > 0) {
+    const lots = phpData.progressPerLot.map(l => l.lot_name);
+    const deliveredData = phpData.progressPerLot.map(l => {
+        const total = l.total || 1;
+        return Math.round((l.delivered / total) * 100);
+    });
+
+    new Chart(document.getElementById('deliveredPerLotChart'), {
+        type: 'bar',
+        data: {
+            labels: lots,
+            datasets: [{
+                label: 'Delivered %',
+                data: deliveredData,
+                backgroundColor: '#6f42c1',
+                borderColor: '#5a3596',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage (%)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Lots'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const lotData = phpData.progressPerLot[context.dataIndex];
+                            return `Delivered: ${lotData.delivered}/${lotData.total} (${context.parsed.y}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+} else {
+    createEmptyChart(document.getElementById('deliveredPerLotChart'), 'No lot data available');
+}
 
 });
