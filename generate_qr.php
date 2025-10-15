@@ -9,13 +9,35 @@ use Dompdf\Dompdf;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 
-$ids = isset($_GET['ids']) ? explode(',', $_GET['ids']) : [];
-if (empty($ids)) {
-    die("No DR numbers provided. Use ?ids=4095,4096");
+// ---- Handle both POST and GET safely ----
+
+// Accept either comma-separated string or array
+$raw_ids = $_POST['ids'] ?? $_GET['ids'] ?? '';
+
+if (empty($raw_ids)) {
+    die("No DR numbers provided. Use ?ids=4095,4096 or send via POST.");
 }
 
+// Normalize to array
+if (is_string($raw_ids)) {
+    $ids = array_filter(array_map('trim', explode(',', $raw_ids)));
+} elseif (is_array($raw_ids)) {
+    $ids = array_filter(array_map('trim', $raw_ids));
+} else {
+    die("Invalid data format for DR numbers.");
+}
+
+// Ensure all numeric
+$ids = array_filter($ids, fn($id) => is_numeric($id));
+
+if (empty($ids)) {
+    die("Invalid or empty DR numbers provided.");
+}
+
+// ---- Continue your logic ----
 $logoPath = __DIR__ . "/assets/uploads/logo/logo.webp";
 $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+
 
 $html = "<style>
 @page { margin: 20mm; }
