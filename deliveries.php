@@ -135,6 +135,7 @@ LIMIT :limit OFFSET :offset;
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeliveryModal">Add Delivery</button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#batchDeliveryModal">Batch Delivery</button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importDeliveryModal">Import From File Delivery</button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generateQRModal">Batch Generate AR</button>
     </div>
 </div>
 
