@@ -77,7 +77,7 @@
               <?php
                 $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                  echo "<option value='{$row['project_id']}'>" . htmlspecialchars($row['project_name']) . "</option>";
+                  echo "<option value='{$row['project_id']}' title='" . htmlspecialchars($row['project_name']) . "'>" . htmlspecialchars(strlen($row['project_name']) > 20 ? substr($row['project_name'], 0, 100) . '...' : $row['project_name']) . "</option>";
                 }
               ?>
             </select>
