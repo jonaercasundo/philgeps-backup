@@ -38,6 +38,7 @@ function getFilters() {
                 `
                 <thead class="table-dark">
                         <tr>
+                            <th></th>
                             <th>Delivery Details</th>
                             <th>Items</th>
                             <th>Date</th>
@@ -49,19 +50,21 @@ function getFilters() {
                 `;
             tbody.innerHTML += data.rows.map(group => `
                 <tr class="table-secondary fw-bold">
-                    <td colspan="3">
+                    <td class="text-center align-middle"colspan ="1">
+                        <input type="checkbox" class="form-check-input dr-checkbox" value="${group.dr_no}">
+                    </td>
+                    <td class="align-middle" colspan="3">
                         DR No: ${group.dr_no} — 
                         Project: ${group.project_name} — 
                         School: ${group.school_name}
                     </td>
-                    <td class="text-center"  colspan ="1">
-                        <a class="btn btn-secondary mb-1" href="generate_qr.php?id=${group.dr_no}" target="_blank">
-                            <i class="bi bi-qr-code fs-4"></i>
-                        </a>
+                    <td colspan ="1">
+                        <button class="btn btn-secondary mb-1" onclick="generateARs()"><i class="bi bi-qr-code fs-4"></i></button>
                     </td>
                 </tr>
                 ${group.deliveries.map(d => `
                     <tr>
+                        <td></td>
                         <td>LOT ${d.lot_name} Keystage ${d.keystage_num} ${d.description}</td>
                         <td>${d.items_contents}</td>
                         <td>${d.delivery_date}</td>

@@ -64,7 +64,7 @@ try {
     if ($selectedProject > 0) {
         $stmt = $pdo->query("
             SELECT
-                SUM(CASE WHEN status='Ongoing' THEN 1 ELSE 0 END) AS activeProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
                 (SELECT COUNT(*) FROM deliveries WHERE status='pending' AND project_id = $selectedProject) AS pending,
                 (SELECT COUNT(*) FROM deliveries WHERE status='accepted' AND project_id = $selectedProject) AS accepted,
                 (SELECT COUNT(*) FROM deliveries WHERE status='delivered' AND project_id = $selectedProject) AS delivered
@@ -73,7 +73,7 @@ try {
     } else {
         $stmt = $pdo->query("
             SELECT
-                SUM(CASE WHEN status='Ongoing' THEN 1 ELSE 0 END) AS activeProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
                 (SELECT COUNT(*) FROM deliveries WHERE status='pending') AS pending,
                 (SELECT COUNT(*) FROM deliveries WHERE status='accepted') AS accepted,
                 (SELECT COUNT(*) FROM deliveries WHERE status='delivered') AS delivered
@@ -81,13 +81,38 @@ try {
         ");
     }
 
-    $totals = $stmt->fetch(PDO::FETCH_ASSOC);
+    $deliveryTotals = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Calculate progress percentages AFTER getting $totals
-    $totalDeliveries = ($totals['pending'] ?? 0) + ($totals['accepted'] ?? 0) + ($totals['delivered'] ?? 0);
-    $pendingPercent = $totalDeliveries > 0 ? round(($totals['pending'] / $totalDeliveries) * 100) : 0;
-    $acceptedPercent = $totalDeliveries > 0 ? round(($totals['accepted'] / $totalDeliveries) * 100) : 0;
-    $deliveredPercent = $totalDeliveries > 0 ? round(($totals['delivered'] / $totalDeliveries) * 100) : 0;
+    // Calculate progress percentages AFTER getting $deliveryTotals
+    $totalDeliveries = ($deliveryTotals['pending'] ?? 0) + ($deliveryTotals['accepted'] ?? 0) + ($deliveryTotals['delivered'] ?? 0);
+    $pendingPercent = $totalDeliveries > 0 ? round(($deliveryTotals['pending'] / $totalDeliveries) * 100) : 0;
+    $acceptedPercent = $totalDeliveries > 0 ? round(($deliveryTotals['accepted'] / $totalDeliveries) * 100) : 0;
+    $deliveredPercent = $totalDeliveries > 0 ? round(($deliveryTotals['delivered'] / $totalDeliveries) * 100) : 0;
+
+    // Billing Summary
+    $stmt = $pdo->query("
+        SELECT
+            (SELECT COUNT(*) FROM grouping) AS total_groups,
+            (SELECT COUNT(DISTINCT dr_no) FROM billing_grouped) AS total_drs,
+            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g
+             JOIN billing_grouped bg ON bg.group_id = g.group_id 
+             WHERE status = 'for billing') AS for_billing_count,
+            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
+             JOIN billing_grouped bg ON bg.group_id = g.group_id 
+             WHERE status = 'billed') AS billed_count,
+            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
+             JOIN billing_grouped bg ON bg.group_id = g.group_id 
+             WHERE status = 'paid') AS paid_count
+    ");
+    
+    $billingTotals = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Calculate percentages based on total groups
+    $totalGroups = $billingTotals['total_groups'] ?? 0;
+    $totalDr = $billingTotals['total_drs'] ?? 0;
+    $forBillingPercent = $totalGroups > 0 ? round(($billingTotals['for_billing_count'] / $totalDr) * 100) : 0;
+    $billedPercent = $totalGroups > 0 ? round(($billingTotals['billed_count'] / $totalDr) * 100) : 0;
+    $paidPercent = $totalGroups > 0 ? round(($billingTotals['paid_count'] / $totalDr) * 100) : 0;
 
     // 1. Delivery Status Overview (filtered)
     $deliveryStatusQuery = "
@@ -213,13 +238,42 @@ $stmt = $pdo->prepare($inventoryByWarehouseQuery);
 $stmt->execute(['selectedDate' => $selectedDate]);
 $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-// Add missing variables with empty data for now
-// $projectsPerYear = [];
-// $projectsByAgency = [];
-// $amountPerYear = [];
-// $projectProgress = [];
-// $topPackageTypes = [];
-// $deliveriesPerProject = [];
+// Progress per Region
+$progressPerRegionQuery = "
+    SELECT 
+        s.region,
+        COUNT(*) AS total,
+        SUM(CASE WHEN d.status = 'pending' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN d.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
+        SUM(CASE WHEN d.status = 'accepted' THEN 1 ELSE 0 END) AS accepted
+    FROM deliveries d
+    JOIN school s ON s.school_id = d.school_id
+    " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
+    GROUP BY s.region
+    ORDER BY s.region
+";
+
+$stmt = $pdo->query($progressPerRegionQuery);
+$progressPerRegion = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Progress per Lot
+$progressPerLotQuery = "
+    SELECT 
+        l.lot_name,
+        COUNT(*) AS total,
+        SUM(CASE WHEN d.status = 'pending' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN d.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
+        SUM(CASE WHEN d.status = 'accepted' THEN 1 ELSE 0 END) AS accepted
+    FROM deliveries d
+    LEFT JOIN keystage k ON d.keystage_id = k.keystage_id
+    JOIN lot l ON l.lot_id = COALESCE(d.lot_id, k.lot_id)
+    " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
+    GROUP BY l.lot_name
+    ORDER BY l.lot_name
+";
+
+$stmt = $pdo->query($progressPerLotQuery);
+$progressPerLot = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
 } catch (PDOException $e) {
@@ -320,12 +374,17 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
 
 <!-- Summary Cards (Non-draggable) -->
 <div class="row mb-4">
+  <div class="col-12 mt-4 mb-2">
+    <h5 class="fw-bold text-dark border-start border-4 border-primary ps-2 mb-3">
+      📦 Projects Summary
+    </h5>
+  </div>                
   <?php 
   $cards = [
-      ['title'=>'Active Projects','value'=>$totals['activeProjects'],'class'=>'primary','icon'=>'🚀'],
-      ['title'=>'Pending','value'=>$totals['pending'] ?? 0,'class'=>'warning','icon'=>'⏳', 'percent'=>$pendingPercent],
-      ['title'=>'Accepted','value'=>$totals['accepted'] ?? 0,'class'=>'info','icon'=>'✅', 'percent'=>$acceptedPercent],
-      ['title'=>'Delivered','value'=>$totals['delivered'] ?? 0,'class'=>'success','icon'=>'📦', 'percent'=>$deliveredPercent]
+      ['title'=>'Active Projects','value'=>$deliveryTotals['activeProjects'],'class'=>'primary','icon'=>'🚀'],
+      ['title'=>'Pending','value'=>$deliveryTotals['pending'] ?? 0,'class'=>'warning','icon'=>'⏳', 'percent'=>$pendingPercent],
+      ['title'=>'Accepted','value'=>$deliveryTotals['accepted'] ?? 0,'class'=>'info','icon'=>'✅', 'percent'=>$acceptedPercent],
+      ['title'=>'Delivered','value'=>$deliveryTotals['delivered'] ?? 0,'class'=>'success','icon'=>'📦', 'percent'=>$deliveredPercent]
   ];
   foreach($cards as $c): ?>
   <div class="col-md-3 mb-3">
@@ -342,7 +401,49 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
             <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
                  aria-valuenow="<?= $c['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
-          <small class="text-light opacity-75"><?= $c['percent'] ?>%</small>
+          <small class="text-dark opacity-75"><?= $c['percent'] ?>%</small>
+        </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+  <?php endforeach; ?>
+
+   <div class="col-12 mt-4 mb-2">
+    <h5 class="fw-bold text-dark border-start border-4 border-success ps-2 mb-3">
+      💰 Billing Summary
+    </h5>
+  </div>       
+  <?php 
+  $cards = [
+      ['title'=>'Total Groups','value'=>$billingTotals['total_groups'],'class'=>'primary','icon'=>'📊','subtext'=>'Total DRs: '.$billingTotals['total_drs']],
+      ['title'=>'For Billing','value'=>$billingTotals['for_billing_count'] ?? 0,'class'=>'warning','icon'=>'⏳', 'percent'=>$forBillingPercent],
+      ['title'=>'Billed','value'=>$billingTotals['billed_count'] ?? 0,'class'=>'info','icon'=>'📄', 'percent'=>$billedPercent],
+      ['title'=>'Paid','value'=>$billingTotals['paid_count'] ?? 0,'class'=>'success','icon'=>'💰', 'percent'=>$paidPercent]
+  ];
+  foreach($cards as $c): ?>
+  <div class="col-md-3 mb-3">
+    <div class="card text-bg-<?=$c['class']?> shadow-sm h-100">
+      <div class="card-body text-center">
+        <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
+        <h6 class="card-title"><?= $c['title'] ?></h6>
+        <h4 class="mb-0"><strong><?= $c['value'] ?></strong></h4>
+        
+        <!-- Subtext for first card -->
+        <?php if (isset($c['subtext'])): ?>
+        <div class="mt-2">
+          <small class="text-light opacity-75"><?= $c['subtext'] ?></small>
+        </div>
+        <?php endif; ?>
+        
+        <!-- Progress Bar for status cards -->
+        <?php if (isset($c['percent'])): ?>
+        <div class="mt-2">
+          <div class="progress border border-1 border-light" style="height: 8px;">
+            <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
+                  aria-valuenow="<?= $c['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <small class="text-dark opacity-75"><?= $c['percent'] ?>%</small>
         </div>
         <?php endif; ?>
       </div>
@@ -350,6 +451,7 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
   </div>
   <?php endforeach; ?>
 </div>
+
 
 <!-- Draggable Charts Container -->
 <div id="draggable-dashboard" class="row">
@@ -367,7 +469,7 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
     </div>
   </div>
 
-    <!-- Chart 4: School Density -->
+  <!-- Chart 4: School Density -->
   <!-- <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
     <div class="card shadow-sm h-100">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -406,6 +508,46 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
     </div>
   </div>
 
+   <!-- Inventory by Warehouse -->
+  <div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
+      <div class="card shadow-sm h-100">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">📦 Inventory by Warehouse <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h6>
+              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          </div>
+          <div class="card-body">
+              <!-- Date Filter Form -->
+              <form method="GET" class="row mb-3" id="dateFilterForm">
+                  <!-- Preserve project_id if it exists -->
+                  <?php if($selectedProject > 0): ?>
+                      <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
+                  <?php endif; ?>
+                  
+                  <div class="col-md-4">
+                      <!-- <label for="dateFilter" class="form-label"><small><strong>Filter by Date</strong></small></label> -->
+                      <input type="date" class="form-control form-control-sm" id="dateFilter" name="selectedDate" 
+                            value="<?php echo htmlspecialchars($selectedDate); ?>">
+                  </div>
+                  <div class="col-md-4 align-self-end">
+                      <button type="submit" class="btn btn-primary btn-sm">Apply Date Filter</button>
+                      <a href="?#inventory-warehouse" class="btn btn-outline-secondary btn-sm">
+                          ❌ Clear Filter
+                      </a>
+                  </div>
+                  <?php if(isset($selectedDate) && $selectedDate !== date('Y-m-d')): ?>
+                  <div class="col-md-4 align-self-end text-end">
+                      <small class="text-muted">
+                          <i class="fas fa-history"></i> Date: <?php echo htmlspecialchars($selectedDate); ?>
+                      </small>
+                  </div>
+                  <?php endif; ?>
+              </form>
+              
+              <div id="warehouseChartsContainer" class="row"></div>
+          </div>
+      </div>
+  </div>
+
   <!-- Chart: Inventory Quantities per Warehouse -->
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-quantities">
     <div class="card shadow-sm h-100">
@@ -419,58 +561,70 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
     </div>
   </div>
 
- <!-- Inventory by Warehouse -->
-<div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
+  <!-- Leaflet Map Placeholder -->
+  <div class="col-6 mb-4 chart-item" data-chart-id="map-overview">
     <div class="card shadow-sm h-100">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">📦 Inventory by Warehouse <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h6>
-            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-        </div>
-        <div class="card-body">
-            <!-- Date Filter Form -->
-            <form method="GET" class="row mb-3" id="dateFilterForm">
-                <!-- Preserve project_id if it exists -->
-                <?php if($selectedProject > 0): ?>
-                    <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
-                <?php endif; ?>
-                
-                <div class="col-md-4">
-                    <!-- <label for="dateFilter" class="form-label"><small><strong>Filter by Date</strong></small></label> -->
-                    <input type="date" class="form-control form-control-sm" id="dateFilter" name="selectedDate" 
-                          value="<?php echo htmlspecialchars($selectedDate); ?>">
-                </div>
-                <div class="col-md-4 align-self-end">
-                    <button type="submit" class="btn btn-primary btn-sm">Apply Date Filter</button>
-                    <a href="?#inventory-warehouse" class="btn btn-outline-secondary btn-sm">
-                        ❌ Clear Filter
-                    </a>
-                </div>
-                <?php if(isset($selectedDate) && $selectedDate !== date('Y-m-d')): ?>
-                <div class="col-md-4 align-self-end text-end">
-                    <small class="text-muted">
-                        <i class="fas fa-history"></i> Date: <?php echo htmlspecialchars($selectedDate); ?>
-                    </small>
-                </div>
-                <?php endif; ?>
-            </form>
-            
-            <div id="warehouseChartsContainer" class="row"></div>
-        </div>
-    </div>
-</div>
-
-<!-- Leaflet Map Placeholder -->
-<div class="col-6 mb-4 chart-item" data-chart-id="map-overview">
-  <div class="card shadow-sm h-100">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-      <h6 class="mb-0">🗺️ Map Overview</h6>
-      <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-    </div>
-    <div class="card-body p-0">
-      <div id="leafletMap" style="height: 500px; width: 100%;"></div>
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">🗺️ Map Overview</h6>
+        <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+      </div>
+      <div class="card-body p-0">
+        <div id="leafletMap" style="height: 500px; width: 100%;"></div>
+      </div>
     </div>
   </div>
-</div>
+
+    <!-- Progress by Region - Accepted -->
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="accepted-per-region">
+      <div class="card shadow-sm h-100">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">✅ Accepted by Region (%)</h6>
+              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          </div>
+          <div class="card-body">
+              <canvas id="acceptedPerRegionChart" height="300"></canvas>
+          </div>
+      </div>
+  </div>
+
+  <!-- Progress by Region - Delivered -->
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="delivered-per-region">
+      <div class="card shadow-sm h-100">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">🚚 Delivered by Region (%)</h6>
+              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          </div>
+          <div class="card-body">
+              <canvas id="deliveredPerRegionChart" height="300"></canvas>
+          </div>
+      </div>
+  </div>
+
+  <!-- Progress by Lot - Accepted -->
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="accepted-per-lot">
+      <div class="card shadow-sm h-100">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">✅ Accepted by Lot (%)</h6>
+              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          </div>
+          <div class="card-body">
+              <canvas id="acceptedPerLotChart" height="300"></canvas>
+          </div>
+      </div>
+  </div>
+
+  <!-- Progress by Lot - Delivered -->
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="delivered-per-lot">
+      <div class="card shadow-sm h-100">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">🚚 Delivered by Lot (%)</h6>
+              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          </div>
+          <div class="card-body">
+              <canvas id="deliveredPerLotChart" height="300"></canvas>
+          </div>
+      </div>
+  </div>
 
 </div>
 
@@ -542,14 +696,14 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
 
 <!-- Pass PHP data to JavaScript and load the external script -->
 <script>
-  const phpData = {
-       
+  const phpData = {      
         deliveryStatusOverview: <?= json_encode($deliveryStatusOverview) ?>,
         monthlyDeliveryTrend: <?= json_encode($monthlyDeliveryTrend) ?>,
-       
         inventoryData: <?= json_encode($inventoryData) ?>,
         inventoryByWarehouse: <?= json_encode($inventoryByWarehouse) ?>,
-        selectedProject: <?= json_encode($selectedProject) ?>
+        selectedProject: <?= json_encode($selectedProject) ?>,
+        progressPerRegion: <?= json_encode($progressPerRegion) ?>,
+        progressPerLot: <?= json_encode($progressPerLot) ?> 
     };
 </script>
 
@@ -564,9 +718,11 @@ document.addEventListener("DOMContentLoaded", function () {
   if (!mapContainer) return;
 
   // Initialize the map centered on the Philippines
+  const defaultCenter = [12.8797, 121.7740];
+  const defaultZoom = 6;
   const map = L.map(mapContainer, {
-    center: [12.8797, 121.7740],
-    zoom: 6,
+    center: defaultCenter,
+    zoom: defaultZoom,
     zoomControl: true
   });
 
@@ -578,7 +734,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 19,
-    attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    attribution: 'Tiles © Esri'
   });
 
   const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
@@ -591,92 +747,82 @@ document.addEventListener("DOMContentLoaded", function () {
     attribution: '© OpenStreetMap, © CartoDB'
   });
 
-  // Set default layer
   osm.addTo(map);
 
   // --- 🔍 Add Search Bar ---
-  const geocoder = L.Control.geocoder({
-    defaultMarkGeocode: false
-  })
-  .on('markgeocode', function(e) {
-    const center = e.geocode.center;
-    L.marker(center).addTo(map)
-      .bindPopup(`<b>${e.geocode.name}</b>`).openPopup();
-    map.setView(center, 10);
-  })
-  .addTo(map);
+  const geocoder = L.Control.geocoder({ defaultMarkGeocode: false })
+    .on('markgeocode', function(e) {
+      const center = e.geocode.center;
+      L.marker(center).addTo(map)
+        .bindPopup(`<b>${e.geocode.name}</b>`).openPopup();
+      map.setView(center, 10);
+    })
+    .addTo(map);
 
+  // --- 📦 Choropleth Data ---
   fetch("ph.json")
-  .then(response => response.json())
-  .then(geoData => {
-    const maxValue = Math.max(...Object.values(deliveriesByDivision));
-    
-const maxPercent = Math.max(...Object.values(deliveriesByDivision).map(v => v.percentage));
+    .then(response => response.json())
+    .then(geoData => {
+      const maxPercent = Math.max(...Object.values(deliveriesByDivision).map(v => v.percentage));
 
-function getColor(value) {
-  if (value === 0 || isNaN(value)) return "#f0f0f0";
-  const intensity = value / maxPercent;
-  const r = Math.floor(255 - (intensity * 150));
-  const g = Math.floor(230 - (intensity * 150));
-  const b = 255 - Math.floor(intensity * 50);
-  return `rgb(${r},${g},${b})`;
-}
+      function getColor(value) {
+        if (value === 0 || isNaN(value)) return "#f0f0f0";
+        const intensity = value / maxPercent;
+        const r = Math.floor(255 - (intensity * 150));
+        const g = Math.floor(230 - (intensity * 150));
+        const b = 255 - Math.floor(intensity * 50);
+        return `rgb(${r},${g},${b})`;
+      }
 
-const geoLayer = L.geoJSON(geoData, {
-  style: function (feature) {
-    const name = feature.properties.name;
-    const data = deliveriesByDivision[name];
-    const percent = data ? data.percentage : 0;
-    return {
-      color: "#444",
-      weight: 1,
-      fillColor: getColor(percent),
-      fillOpacity: 0.7
-    };
-  },
-  onEachFeature: function (feature, layer) {
-    const name = feature.properties.name;
-    const data = deliveriesByDivision[name];
-    const count = data ? data.count : 0;
-    const percent = data ? data.percentage : 0;
-    layer.bindPopup(`<b>${name}</b><br>Deliveries: ${count}<br>Share: ${percent}%`);
-  }
-}).addTo(map);
+      const geoLayer = L.geoJSON(geoData, {
+        style: function (feature) {
+          const name = feature.properties.name;
+          const data = deliveriesByDivision[name];
+          const percent = data ? data.percentage : 0;
+          return {
+            color: "#444",
+            weight: 1,
+            fillColor: getColor(percent),
+            fillOpacity: 0.7
+          };
+        },
+        onEachFeature: function (feature, layer) {
+          const name = feature.properties.name;
+          const data = deliveriesByDivision[name];
+          const count = data ? data.count : 0;
+          const percent = data ? data.percentage : 0;
+          layer.bindPopup(`<b>${name}</b><br>Deliveries: ${count}<br>Share: ${percent}%`);
+        }
+      }).addTo(map);
 
+      map.fitBounds(geoLayer.getBounds());
 
-    map.fitBounds(geoLayer.getBounds());
+      // Layer Controls
+      const baseMaps = {
+        "🗺️ OpenStreetMap": osm,
+        "🛰️ Satellite": satellite,
+        "🏔️ Terrain": terrain,
+        "🌙 Dark Mode": dark
+      };
+      const overlayMaps = { "📦 Deliveries by Province": geoLayer };
+      L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
 
-    // Add Layer Controls
-    const baseMaps = {
-      "🗺️ OpenStreetMap": osm,
-      "🛰️ Satellite": satellite,
-      "🏔️ Terrain": terrain,
-      "🌙 Dark Mode": dark
-    };
-
-    const overlayMaps = {
-      "📦 Deliveries by Province": geoLayer
-    };
-
-    L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
-  })
-  .catch(error => console.error("Error loading GeoJSON:", error));
-
-  const legend = L.control({ position: 'bottomright' });
-legend.onAdd = function (map) {
-  const div = L.DomUtil.create('div', 'info legend');
-  div.innerHTML = '<h6>Deliveries</h6>';
-  const grades = [0, 10, 20, 50, 100];
-  for (let i = 0; i < grades.length; i++) {
-    const next = grades[i + 1];
-    const color = getColor(grades[i]);
-    div.innerHTML +=
-      `<i style="background:${color}"></i> ${grades[i]}${next ? '&ndash;' + next + '<br>' : '+'}`;
-  }
-  return div;
-};
-legend.addTo(map);
-
+      // --- 🧭 Reset Button ---
+      const resetControl = L.control({ position: 'topleft' });
+      resetControl.onAdd = function () {
+        const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+        div.innerHTML = '<button class="btn btn-sm btn-light fw-bold px-2 py-1">↻ Reset</button>';
+        div.title = "Reset to Default View";
+        div.style.cursor = 'pointer';
+        div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+        div.onclick = function () {
+          map.setView(defaultCenter, defaultZoom);
+        };
+        return div;
+      };
+      resetControl.addTo(map);
+    })
+    .catch(error => console.error("Error loading GeoJSON:", error));
 });
 </script>
 

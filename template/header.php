@@ -63,7 +63,7 @@ $mainNav = [
     "inventory.php" => "Warehouse",
     "logistics.php" => "Logistics",
     "billing.php" => "<span class='text-decoration-line-through'>Billing</span>",
-    "reports.php" => "Reports",
+    "reports.php" => "<span class='text-decoration-line-through'>Reports</span>",
     "users.php" => "Users"
 ];
 // Define main navigation links
@@ -75,7 +75,6 @@ switch($_SESSION['role']){
     "deliveries.php" => "Deliveries",
     "inventory.php" => "Warehouse",
     "logistics.php" => "Logistics",
-    "reports.php" => "Reports",
     ];
   break;
   case "Warehouse Admin":
@@ -120,7 +119,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       <ul class="navbar-nav me-auto">
         <?php foreach($mainNav as $file => $label): ?>
           <li class="nav-item">
-            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "billing.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
+            <a class="nav-link <?= ($currentPage === $file) ? 'active' : ''; if($file === "billing.php" || $file === "reports.php"){echo " disabled";}?>" href="<?= $file ?>"><?= $label ?></a>
           </li>
         <?php endforeach; ?>
       </ul>
@@ -172,6 +171,8 @@ if (isset($is_warehouse_page) && $is_warehouse_page === true):
     </div>
 </nav>
 <?php endif; ?>
+
+
 
 <?php
 // This check assumes $is_logistics_page is set to true on the relevant pages
@@ -238,4 +239,43 @@ if (isset($_GET['id'])):
   </div>
 </nav>
 <?php endif; ?>
+
+<?php
+// This check assumes $is_deliveries_page is set to true on the relevant pages
+if (isset($is_deliveries_page) && $is_deliveries_page === true): 
+
+    $deliveriesNav = [
+      'deliveries.php' => 'All Deliveries',
+      'manual_checking.php' => 'Deliveries Grouping',
+  ];
+  if($_SESSION['role'] == 'Warehouse Admin'){
+    $deliveriesNav = [
+
+  ];
+  }elseif($_SESSION['role'] == 'Warehouse Coordinator'){
+    $deliveriesNav = [
+      
+  ];
+  }
+?>
+
+<nav id="deliveries_nav" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+    <div class="container-fluid justify-content-center">
+        <ul class="nav navbar-nav">
+            <?php foreach($deliveriesNav as $file => $label): ?>
+                 <li class="nav-item">
+                    <a 
+                        class="nav-link <?= (isset($currentPage) && $currentPage === $file) ? 'active' : '' ?>" 
+                        href="<?= $file ?>"
+                    >
+                        <?= $label ?>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+</nav>
+<?php endif; ?>
+
+
 <div class="container-fluid mt-4">
