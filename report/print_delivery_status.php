@@ -121,7 +121,7 @@
         <a href="?export=csv<?= $selectedProject > 0 ? '&project_id=' . $selectedProject : '' ?>" class="btn btn-success">
             <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
         </a>
-        <button class="btn btn-primary" onclick="window.print()">
+        <button class="btn btn-primary" onclick="printDeliveryReport()">
             <i class="bi bi-printer"></i> Print
         </button>
     </div>
@@ -167,4 +167,16 @@
             order: [[1, 'desc']]
         });
     });
+</script>
+
+<script src="print-helper.js"></script>
+<script>
+// For your current page
+function printDeliveryReport() {
+    printTable(
+        'deliveryStatusTable', 
+        'Delivery Status Report', 
+        '<?= $selectedProject > 0 ? htmlspecialchars($selectedProjectName) : "" ?>'
+    );
+}
 </script>
