@@ -41,8 +41,8 @@ try {
     JOIN projects p ON d.project_id = p.project_id
     JOIN school s ON d.school_id = s.school_id
     LEFT JOIN billing_grouped bg 
-      ON CONVERT(d.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci = 
-         CONVERT(bg.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        ON CONVERT(d.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci = 
+        CONVERT(bg.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci
     LEFT JOIN (
         SELECT 
             x.delivery_id,
@@ -87,11 +87,11 @@ try {
         ) x
         GROUP BY x.delivery_id
     ) pkg_items ON pkg_items.delivery_id = d.delivery_id
-    WHERE d.status = 'delivered'
-      AND bg.dr_no IS NULL
-    ORDER BY d.delivery_date DESC
-    LIMIT :limit OFFSET :offset
-");
+        WHERE d.status = 'delivered'
+        AND bg.dr_no IS NULL
+        ORDER BY d.delivery_date DESC
+        LIMIT :limit OFFSET :offset
+    ");
 
     $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
     $stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
