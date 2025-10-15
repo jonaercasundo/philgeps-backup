@@ -32,15 +32,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $duplicate_count = 0;
 
         // Step 1: Check if group already exists, if not create it
-        $check_group_stmt = $pdo->prepare("SELECT group_id FROM grouping WHERE group_name = ?");
+        $check_group_stmt = $pdo->prepare("
+            SELECT group_id FROM grouping WHERE LOWER(group_name) = LOWER(?)
+        ");
         $check_group_stmt->execute([$group_name]);
+
         
         if ($check_group_stmt->rowCount() > 0) {
             // Group exists, get the group_id
             $group_id = $check_group_stmt->fetchColumn();
         } else {
             // Create new group
-            $create_group_stmt = $pdo->prepare("INSERT INTO grouping (group_name, status, created_at) VALUES (?, 'active', NOW())");
+            $create_group_stmt = $pdo->prepare("INSERT INTO grouping (group_name, created_at) VALUES (?, NOW())");
             if ($create_group_stmt->execute([$group_name])) {
                 $group_id = $pdo->lastInsertId();
             } else {
