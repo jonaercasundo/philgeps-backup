@@ -125,65 +125,73 @@ $grouped_summary = getBillingGroupSummary($pdo);
 
 <!-- Main Full-Screen Container -->
 <div class="row g-0 h-100">
-<!-- LEFT SIDEBAR -->
-<div class="col-md-3 border-end d-flex flex-column bg-light">
-    <div class="p-3 border-bottom bg-dark text-white">
-        <h5 class="mb-0">Billing Groups</h5>
-    </div>
+    <!-- LEFT SIDEBAR -->
+    <div class="col-md-3 border-end d-flex flex-column bg-light">
+        <div class="p-3 border-bottom bg-dark text-white">
+            <h5 class="mb-0">Billing Groups</h5>
+        </div>
 
-    <div class="flex-fill d-flex flex-column">
-        <!-- Scrollable content area -->
-        <div class="flex-fill" style="max-height: 60vh; overflow-y: auto;">
-            <div class="p-3">
-                <?php if (empty($grouped_summary)): ?>
-                    <div class="text-center text-muted py-4">
-                        <small>No billing groups yet</small>
-                    </div>
-                <?php else: ?>
-                    <div class="list-group">
-                        <?php foreach ($grouped_summary as $group): ?>
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <strong><?= htmlspecialchars($group['group_name']) ?></strong>
-                                    <span class="badge bg-primary"><?= $group['dr_count'] ?></span>
-                                </div>
-
-                                <?php if (!empty($group['dr_numbers'])): ?>
-                                    <div class="table table-sm mb-0">
-                                        <?php foreach ($group['dr_numbers'] as $dr_no): ?>
-                                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                                                <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
-                                                <div>
-                                                    <button class="btn btn-danger btn-sm" data-dr="<?= htmlspecialchars($dr_no) ?>">
-                                                        <i class="bi bi-x"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
+        <div class="flex-fill d-flex flex-column">
+            <!-- Scrollable content area -->
+            <div class="flex-fill" style="max-height: 60vh; overflow-y: auto;">
+                <div class="p-3">
+                    <?php if (empty($grouped_summary)): ?>
+                        <div class="text-center text-muted py-4">
+                            <small>No billing groups yet</small>
+                        </div>
+                    <?php else: ?>
+                        <div class="list-group">
+                            <?php foreach ($grouped_summary as $group): ?>
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong><?= htmlspecialchars($group['group_name']) ?></strong>
+                                            <button class="btn btn-sm btn-outline-primary edit-group-btn" 
+                                                    data-group-name="<?= htmlspecialchars($group['group_name']) ?>"
+                                                    data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
+                                                    title="Edit group name">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        </div>
+                                        <span class="badge bg-primary"><?= $group['dr_count'] ?></span>
                                     </div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
 
-        <!-- Quick Stats - Fixed at bottom -->
-        <div class="border-top p-3 bg-white">
-            <div class="row text-center">
-                <div class="col-6">
-                    <div class="fw-bold text-primary"><?= count($grouped_summary) ?></div>
-                    <small class="text-muted">Groups</small>
+                                    <?php if (!empty($group['dr_numbers'])): ?>
+                                        <div class="table table-sm mb-0">
+                                            <?php foreach ($group['dr_numbers'] as $dr_no): ?>
+                                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                                    <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
+                                                    <div>
+                                                        <button class="btn btn-danger btn-sm" data-dr="<?= htmlspecialchars($dr_no) ?>">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
-                <div class="col-6">
-                    <div class="fw-bold text-success"><?= array_sum(array_column($grouped_summary, 'dr_count')) ?></div>
-                    <small class="text-muted">Total DRs</small>
+            </div>
+
+            <!-- Quick Stats - Fixed at bottom -->
+            <div class="border-top p-3 bg-white">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold text-primary"><?= count($grouped_summary) ?></div>
+                        <small class="text-muted">Groups</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-success"><?= array_sum(array_column($grouped_summary, 'dr_count')) ?></div>
+                        <small class="text-muted">Total DRs</small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
     <!-- 2. RIGHT MAIN CONTENT AREA (9 Columns wide on medium/large screens) -->
     <div class="col-md-9 d-flex flex-column">
@@ -284,7 +292,9 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 <h5 class="modal-title" id="addToGroupModalLabel">Add to Billing Group</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-           <div class="modal-body">
+            <div class="modal-body">
+                <input type="hidden" id="groupIdInput">
+                <input type="hidden" id="isEditMode" value="0">
                 <div class="mb-3">
                     <label for="groupNameInput" class="form-label">Group Name</label>
                     <input type="text" class="form-control" id="groupNameInput" placeholder="Enter group name (e.g., Group 1, Group 2)" required>
@@ -302,6 +312,36 @@ $grouped_summary = getBillingGroupSummary($pdo);
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Delete DR from Billing Group</h5>
+      </div>
+      <div class="modal-body">
+        <form id="deleteForm" method="POST" action="script/delete.php">
+          <input type="hidden" name="source_page" value="<?= basename($_SERVER['PHP_SELF']) . '?' . http_build_query($_GET) ?>">
+          <input type="hidden" id="delete_dr_no" name="id">
+          <input type="hidden" name="table" value="billing_grouped">
+          <input type="hidden" name="condition" value="dr_no">
+          <div class="mb-3">
+            <label>Are you sure you want to remove <strong id="drToDeleteText"></strong> from the billing group?</label>
+          </div>
+          <div class="mb-3">
+            <label>Input password to Continue</label>
+            <input type="password" name="deletePassword" class="form-control" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-danger" onclick="document.getElementById('deleteForm').submit();">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?php require "template/footer.php"; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -316,7 +356,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
         return selected;
     }
 
-    // Show modal with selected deliveries
+    // Show modal with selected deliveries (ADD mode)
     document.getElementById('addToGroupBtn').addEventListener('click', function() {
         const selectedDRs = getSelectedDRs();
         
@@ -337,6 +377,42 @@ $grouped_summary = getBillingGroupSummary($pdo);
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('addToGroupModal'));
         modal.show();
+    });
+
+    // Handle edit group button click (EDIT mode)
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-group-btn')) {
+            const btn = e.target.closest('.edit-group-btn');
+            const groupName = btn.dataset.groupName;
+            const groupId = btn.dataset.groupId;
+            
+            const selectedDRs = getSelectedDRs();
+            
+            if (selectedDRs.length === 0) {
+                window.location.href = '?toast=Please select at least one delivery to add to the billing group&type=danger';
+                return;
+            }
+            
+            // Set to EDIT mode
+            document.getElementById('isEditMode').value = '1';
+            document.getElementById('groupIdInput').value = groupId;
+            document.getElementById('groupNameInput').value = groupName;
+            document.getElementById('addToGroupModalLabel').textContent = 'Edit Billing Group';
+            document.getElementById('confirmAddToGroup').textContent = 'Confirm Edit Group';
+            
+            // Populate the list in modal
+            const drList = document.getElementById('drList');
+            drList.innerHTML = '';
+            selectedDRs.forEach(dr => {
+                const li = document.createElement('li');
+                li.textContent = `DR No: ${dr}`;
+                drList.appendChild(li);
+            });
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addToGroupModal'));
+            modal.show();
+        }
     });
 
     // Handle confirm button
@@ -396,27 +472,21 @@ $grouped_summary = getBillingGroupSummary($pdo);
         });
     });
 
-document.addEventListener('click', function(e) {
-  const editBtn = e.target.closest('.edit-dr');
-  const removeBtn = e.target.closest('.remove-dr');
+// Handle remove DR from group - Show delete modal
+    document.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('.btn-danger[data-dr]');
 
-  if (editBtn) {
-    const drNo = editBtn.dataset.dr;
-    const checkbox = document.querySelector(`.dr-checkbox[value="${drNo}"]`);
-    if (!checkbox) return alert(`DR ${drNo} not found on this page`);
-    const row = checkbox.closest('tr');
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    row.classList.add('table-warning');
-    setTimeout(() => row.classList.remove('table-warning'), 2000);
-  }
-
-  if (removeBtn) {
-    const drNo = removeBtn.dataset.dr;
-    if (confirm(`Are you sure you want to remove DR ${drNo} from this group?`)) {
-      // TODO: Add AJAX or PHP call to remove DR from group
-      alert(`Removed DR ${drNo}`);
-    }
-  }
-});
+        if (removeBtn) {
+            const drNo = removeBtn.dataset.dr;
+            
+            // Set DR number in modal
+            document.getElementById('delete_dr_no').value = drNo;
+            document.getElementById('drToDeleteText').textContent = `DR ${drNo}`;
+            
+            // Show delete modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            deleteModal.show();
+        }
+    });
 
 </script>
