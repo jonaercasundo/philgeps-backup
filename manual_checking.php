@@ -154,11 +154,8 @@ $grouped_summary = getBillingGroupSummary($pdo);
                                             <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
                                                 <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
                                                 <div>
-                                                    <button class="btn btn-warning btn-sm" data-dr="<?= htmlspecialchars($dr_no) ?>">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </button>
                                                     <button class="btn btn-danger btn-sm" data-dr="<?= htmlspecialchars($dr_no) ?>">
-                                                        <i class="bi bi-trash"></i>
+                                                        <i class="bi bi-x"></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -290,7 +287,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
            <div class="modal-body">
                 <div class="mb-3">
                     <label for="groupNameInput" class="form-label">Group Name</label>
-                    <input type="text" class="form-control" id="groupNameInput" placeholder="Enter group name (e.g., Week 1, March Batch)" required>
+                    <input type="text" class="form-control" id="groupNameInput" placeholder="Enter group name (e.g., Group 1, Group 2)" required>
                 </div>
                 <div id="selectedDRList" class="mb-3">
                     <strong>Selected Deliveries:</strong>
