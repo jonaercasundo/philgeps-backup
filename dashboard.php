@@ -94,18 +94,25 @@ try {
         SELECT
             (SELECT COUNT(*) FROM grouping) AS total_groups,
             (SELECT COUNT(DISTINCT dr_no) FROM billing_grouped) AS total_drs,
-            (SELECT COUNT(*) FROM grouping WHERE status = 'for billing') AS for_billing_count,
-            (SELECT COUNT(*) FROM grouping WHERE status = 'billed') AS billed_count,
-            (SELECT COUNT(*) FROM grouping WHERE status = 'paid') AS paid_count
+            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g
+             JOIN billing_grouped bg ON bg.group_id = g.group_id 
+             WHERE status = 'for billing') AS for_billing_count,
+            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
+             JOIN billing_grouped bg ON bg.group_id = g.group_id 
+             WHERE status = 'billed') AS billed_count,
+            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
+             JOIN billing_grouped bg ON bg.group_id = g.group_id 
+             WHERE status = 'paid') AS paid_count
     ");
     
     $billingTotals = $stmt->fetch(PDO::FETCH_ASSOC);
     
     // Calculate percentages based on total groups
     $totalGroups = $billingTotals['total_groups'] ?? 0;
-    $forBillingPercent = $totalGroups > 0 ? round(($billingTotals['for_billing_count'] / $totalGroups) * 100) : 0;
-    $billedPercent = $totalGroups > 0 ? round(($billingTotals['billed_count'] / $totalGroups) * 100) : 0;
-    $paidPercent = $totalGroups > 0 ? round(($billingTotals['paid_count'] / $totalGroups) * 100) : 0;
+    $totalDr = $billingTotals['total_drs'] ?? 0;
+    $forBillingPercent = $totalGroups > 0 ? round(($billingTotals['for_billing_count'] / $totalDr) * 100) : 0;
+    $billedPercent = $totalGroups > 0 ? round(($billingTotals['billed_count'] / $totalDr) * 100) : 0;
+    $paidPercent = $totalGroups > 0 ? round(($billingTotals['paid_count'] / $totalDr) * 100) : 0;
 
     // 1. Delivery Status Overview (filtered)
     $deliveryStatusQuery = "
@@ -394,7 +401,7 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
             <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
                  aria-valuenow="<?= $c['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
-          <small class="text-light opacity-75"><?= $c['percent'] ?>%</small>
+          <small class="text-dark opacity-75"><?= $c['percent'] ?>%</small>
         </div>
         <?php endif; ?>
       </div>
@@ -433,10 +440,10 @@ echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision
         <?php if (isset($c['percent'])): ?>
         <div class="mt-2">
           <div class="progress border border-1 border-light" style="height: 8px;">
-            <div class="progress-bar bg-light" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
+            <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
                   aria-valuenow="<?= $c['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
-          <small class="text-light opacity-75"><?= $c['percent'] ?>%</small>
+          <small class="text-dark opacity-75"><?= $c['percent'] ?>%</small>
         </div>
         <?php endif; ?>
       </div>
