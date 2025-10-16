@@ -807,19 +807,9 @@ if ($selectedProject > 0) {
     };
 </script>
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<script src="assets/js/charts.js?v=123451"></script>
-=======
+
 <script src="assets/js/charts.js?=v12"></script>
->>>>>>> Stashed changes
-=======
-<script src="assets/js/charts.js?=v12"></script>
->>>>>>> Stashed changes
-=======
-<script src="assets/js/charts.js?=v12"></script>
->>>>>>> Stashed changes
+
 
 <?php require "template/footer.php"; ?>
 
