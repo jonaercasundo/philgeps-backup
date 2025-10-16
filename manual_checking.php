@@ -15,9 +15,43 @@ try {
     $page = max(1, intval($_GET['page'] ?? 1));
     $offset = ($page - 1) * $limit;
 
-    // Count total deliveries with status 'delivered'
-    $stmt = $pdo->query("SELECT COUNT(*) FROM deliveries WHERE status = 'delivered'");
-    $total_rows = $stmt->fetchColumn();
+    // Get search parameter
+    $search = trim($_GET['search'] ?? '');
+
+    // Build WHERE clause for search
+    $searchCondition = "d.status = 'delivered' AND bg.dr_no IS NULL";
+    $searchParams = [];
+    
+    if (!empty($search)) {
+        $searchCondition .= " AND (
+            d.dr_no LIKE :search OR
+            p.project_name LIKE :search OR
+            s.school_name LIKE :search OR
+            s.address LIKE :search OR
+            l.lot_name LIKE :search OR
+            k.keystage_num LIKE :search OR
+            k.description LIKE :search
+        )";
+        $searchParams[':search'] = "%$search%";
+    }
+
+    // Count total deliveries with search filter
+    $countQuery = "SELECT COUNT(DISTINCT d.delivery_id) FROM deliveries d
+        LEFT JOIN keystage k ON k.keystage_id = d.keystage_id
+        JOIN lot l ON l.lot_id = d.lot_id
+        JOIN projects p ON d.project_id = p.project_id
+        JOIN school s ON d.school_id = s.school_id
+        LEFT JOIN billing_grouped bg 
+            ON CONVERT(d.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci = 
+            CONVERT(bg.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        WHERE $searchCondition";
+    
+    $countStmt = $pdo->prepare($countQuery);
+    foreach ($searchParams as $key => $value) {
+        $countStmt->bindValue($key, $value);
+    }
+    $countStmt->execute();
+    $total_rows = $countStmt->fetchColumn();
     $total_pages = ceil($total_rows / $limit);
 
     // Fetch deliveries with status 'delivered'
@@ -87,11 +121,15 @@ try {
         ) x
         GROUP BY x.delivery_id
     ) pkg_items ON pkg_items.delivery_id = d.delivery_id
-        WHERE d.status = 'delivered'
+        WHERE $searchCondition
         AND bg.dr_no IS NULL
         ORDER BY d.delivery_date DESC
         LIMIT :limit OFFSET :offset
     ");
+
+    foreach ($searchParams as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
 
     $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
     $stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
@@ -132,6 +170,19 @@ $grouped_summary = getBillingGroupSummary($pdo);
         </div>
 
         <div class="flex-fill d-flex flex-column">
+            <!-- Search Bar for Billing Groups -->
+            <div class="p-3 border-bottom bg-white">
+                <div class="input-group input-group-sm">
+                    <input type="text" 
+                           id="groupSearchInput" 
+                           class="form-control" 
+                           placeholder="Search groups or DR...">
+                    <button class="btn btn-outline-secondary" type="button" id="clearGroupSearch">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </div>
+
             <!-- Scrollable content area -->
             <div class="flex-fill" style="max-height: 60vh; overflow-y: auto;">
                 <div class="p-3">
@@ -140,20 +191,22 @@ $grouped_summary = getBillingGroupSummary($pdo);
                             <small>No billing groups yet</small>
                         </div>
                     <?php else: ?>
-                        <div class="list-group">
+                        <div class="list-group" id="billingGroupsList">
                             <?php foreach ($grouped_summary as $group): ?>
-                                <div class="list-group-item">
+                                <div class="list-group-item group-item"
+                                    data-group-name="<?= htmlspecialchars(strtolower($group['group_name'])) ?>"
+                                    data-dr-numbers="<?= htmlspecialchars(strtolower(implode(' ', $group['dr_numbers']))) ?>">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <div class="d-flex align-items-center gap-2">
                                             <strong><?= htmlspecialchars($group['group_name']) ?></strong>
-                                            <button class="btn btn-sm btn-outline-primary edit-group-btn" 
-                                                    data-group-name="<?= htmlspecialchars($group['group_name']) ?>"
-                                                    data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                                    title="Edit group name">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
+                                            <span class="badge bg-success"><?= $group['dr_count'] ?></span>
                                         </div>
-                                        <span class="badge bg-primary"><?= $group['dr_count'] ?></span>
+                                        <button class="btn btn-sm btn-outline-success edit-group-btn"data-group-name="<?= htmlspecialchars($group['group_name']) ?>"
+                                                data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
+                                                    data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
+                                                    title="Add more to Group">
+                                                <i class="bi bi-plus"></i>
+                                        </button>
                                     </div>
 
                                     <?php if (!empty($group['dr_numbers'])): ?>
@@ -162,7 +215,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
                                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
                                                     <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
                                                     <div>
-                                                        <button class="btn btn-danger btn-sm" data-dr="<?= htmlspecialchars($dr_no) ?>">
+                                                        <button class="btn btn-sm btn-danger d-inline-flex align-items-center justify-content-center px-2 py-1" data-dr="<?= htmlspecialchars($dr_no) ?>">
                                                             <i class="bi bi-x"></i>
                                                         </button>
                                                     </div>
@@ -172,6 +225,14 @@ $grouped_summary = getBillingGroupSummary($pdo);
                                     <?php endif; ?>
                                 </div>
                             <?php endforeach; ?>
+                        </div>
+                        <div id="noGroupResults" class="text-center text-muted py-4" style="display: none;">
+                            <i class="bi bi-search" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">No groups or DR numbers found</p>
+                        </div>
+                        <div id="noGroupResults" class="text-center text-muted py-4" style="display: none;">
+                            <i class="bi bi-search" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">No groups or DR numbers found</p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -205,8 +266,44 @@ $grouped_summary = getBillingGroupSummary($pdo);
                     </button>
                 </div>
 
+                <!-- Search Bar -->
+                <div class="mb-3">
+                    <form method="GET" action="" class="d-flex gap-2">
+                        <input type="text" 
+                               name="search" 
+                               class="form-control" 
+                               placeholder="Search by DR No, Project, or School..." 
+                               value="<?= htmlspecialchars($search) ?>">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <?php if (!empty($search)): ?>
+                            <a href="?" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </a>
+                        <?php endif; ?>
+                    </form>
+                    <?php if (!empty($search)): ?>
+                        <small class="text-muted mt-2 d-block">
+                            Found <?= $total_rows ?> result<?= $total_rows != 1 ? 's' : '' ?> for "<?= htmlspecialchars($search) ?>"
+                        </small>
+                    <?php endif; ?>
+                </div>
+
                 <!-- Table - EXACT SAME STRUCTURE as deliveries.php -->
                 <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+                    <?php if (empty($grouped_deliveries)): ?>
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                            <p class="mt-3">
+                                <?php if (!empty($search)): ?>
+                                    No deliveries found matching your search.
+                                <?php else: ?>
+                                    No deliveries available for billing.
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    <?php else: ?>
                     <table class="table table-bordered shadow-sm">
                         <thead class="table-dark">
                             <tr>
@@ -248,9 +345,11 @@ $grouped_summary = getBillingGroupSummary($pdo);
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Pagination -->
+                <?php if ($total_pages > 1): ?>
                 <nav class="mt-3">
                     <ul class="pagination justify-content-center">
                         <!-- Previous -->
@@ -279,6 +378,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
                         </li>
                     </ul>
                 </nav>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -472,7 +572,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
         });
     });
 
-// Handle remove DR from group - Show delete modal
+    // Handle remove DR from group - Show delete modal
     document.addEventListener('click', function(e) {
         const removeBtn = e.target.closest('.btn-danger[data-dr]');
 
@@ -489,4 +589,51 @@ $grouped_summary = getBillingGroupSummary($pdo);
         }
     });
 
+    // Billing Groups Search Functionality
+    const groupSearchInput = document.getElementById('groupSearchInput');
+    const clearGroupSearchBtn = document.getElementById('clearGroupSearch');
+    const billingGroupsList = document.getElementById('billingGroupsList');
+    const noGroupResults = document.getElementById('noGroupResults');
+
+    if (groupSearchInput && billingGroupsList) {
+        groupSearchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const groupItems = billingGroupsList.querySelectorAll('.group-item');
+            let visibleCount = 0;
+
+            groupItems.forEach(item => {
+                const groupName = item.dataset.groupName;
+                const drNumbers = item.dataset.drNumbers;
+                
+                // Check if search term matches group name or any DR number
+                if (groupName.includes(searchTerm) || drNumbers.includes(searchTerm)) {
+                    item.style.display = '';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide no results message
+            if (visibleCount === 0 && searchTerm !== '') {
+                billingGroupsList.style.display = 'none';
+                noGroupResults.style.display = 'block';
+            } else {
+                billingGroupsList.style.display = '';
+                noGroupResults.style.display = 'none';
+            }
+
+            // Show/hide clear button
+            clearGroupSearchBtn.style.display = searchTerm ? 'block' : 'none';
+        });
+
+        // Clear search
+        clearGroupSearchBtn.addEventListener('click', function() {
+            groupSearchInput.value = '';
+            groupSearchInput.dispatchEvent(new Event('input'));
+        });
+
+        // Initialize clear button visibility
+        clearGroupSearchBtn.style.display = 'none';
+    }
 </script>
