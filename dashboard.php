@@ -73,11 +73,11 @@ try {
     } else {
         $stmt = $pdo->query("
             SELECT
-                (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
-                (SELECT COUNT(*) FROM deliveries WHERE status='pending') AS pending,
-                (SELECT COUNT(*) FROM deliveries WHERE status='accepted') AS accepted,
-                (SELECT COUNT(*) FROM deliveries WHERE status='delivered') AS delivered
-            FROM projects
+              (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
+              (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='pending') AS pending,
+              (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='accepted') AS accepted,
+              (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='delivered') AS delivered;
+
         ");
     }
 
@@ -807,11 +807,9 @@ if ($selectedProject > 0) {
     };
 </script>
 
-<<<<<<< Updated upstream
-<script src="assets/js/charts.js?v=123451"></script>
-=======
+
 <script src="assets/js/charts.js?=v12"></script>
->>>>>>> Stashed changes
+
 
 <?php require "template/footer.php"; ?>
 
