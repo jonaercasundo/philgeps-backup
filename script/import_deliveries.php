@@ -53,6 +53,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                         $description = '';
                     }
 
+                                    // Fetch existing Lots & Keystages
+                    $stmt = $pdo->prepare("SELECT lot_id, lot_name FROM lot WHERE project_id =  :project_id");
+                    $stmt->execute(['project_id' => $project_id]);
+                    $lots = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+                    $stmt = $pdo->prepare("
+                        SELECT k.keystage_id,  CONCAT('LOT ',l.lot_name,' KS', k.keystage_num, ' ', k.description) AS label
+                        FROM keystage k
+                        JOIN lot l ON k.lot_id = l.lot_id
+                        WHERE l.project_id = :project_id
+                    ");
+                    $stmt->execute(['project_id' => $project_id]);
+                    $keystages = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+                    // Find matching lot_id from name
+                    $lot_id = array_search($lot[1] ?? '', $lots);
+
+                    // Find matching keystage_id (if any)
+                    $stmt = $pdo->prepare("
+                        SELECT k.keystage_id
+                        FROM keystage k
+                        JOIN lot l ON k.lot_id = l.lot_id
+                        WHERE l.project_id   = :project_id
+                          AND k.keystage_num = :num
+                          AND k.description  = :desc
+                          AND k.lot_id       = :lot_id
+                    ");
+                    $stmt->execute([
+                        'project_id' => $project_id,
+                        'num'        => $ks[1] ?? '',
+                        'desc'       => $description ?? '',
+                        'lot_id'     => $lot_id ?: null,
+                    ]);
+                    $foundKs = $stmt->fetchColumn();
+
+                    // Skip if either keystage or lot not found yet
+                    if (!$lot_id || !$foundKs) {
+                        // Still add to table for manual selection later
+                        $rows[] = [
+                            'school_id'     => $school_id,
+                            'dr_no'         => $dr_no,
+                            'delivery_date' => $delivery_date,
+                            'package_type'  => $pkg[1] ?? '',
+                            'lot_name'      => $lot[1] ?? '',
+                            'keystage_num'  => $ks[1] ?? '',
+                            'description'   => $description ?? '',
+                        ];
+                        continue;
+                    }
+
+                    // ✅ Check if this record already exists
+                    $check = $pdo->prepare("
+                        SELECT COUNT(*) FROM deliveries
+                        WHERE school_id = :school_id
+                          AND project_id = :project_id
+                          AND keystage_id = :keystage_id
+                          AND lot_id = :lot_id
+                    ");
+                    $check->execute([
+                        'school_id'   => $school_id,
+                        'project_id'  => $project_id,
+                        'keystage_id' => $foundKs,
+                        'lot_id'      => $lot_id,
+                    ]);
+
+                    if ($check->fetchColumn() > 0) {
+                        // 🚫 Skip duplicates
+                        continue;
+                    }
+
+                    // Otherwise, add to preview list
                     $rows[] = [
                         'school_id'     => $school_id,
                         'dr_no'         => $dr_no,
@@ -62,25 +133,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                         'keystage_num'  => $ks[1] ?? '',
                         'description'   => $description ?? '',
                     ];
+
                 }
             }
         }
         fclose($handle);
     }
 
-    // Fetch existing Lots & Keystages
-    $stmt = $pdo->prepare("SELECT lot_id, lot_name FROM lot WHERE project_id =  :project_id");
-    $stmt->execute(['project_id' => $project_id]);
-    $lots = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-
-    $stmt = $pdo->prepare("
-        SELECT k.keystage_id,  CONCAT('LOT ',l.lot_name,' KS', k.keystage_num, ' ', k.description) AS label
-        FROM keystage k
-        JOIN lot l ON k.lot_id = l.lot_id
-        WHERE l.project_id = :project_id
-    ");
-    $stmt->execute(['project_id' => $project_id]);
-    $keystages = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    
 }
 ?>
 
