@@ -278,7 +278,6 @@ try {
     $stmt = $pdo->query($changesPerWarehouseQuery);
     $changesPerWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
- 
         
     // Progress per Region
     $progressPerRegionQuery = "
@@ -559,7 +558,7 @@ if ($selectedProject > 0) {
       </div>
   </div>
 
-   <!-- Inventory by Warehouse -->
+  <!-- Inventory by Warehouse -->
   <div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
       <div class="card shadow-sm h-100">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -605,24 +604,34 @@ if ($selectedProject > 0) {
   </div>
 
   <!-- Chart: Inventory History Over Time -->
-<div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-history-trend">
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-history-trend">
   <div class="card shadow-sm h-80">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
       <h6 class="mb-0">📅 Inventory History (Daily Changes)</h6>
-      <span class="drag-handle text-muted">⋮⋮</span>
+      <div class="d-flex align-items-center gap-3">
+        <a href="report/print_inventory_history.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+          <i class="bi bi-printer"></i>
+        </a>
+        <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+      </div>
     </div>
     <div class="card-body">
       <canvas id="inventoryHistoryTrendChart" height="200"></canvas>
     </div>
   </div>
-</div>
+  </div>
 
   <!-- Chart: Top Updated Items -->
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="top-updated-items">
     <div class="card shadow-sm h-80">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">🏷️ Top Updated Items</h6>
-        <span class="drag-handle text-muted">⋮⋮</span>
+        <div class="d-flex align-items-center gap-3">
+          <a href="report/print_top_updated_items.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+            <i class="bi bi-printer"></i>
+          </a>
+          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
       </div>
       <div class="card-body">
         <canvas id="topUpdatedItemsChart" height="200"></canvas>
@@ -635,7 +644,12 @@ if ($selectedProject > 0) {
     <div class="card shadow-sm h-80">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">🏭 Changes per Warehouse</h6>
-        <span class="drag-handle text-muted">⋮⋮</span>
+        <div class="d-flex align-items-center gap-3">
+          <a href="report/print_changes_per_warehouse.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+            <i class="bi bi-printer"></i>
+          </a>
+          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
       </div>
       <div class="card-body">
         <canvas id="changesPerWarehouseChart" height="200"></canvas>
