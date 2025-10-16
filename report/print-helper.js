@@ -1,6 +1,6 @@
 /**
- * Universal print function for tables
- * @param {string} tableId - ID of the table to print
+ * Universal print function for single or multiple tables
+ * @param {string|array} tableId - ID of the table(s) to print (string for single, array for multiple)
  * @param {string} title - Report title
  * @param {string} subtitle - Report subtitle (optional)
  * @param {object} options - Additional options (optional)
@@ -11,7 +11,9 @@ function printTable(tableId, title, subtitle = '', options = {}) {
         showDate: true,
         showHeader: true,
         customStyles: '',
-        pageOrientation: 'portrait'
+        pageOrientation: 'portrait',
+        includeHeaders: true, // For multiple tables, include section headers
+        sectionTitles: [] // Titles for each section when printing multiple tables
     };
     
     const config = { ...defaultOptions, ...options };
@@ -19,10 +21,38 @@ function printTable(tableId, title, subtitle = '', options = {}) {
     // Store original content
     const originalContent = document.body.innerHTML;
     
-    // Get the table
-    const table = document.getElementById(tableId);
-    if (!table) {
-        alert('Table not found!');
+    // Handle single or multiple tables
+    const tableIds = Array.isArray(tableId) ? tableId : [tableId];
+    
+    // Collect all tables
+    let tablesHTML = '';
+    tableIds.forEach((id, index) => {
+        const table = document.getElementById(id);
+        if (!table) {
+            console.warn(`Table with ID "${id}" not found!`);
+            return;
+        }
+        
+        // Add section title if provided
+        if (config.includeHeaders && config.sectionTitles[index]) {
+            tablesHTML += `
+                <h3 style="margin-top: ${index > 0 ? '40px' : '0'}; margin-bottom: 15px; font-size: 18px; color: #333;">
+                    ${config.sectionTitles[index]}
+                </h3>
+            `;
+        }
+        
+        // Add spacing between tables
+        if (index > 0) {
+            tablesHTML += '<div style="margin-top: 30px;"></div>';
+        }
+        
+        tablesHTML += table.outerHTML;
+    });
+    
+    if (!tablesHTML) {
+        alert('No tables found to print!');
+        document.body.innerHTML = originalContent;
         return;
     }
     
@@ -42,7 +72,7 @@ function printTable(tableId, title, subtitle = '', options = {}) {
     const printContent = `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
             ${headerHTML}
-            ${table.outerHTML}
+            ${tablesHTML}
         </div>
     `;
     
@@ -57,12 +87,15 @@ function printTable(tableId, title, subtitle = '', options = {}) {
             table { 
                 width: 100% !important; 
                 border-collapse: collapse !important;
-                font-size: 14px;
+                font-size: 12px;
+                page-break-inside: auto;
             }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
             th, td { 
                 border: 1px solid #000 !important; 
-                padding: 12px !important;
-                text-align: center !important;
+                padding: 8px !important;
             }
             th { 
                 background-color: #f8f9fa !important; 
@@ -75,6 +108,16 @@ function printTable(tableId, title, subtitle = '', options = {}) {
             .table-dark { 
                 background-color: #343a40 !important; 
                 color: white !important;
+            }
+            .table-secondary {
+                background-color: #e9ecef !important;
+                font-weight: bold !important;
+            }
+            .text-start { text-align: left !important; }
+            .text-center { text-align: center !important; }
+            .text-end { text-align: right !important; }
+            h3 {
+                page-break-after: avoid;
             }
             ${config.customStyles}
         }
@@ -93,12 +136,30 @@ function printTable(tableId, title, subtitle = '', options = {}) {
     
     // Dispatch event to notify that print is complete
     window.dispatchEvent(new CustomEvent('printComplete', { 
-        detail: { tableId, title, subtitle } 
+        detail: { tableId: tableIds, title, subtitle } 
     }));
 }
 
 /**
- * Quick print function for simple use
+ * Print multiple tables together
+ * @param {array} tableIds - Array of table IDs to print
+ * @param {string} title - Report title
+ * @param {string} subtitle - Report subtitle (optional)
+ * @param {array} sectionTitles - Array of section titles for each table (optional)
+ * @param {object} options - Additional options (optional)
+ */
+function printMultipleTables(tableIds, title, subtitle = '', sectionTitles = [], options = {}) {
+    const config = {
+        ...options,
+        includeHeaders: true,
+        sectionTitles: sectionTitles
+    };
+    
+    printTable(tableIds, title, subtitle, config);
+}
+
+/**
+ * Quick print function for simple use (single table)
  */
 function quickPrint(tableId, title) {
     printTable(tableId, title);

@@ -1,5 +1,5 @@
 <?php 
-    require "reports_header.php"; 
+    require "reports_header.php";  
     require "../script/role_auth.php";
     require "../config/db.php";
 
@@ -21,15 +21,58 @@
         if (ob_get_length()) ob_clean();
         
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=inventory_by_warehouse_' . date('Y-m-d') . '.csv');
+        header('Content-Disposition: attachment; filename=inventory_report_' . date('Y-m-d') . '.csv');
         
         $output = fopen('php://output', 'w');
         fwrite($output, "\xEF\xBB\xBF");
         
-        // CSV Headers
-        fputcsv($output, ['Warehouse', 'Item Name', 'Unit', 'Quantity', 'As of Date: ' . $selectedDate]);
+        // SECTION 1: Inventory Quantity Summary
+        fputcsv($output, ['INVENTORY QUANTITY SUMMARY']);
+        fputcsv($output, []);
+        fputcsv($output, ['Warehouse Name', 'Total Items', 'Total Quantity']);
         
-        // Fetch data for CSV
+        // Fetch inventory quantity data
+        $inventoryQuantityQuery = "
+            SELECT 
+                w.warehouse_name,
+                COUNT(DISTINCT i.item_id) as total_items,
+                SUM(inv.qty) as total_quantity
+            FROM inventory inv
+            JOIN item i ON inv.item_id = i.item_id
+            JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
+            WHERE inv.inventory_status = 'Approved'
+                AND inv.qty > 0
+                " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+            GROUP BY w.warehouse_id, w.warehouse_name
+            ORDER BY total_quantity DESC
+        ";
+        
+        $stmt = $pdo->query($inventoryQuantityQuery);
+        $inventoryQuantityData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($inventoryQuantityData as $row) {
+            fputcsv($output, [
+                $row['warehouse_name'],
+                $row['total_items'],
+                $row['total_quantity']
+            ]);
+        }
+        
+        $totalItems = array_sum(array_column($inventoryQuantityData, 'total_items'));
+        $totalQuantity = array_sum(array_column($inventoryQuantityData, 'total_quantity'));
+        
+        fputcsv($output, []);
+        fputcsv($output, ['TOTAL', $totalItems, $totalQuantity]);
+        
+        // SECTION 2: Inventory by Warehouse Details
+        fputcsv($output, []);
+        fputcsv($output, []);
+        fputcsv($output, ['INVENTORY BY WAREHOUSE DETAILS']);
+        fputcsv($output, ['As of Date: ' . $selectedDate]);
+        fputcsv($output, []);
+        fputcsv($output, ['Warehouse', 'Item Name', 'Unit', 'Quantity']);
+        
+        // Fetch inventory by warehouse data
         $inventoryByWarehouseQuery = "
             SELECT 
                 w.warehouse_name,
@@ -56,10 +99,9 @@
 
         $stmt = $pdo->prepare($inventoryByWarehouseQuery);
         $stmt->execute(['selectedDate' => $selectedDate]);
-        $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $inventoryByWarehouseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // CSV Data Rows
-        foreach ($inventoryData as $row) {
+        foreach ($inventoryByWarehouseData as $row) {
             fputcsv($output, [
                 $row['warehouse_name'],
                 $row['item_name'],
@@ -68,38 +110,33 @@
             ]);
         }
         
-        // Calculate totals
-        $warehouseTotals = [];
-        $grandTotal = 0;
-        
-        foreach ($inventoryData as $row) {
-            $warehouseTotals[$row['warehouse_name']] = ($warehouseTotals[$row['warehouse_name']] ?? 0) + $row['qty'];
-            $grandTotal += $row['qty'];
-        }
-        
-        // Add warehouse totals
-        fputcsv($output, []); // Empty row
-        fputcsv($output, ['Warehouse Totals:', '', '', '']);
-        foreach ($warehouseTotals as $warehouse => $total) {
-            fputcsv($output, [$warehouse, 'TOTAL', '', $total]);
-        }
-        
-        // Grand total
-        fputcsv($output, []); // Empty row
-        fputcsv($output, ['GRAND TOTAL', '', '', $grandTotal]);
-        
-        // Report metadata
-        // fputcsv($output, []);
-        // fputcsv($output, ['Report Details:', '', '', '']);
-        // fputcsv($output, ['Generated on:', date('Y-m-d H:i:s'), '', '']);
-        // fputcsv($output, ['Project:', $selectedProject > 0 ? $selectedProjectName : 'All Projects', '', '']);
-        // fputcsv($output, ['Data as of:', $selectedDate, '', '']);
-        
         fclose($output);
         exit();
     }
 
-    // Fetch inventory by warehouse data
+    // Fetch Inventory Quantity Data
+    $inventoryQuantityQuery = "
+        SELECT 
+            w.warehouse_name,
+            COUNT(DISTINCT i.item_id) as total_items,
+            SUM(inv.qty) as total_quantity
+        FROM inventory inv
+        JOIN item i ON inv.item_id = i.item_id
+        JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
+        WHERE inv.inventory_status = 'Approved'
+            AND inv.qty > 0
+            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+        GROUP BY w.warehouse_id, w.warehouse_name
+        ORDER BY total_quantity DESC
+    ";
+    
+    $stmt = $pdo->query($inventoryQuantityQuery);
+    $inventoryQuantityData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $totalItems = array_sum(array_column($inventoryQuantityData, 'total_items'));
+    $totalQuantity = array_sum(array_column($inventoryQuantityData, 'total_quantity'));
+
+    // Fetch Inventory by Warehouse Data
     $inventoryByWarehouseQuery = "
         SELECT 
             w.warehouse_name,
@@ -109,8 +146,8 @@
                 (SELECT ih.new_qty
                 FROM inventory_history ih
                 WHERE ih.item_id = i.item_id 
-                  AND ih.warehouse_id = w.warehouse_id 
-                  AND DATE(ih.changed_at) <= :selectedDate
+                AND ih.warehouse_id = w.warehouse_id 
+                AND DATE(ih.changed_at) <= :selectedDate
                 ORDER BY ih.changed_at DESC 
                 LIMIT 1),
                 inv.qty
@@ -126,90 +163,154 @@
 
     $stmt = $pdo->prepare($inventoryByWarehouseQuery);
     $stmt->execute(['selectedDate' => $selectedDate]);
-    $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $inventoryByWarehouseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>📦 Inventory by Warehouse Report <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h4>
+    <h4>📦 Inventory Report <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h4>
     <a href="../dashboard.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Back to Dashboard
     </a>
 </div>
 
-<div class="row mb-3 align-items-end">
-    <div class="col-md-4">
-        <label for="dateFilter" class="form-label">Filter by Date</label>
-        <form method="GET" class="d-flex gap-2">
-            <?php if($selectedProject > 0): ?>
-                <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
-            <?php endif; ?>
-            <input type="date" class="form-control" name="selectedDate" value="<?= htmlspecialchars($selectedDate) ?>">
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-funnel"></i> Apply
-            </button>
-        </form>
-    </div>
+<div class="row my-3 align-items-end">
     <div class="col-md-12 d-flex justify-content-end gap-2">
-        <!-- CSV Export Button -->
         <a href="?export=csv<?= $selectedProject > 0 ? '&project_id=' . $selectedProject : '' ?>&selectedDate=<?= htmlspecialchars($selectedDate) ?>" class="btn btn-success">
             <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
         </a>
-        <button class="btn btn-primary" onclick="printDeliveryReport()">
+        <button class="btn btn-primary" onclick="printCombinedReport()">
             <i class="bi bi-printer"></i> Print
         </button>
     </div>
-
 </div>
 
-<?php if($selectedDate !== date('Y-m-d')): ?>
-<div class="alert alert-info">
-    <i class="bi bi-info-circle"></i> Showing inventory as of: <strong><?= date('F d, Y', strtotime($selectedDate)) ?></strong>
-</div>
-<?php endif; ?>
+<!--Tables -->
+<div id="InventoryReport">
+    <!-- Inventory Quantity Summary Table -->
+    <h5 class="mt-4 mb-3">Inventory Quantity Summary</h5>
+    <table id="inventoryQuantityTable" class="table table-bordered shadow-sm mb-5">
+        <thead class="table-dark">
+            <tr>
+                <th>Warehouse Name</th>
+                <th>Total Items</th>
+                <th>Total Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($inventoryQuantityData as $row): ?>
+            <tr>
+                <td class="text-start"><?= htmlspecialchars($row['warehouse_name']) ?></td>
+                <td class="text-center"><?= number_format($row['total_items']) ?></td>
+                <td class="text-end"><?= number_format($row['total_quantity']) ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+        <tfoot class="table-secondary">
+            <tr>
+                <th class="text-start">Total</th>
+                <th class="text-center"><?= number_format($totalItems) ?></th>
+                <th class="text-end"><?= number_format($totalQuantity) ?></th>
+            </tr>
+        </tfoot>
+    </table>
 
-<table id="inventoryWarehouseTable" class="table table-bordered shadow-sm">
-    <thead class="table-dark">
-        <tr>
-            <th>Warehouse Name</th>
-            <th>Item Name</th>
-            <th>Unit</th>
-            <th>Quantity</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach ($inventoryData as $row): ?>
-        <tr>
-            <td class="text-start"><?= htmlspecialchars($row['warehouse_name']) ?></td>
-            <td class="text-start"><?= htmlspecialchars($row['item_name']) ?></td>
-            <td class="text-center"><?= htmlspecialchars($row['unit']) ?></td>
-            <td class="text-end"><?= number_format($row['qty']) ?></td>
-        </tr>
-        <?php endforeach; ?>
-    </tbody>
-</table>
+    <hr>
+    <!-- Inventory by Warehouse Details Table -->
+    <div class="row my-3">
+        <div class="col-md-6 col-sm-12">
+            <h5 class="mb-0">Inventory by Warehouse Details</h5>
+        </div>
+        <div class="col-md-6 col-sm-12">
+            <form method="GET" class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+            <?php if($selectedProject > 0): ?>
+                <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
+            <?php endif; ?>
+
+            <label for="dateFilter" class="form-label mb-0">
+                <strong>Filter by Date:</strong>
+            </label>
+
+            <input 
+                type="date" 
+                class="form-control form-control-sm" 
+                id="dateFilter" 
+                name="selectedDate" 
+                value="<?= htmlspecialchars($selectedDate) ?>" 
+                style="max-width: 200px;"
+            >
+
+            <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+                <i class="bi bi-funnel"></i> Apply
+            </button>
+            </form>
+        </div>
+    </div>
+
+    <?php if($selectedDate !== date('Y-m-d')): ?>
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Showing inventory as of: <strong><?= date('F d, Y', strtotime($selectedDate)) ?></strong>
+        </div>
+    <?php endif; ?>
+
+    <table id="inventoryWarehouseTable" class="table table-bordered shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Warehouse Name</th>
+                <th>Item Name</th>
+                <th>Unit</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($inventoryByWarehouseData as $row): ?>
+            <tr>
+                <td class="text-start"><?= htmlspecialchars($row['warehouse_name']) ?></td>
+                <td class="text-start"><?= htmlspecialchars($row['item_name']) ?></td>
+                <td class="text-center"><?= htmlspecialchars($row['unit']) ?></td>
+                <td class="text-end"><?= number_format($row['qty']) ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
 
 <?php require "../template/footer.php"; ?>
 
 <script>
     $(document).ready(function() {
+        $('#inventoryQuantityTable').DataTable({
+            scrollY: "30vh",
+            scrollCollapse: true,
+            paging: false,
+            responsive: true,
+            order: [[2, 'desc']],
+            searching: false
+        });
+
         $('#inventoryWarehouseTable').DataTable({
-            scrollY: "60vh",
+            scrollY: "50vh",
             scrollCollapse: true,
             paging: true,
             responsive: true,
             order: [[0, 'asc'], [1, 'asc']]
         });
+
+        // Reload DataTables after print
+        window.addEventListener('printComplete', function() {
+            location.reload();
+        });
     });
 </script>
 
 <script src="print-helper.js"></script>
+
 <script>
-// For your current page
-function printDeliveryReport() {
-    printTable(
-        'inventoryWarehouseTable', 
-        'Inventory by Warehouse Report', 
-        '<?= $selectedProject > 0 ? htmlspecialchars($selectedProjectName) : "" ?>'
+    function printCombinedReport() {
+    printMultipleTables(
+        ['inventoryQuantityTable', 'inventoryWarehouseTable'],
+        'Inventory Report',
+        '<?= $selectedProject > 0 ? htmlspecialchars($selectedProjectName) : "" ?>',
+        ['Inventory Quantity Summary', 'Inventory by Warehouse Details - As of <?= date("F d, Y", strtotime($selectedDate)) ?>']
     );
 }
 </script>
