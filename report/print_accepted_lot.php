@@ -102,7 +102,7 @@
     $totalDelivered = array_sum(array_column($progressPerLotData, 'delivered'));
 ?>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg">
   <div class="container-fluid d-flex justify-content-between align-items-center">
     
     <div>

@@ -499,17 +499,20 @@ if ($selectedProject > 0) {
   
   <!-- Chart 1: Delivery Status Overview -->
   <div class="col-lg-4 col-md-6 mb-4 chart-item" data-chart-id="delivery-status">
-    <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
       <div class="card shadow-sm h-30">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0">📊 Delivery Status Overview</h6>
-          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          <div class="d-flex align-items-center gap-3">
+            <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+              <i class="bi bi-printer"></i>
+            </a>
+            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          </div>
         </div>
         <div class="card-body">
           <canvas id="deliveryStatusChart" height="300"></canvas>
         </div>
       </div>
-    </a>
   </div>
 
   <!-- Chart 4: School Density -->
@@ -540,26 +543,33 @@ if ($selectedProject > 0) {
 
   <!-- Chart 2: Monthly Delivery Trend -->
   <div class="col-lg-8 col-md-12 mb-4 chart-item" data-chart-id="monthly-trend">
-    <a href="report/print_monthly_trend.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0">📈 Monthly Delivery Trend</h6>
-          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          <div class="d-flex align-items-center gap-3">
+            <a href="report/print_monthly_trend.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+              <i class="bi bi-printer"></i>
+            </a>
+            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+          </div>
         </div>
         <div class="card-body">
           <canvas id="monthlyDeliveryTrendChart" height="300"></canvas>
         </div>
       </div>
-    </a>
   </div>
 
    <!-- Inventory by Warehouse -->
   <div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
-    <a href="report/print_inventory_warehouse.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
       <div class="card shadow-sm h-100">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h6 class="mb-0">📦 Inventory by Warehouse <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h6>
-              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              <div class="d-flex align-items-center gap-3">
+                <a href="report/print_inventory_warehouse.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                  <i class="bi bi-printer"></i>
+                </a>
+                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              </div>
           </div>
           <div class="card-body">
               <!-- Date Filter Form -->
@@ -592,24 +602,7 @@ if ($selectedProject > 0) {
               <div id="warehouseChartsContainer" class="row"></div>
           </div>
       </div>
-    </a>
   </div>
-
-  <!-- Chart: Inventory Quantities per Warehouse -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-quantities">
-    <a href="report/print_inventory_quantity.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">📦 Inventory Quantity</h6>
-          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-        </div>
-        <div class="card-body">
-          <canvas id="inventoryChart" height="300"></canvas>
-        </div>
-      </div>
-    </a>
-  </div>
-
 
   <!-- Chart: Inventory History Over Time -->
 <div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-history-trend">
@@ -665,62 +658,74 @@ if ($selectedProject > 0) {
 
   <!-- Progress by Region - Accepted -->
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="accepted-per-region">
-    <a href="report/print_accepted_region.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
       <div class="card shadow-sm h-100">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h6 class="mb-0">✅ Accepted by Region (%)</h6>
-              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              <div class="d-flex align-items-center gap-3">
+                  <a href="report/print_accepted_region.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                  <i class="bi bi-printer"></i>
+                </a>
+                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              </div>
           </div>
           <div class="card-body">
               <canvas id="acceptedPerRegionChart" height="300"></canvas>
           </div>
       </div>
-    </a>
   </div>
 
   <!-- Progress by Region - Delivered -->
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="delivered-per-region">
-    <a href="report/print_delivered_region.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
       <div class="card shadow-sm h-100">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h6 class="mb-0">🚚 Delivered by Region (%)</h6>
-              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              <div class="d-flex align-items-center gap-3">
+                <a href="report/print_delivered_region.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                  <i class="bi bi-printer"></i>
+                </a>
+                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              </div>
           </div>
           <div class="card-body">
               <canvas id="deliveredPerRegionChart" height="300"></canvas>
           </div>
       </div>
-    </a>
   </div>
 
   <!-- Progress by Lot - Accepted -->
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="accepted-per-lot">
-    <a href="report/print_accepted_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
       <div class="card shadow-sm h-100">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h6 class="mb-0">✅ Accepted by Lot (%)</h6>
-              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              <div class="d-flex align-items-center gap-3">
+                <a href="report/print_accepted_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                  <i class="bi bi-printer"></i>
+                </a>
+                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              </div>
           </div>
           <div class="card-body">
               <canvas id="acceptedPerLotChart" height="300"></canvas>
           </div>
       </div>
-    </a>
   </div>
 
   <!-- Progress by Lot - Delivered -->
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="delivered-per-lot">
-    <a href="report/print_delivered_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
       <div class="card shadow-sm h-100">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h6 class="mb-0">🚚 Delivered by Lot (%)</h6>
-              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              <div class="d-flex align-items-center gap-3">
+                <a href="report/print_delivered_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                  <i class="bi bi-printer"></i>
+                </a>
+                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+              </div>
           </div>
           <div class="card-body">
               <canvas id="deliveredPerLotChart" height="300"></canvas>
           </div>
       </div>
-    </a>
   </div>
 
 </div>
