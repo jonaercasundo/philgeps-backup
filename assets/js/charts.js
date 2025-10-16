@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
   //   createEmptyChart(document.getElementById('placesDeliveredChart'), 'No places delivered data available');
   // }
 
-  // 5. Inventory Quantities per Warehouse (Vertical Bar)
+  // 5. Inventory Quantities
   if (inventoryData.length > 0) {
   // Group by item and calculate totals
   const itemTotals = {};
@@ -523,54 +523,107 @@ document.addEventListener('DOMContentLoaded', function() {
           const itemCount = items.length; // COUNT(*) equivalent
           const totalQty = items.reduce((sum, item) => sum + parseInt(item.qty), 0);
           
+          // Sort items by quantity (descending)
+          items.sort((a, b) => parseInt(b.qty) - parseInt(a.qty));
+
           const col = document.createElement('div');
           col.className = 'col-lg-4 col-md-6 col-sm-12 mb-3';
           col.innerHTML = `
               <div class="card h-100">
-                  <div class="card-header bg-light">
-                      <h6 class="mb-1">${warehouseName}</h6>
-                      <small class="text-muted">${itemCount} items | Total: ${totalQty} units</small>
-                  </div>
-                  <div class="card-body">
-                      <canvas id="warehouseChart_${index}" height="250"></canvas>
-                  </div>
-              </div>
+                <div class="card-header bg-light">
+                    <h6 class="mb-1">${warehouseName}</h6>
+                    <small class="text-muted">${itemCount} items | Total: ${totalQty} units</small>
+                </div>
+                <div class="card-body">
+                    <canvas id="warehouseChart_${index}" height="${Math.max(300, items.length * 25)}"></canvas>
+                </div>
+            </div>
           `;
           
           container.appendChild(col);
           
-          // Create pie chart for this warehouse
           new Chart(document.getElementById(`warehouseChart_${index}`), {
-              type: 'pie',
-              data: {
-                  labels: items.map(item => item.item_name),
-                  datasets: [{
-                      data: items.map(item => parseInt(item.qty)),
-                      backgroundColor: items.map((_, i) => primaryColors[i % primaryColors.length]),
-                      borderColor: items.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
-                      borderWidth: 2
-                  }]
-              },
-              options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                      legend: {
-                        display: false
-                      },
-                      tooltip: {
-                          callbacks: {
-                              label: function(context) {
-                                  const item = items[context.dataIndex];
-                                  const percentage = ((item.qty / totalQty) * 100).toFixed(1);
-                                  return `${item.item_name}: ${item.qty} ${item.unit} (${percentage}%)`;
-                              }
-                          }
-                      }
-                  }
-              }
-          });
-      });
+            type: 'bar',
+            data: {
+                labels: items.map(item => item.item_name),
+                datasets: [{
+                    label: 'Quantity',
+                    data: items.map(item => parseInt(item.qty)),
+                    backgroundColor: items.map((_, i) => primaryColors[i % primaryColors.length]),
+                    borderColor: items.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        backgroundColor: '#fff',
+                        titleColor: '#333',
+                        bodyColor: '#666',
+                        borderColor: '#ddd',
+                        borderWidth: 2,
+                        padding: 12,
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            label: function(context) {
+                                const item = items[context.dataIndex];
+                                const percentage = totalQty > 0 ? ((item.qty / totalQty) * 100).toFixed(1) : 0;
+                                return `${parseInt(item.qty).toLocaleString()} ${item.unit} (${percentage}%)`;
+                            },
+                            title: function(tooltipItems) {
+                                const item = items[tooltipItems[0].dataIndex];
+                                return item.item_name;
+                            }
+                        }
+                    },
+                    legend: { 
+                        display: false 
+                    }
+                },
+                scales: {
+                    x: { 
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Quantity' 
+                        },
+                        grid: { 
+                            color: '#eee' 
+                        },
+                        ticks: { 
+                            precision: 0,
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        }
+                    },
+                    y: { 
+                        title: { 
+                            display: true, 
+                            text: 'Item Name' 
+                        },
+                        grid: { 
+                            display: false 
+                        },
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 0,
+                            minRotation: 0,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
   } else {
       const container = document.getElementById('warehouseChartsContainer');
       container.innerHTML = '<div class="col-12 text-center text-muted py-5"><p>No inventory data available</p></div>';
