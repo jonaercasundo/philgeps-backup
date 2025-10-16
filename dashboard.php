@@ -809,7 +809,11 @@ if ($selectedProject > 0) {
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <script src="assets/js/charts.js?v=123451"></script>
+=======
+<script src="assets/js/charts.js?=v12"></script>
+>>>>>>> Stashed changes
 =======
 <script src="assets/js/charts.js?=v12"></script>
 >>>>>>> Stashed changes
