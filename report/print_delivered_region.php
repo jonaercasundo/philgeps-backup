@@ -1,5 +1,5 @@
 <?php 
-    require "../template/header.php"; 
+    require "reports_header.php"; 
     require "../script/role_auth.php";
     require "../config/db.php";
 

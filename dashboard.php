@@ -237,6 +237,48 @@ try {
     $stmt = $pdo->prepare($inventoryByWarehouseQuery);
     $stmt->execute(['selectedDate' => $selectedDate]);
     $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // 6. Inventory History Trends
+    $inventoryHistoryQuery = "
+        SELECT 
+            DATE(changed_at) AS change_date,
+            COUNT(*) AS total_changes
+        FROM inventory_history
+        GROUP BY DATE(changed_at)
+        ORDER BY change_date ASC
+        LIMIT 30
+    ";
+    $stmt = $pdo->query($inventoryHistoryQuery);
+    $inventoryHistoryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Top 5 most updated items
+    $topUpdatedItemsQuery = "
+        SELECT 
+            i.item_name,
+            COUNT(*) AS update_count
+        FROM inventory_history ih
+        JOIN item i ON ih.item_id = i.item_id
+        GROUP BY i.item_name
+        ORDER BY update_count DESC
+        LIMIT 5
+    ";
+    $stmt = $pdo->query($topUpdatedItemsQuery);
+    $topUpdatedItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Changes per warehouse
+    $changesPerWarehouseQuery = "
+        SELECT 
+            w.warehouse_name,
+            COUNT(*) AS total_changes
+        FROM inventory_history ih
+        JOIN warehouse w ON ih.warehouse_id = w.warehouse_id
+        GROUP BY w.warehouse_name
+        ORDER BY total_changes DESC
+    ";
+    $stmt = $pdo->query($changesPerWarehouseQuery);
+    $changesPerWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+ 
         
     // Progress per Region
     $progressPerRegionQuery = "
@@ -458,7 +500,7 @@ if ($selectedProject > 0) {
   <!-- Chart 1: Delivery Status Overview -->
   <div class="col-lg-4 col-md-6 mb-4 chart-item" data-chart-id="delivery-status">
     <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-      <div class="card shadow-sm h-100">
+      <div class="card shadow-sm h-30">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0">📊 Delivery Status Overview</h6>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
@@ -566,6 +608,46 @@ if ($selectedProject > 0) {
         </div>
       </div>
     </a>
+  </div>
+
+
+  <!-- Chart: Inventory History Over Time -->
+<div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-history-trend">
+  <div class="card shadow-sm h-80">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">📅 Inventory History (Daily Changes)</h6>
+      <span class="drag-handle text-muted">⋮⋮</span>
+    </div>
+    <div class="card-body">
+      <canvas id="inventoryHistoryTrendChart" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+  <!-- Chart: Top Updated Items -->
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="top-updated-items">
+    <div class="card shadow-sm h-80">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">🏷️ Top Updated Items</h6>
+        <span class="drag-handle text-muted">⋮⋮</span>
+      </div>
+      <div class="card-body">
+        <canvas id="topUpdatedItemsChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart: Inventory Changes per Warehouse -->
+  <div class="col-lg-6 mb-4 chart-item" data-chart-id="changes-per-warehouse">
+    <div class="card shadow-sm h-80">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">🏭 Changes per Warehouse</h6>
+        <span class="drag-handle text-muted">⋮⋮</span>
+      </div>
+      <div class="card-body">
+        <canvas id="changesPerWarehouseChart" height="200"></canvas>
+      </div>
+    </div>
   </div>
 
   <!-- Leaflet Map Placeholder -->
@@ -718,11 +800,18 @@ if ($selectedProject > 0) {
         inventoryByWarehouse: <?= json_encode($inventoryByWarehouse) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>,
         progressPerRegion: <?= json_encode($progressPerRegion) ?>,
-        progressPerLot: <?= json_encode($progressPerLot) ?> 
+        progressPerLot: <?= json_encode($progressPerLot) ?> ,
+        inventoryHistoryTrend: <?= json_encode($inventoryHistoryTrend) ?>,
+        topUpdatedItems: <?= json_encode($topUpdatedItems) ?>,
+        changesPerWarehouse: <?= json_encode($changesPerWarehouse) ?>
     };
 </script>
 
+<<<<<<< Updated upstream
 <script src="assets/js/charts.js?v=123451"></script>
+=======
+<script src="assets/js/charts.js?=v12"></script>
+>>>>>>> Stashed changes
 
 <?php require "template/footer.php"; ?>
 
@@ -840,6 +929,5 @@ document.addEventListener("DOMContentLoaded", function () {
     .catch(error => console.error("Error loading GeoJSON:", error));
 });
 </script>
-
 
 

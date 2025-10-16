@@ -7,7 +7,10 @@ const {
   stockLevelData,
   inventoryByWarehouse,
   progressPerRegion,
-  progressPerLot
+  progressPerLot,
+  inventoryHistoryTrend,
+  topUpdatedItems,
+  changesPerWarehouse
 } = phpData;
 
 // Modern Professional Color Scheme
@@ -54,6 +57,7 @@ inventoryData.forEach(row => {
   itemGroups[item_name].warehouses[warehouse_name] = 
       (itemGroups[item_name].warehouses[warehouse_name] || 0) + Number(qty);
 });
+
 
 // Prepare arrays for chart
 const labels = Object.keys(itemGroups);
@@ -298,6 +302,82 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('monthlyDeliveryTrendChart'), 'No monthly trend data available');
   }
 
+// 🎯 Inventory History (Daily Changes)
+new Chart(document.getElementById('inventoryHistoryTrendChart'), {
+  type: 'line',
+  data: {
+    labels: inventoryHistoryTrend.map(r => r.change_date), // e.g. ['2025-01-01', '2025-01-02', ...]
+    datasets: [{
+      label: 'Inventory Changes',
+      data: inventoryHistoryTrend.map(r => r.total_changes),
+      borderColor: '#007bff',
+      backgroundColor: 'rgba(0, 123, 255, 0.2)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.3, // smooth curve
+      pointRadius: 2
+    }]
+  },
+  options: {
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: 'Inventory History (Daily Changes)'
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Date' },
+        ticks: { maxRotation: 45, minRotation: 45 }
+      },
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Total Changes' }
+      }
+    }
+  }
+});
+
+// 🟩 Top Updated Items
+new Chart(document.getElementById('topUpdatedItemsChart'), {
+  type: 'bar',
+  data: {
+    labels: topUpdatedItems.map(r => r.item_name),
+    datasets: [{
+      label: 'Updates',
+      data: topUpdatedItems.map(r => r.update_count),
+      backgroundColor: '#28a745'
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { title: { display: true, text: 'Item' } },
+      y: { beginAtZero: true, title: { display: true, text: 'Updates' } }
+    }
+  }
+});
+
+// 🟨 Changes per Warehouse
+new Chart(document.getElementById('changesPerWarehouseChart'), {
+  type: 'bar',
+  data: {
+    labels: changesPerWarehouse.map(r => r.warehouse_name),
+    datasets: [{
+      label: 'Changes',
+      data: changesPerWarehouse.map(r => r.total_changes),
+      backgroundColor: '#ffc107'
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { title: { display: true, text: 'Warehouse' } },
+      y: { beginAtZero: true, title: { display: true, text: 'Changes' } }
+    }
+  }
+});
   // 3. Today's User Activity (Doughnut)
   // if (todayUserActivity.length > 0) {
   //     const activityTypes = [...new Set(todayUserActivity.map(r => r.activity_type))];

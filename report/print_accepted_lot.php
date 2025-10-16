@@ -1,5 +1,5 @@
 <?php 
-    require "../template/header.php"; 
+    require "reports_header.php"; 
     require "../script/role_auth.php";
     require "../config/db.php";
 
@@ -102,24 +102,30 @@
     $totalDelivered = array_sum(array_column($progressPerLotData, 'delivered'));
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>✅ Accepted by Lot Report <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h4>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid d-flex justify-content-between align-items-center">
+    
+    <div>
+      <span class="navbar-brand mx-auto">
+        <h4>✅ Accepted by Lot Report <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h4>
+      </span>
+    </div>
+
+    <div>
     <a href="../dashboard.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Back to Dashboard
     </a>
-</div>
+    
+    <a href="?export=csv<?= $selectedProject > 0 ? '&project_id=' . $selectedProject : '' ?>" class="btn btn-success">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+    </a>
 
-<div class="row mb-3">
-    <div class="col-md-12 d-flex justify-content-end gap-2">
-        <!-- CSV Export Button -->
-        <a href="?export=csv<?= $selectedProject > 0 ? '&project_id=' . $selectedProject : '' ?>" class="btn btn-success">
-            <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
-        </a>
-        <button class="btn btn-primary" onclick="printDeliveryReport()">
-            <i class="bi bi-printer"></i> Print
-        </button>
-    </div>
-</div>
+    <button class="btn btn-primary" onclick="printDeliveryReport()">
+        <i class="bi bi-printer"></i> Print
+    </button>
+
+  </div>
+</nav>
 
 <table id="acceptedLotTable" class="table table-bordered shadow-sm">
     <thead class="table-dark">
