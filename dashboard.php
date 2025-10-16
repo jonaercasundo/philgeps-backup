@@ -722,7 +722,7 @@ if ($selectedProject > 0) {
     };
 </script>
 
-<script src="assets/js/charts.js"></script>
+<script src="assets/js/charts.js?v=123451"></script>
 
 <?php require "template/footer.php"; ?>
 
