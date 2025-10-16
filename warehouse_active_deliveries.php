@@ -91,8 +91,8 @@
 </table>
 
 <div class="mt-3">
-    <button class="btn btn-danger" onclick="exportPDF()">Export PDF</button>
-    <button class="btn btn-success" onclick="exportExcel()">Export Excel</button>
+    <!-- <button class="btn btn-danger" onclick="exportPDF()">Export PDF</button> -->
+    <button class="btn btn-success" onclick="exportExcel()">Export CSV</button>
     <a href="warehouse_reports.php" class="btn btn-secondary">
         <i class="bi bi-arrow-left"></i> Back to Warehouse Reports
     </a>
