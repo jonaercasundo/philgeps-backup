@@ -15,9 +15,43 @@ try {
     $page = max(1, intval($_GET['page'] ?? 1));
     $offset = ($page - 1) * $limit;
 
-    // Count total deliveries with status 'delivered'
-    $stmt = $pdo->query("SELECT COUNT(*) FROM deliveries WHERE status = 'delivered'");
-    $total_rows = $stmt->fetchColumn();
+    // Get search parameter
+    $search = trim($_GET['search'] ?? '');
+
+    // Build WHERE clause for search
+    $searchCondition = "d.status = 'delivered' AND bg.dr_no IS NULL";
+    $searchParams = [];
+    
+    if (!empty($search)) {
+        $searchCondition .= " AND (
+            d.dr_no LIKE :search OR
+            p.project_name LIKE :search OR
+            s.school_name LIKE :search OR
+            s.address LIKE :search OR
+            l.lot_name LIKE :search OR
+            k.keystage_num LIKE :search OR
+            k.description LIKE :search
+        )";
+        $searchParams[':search'] = "%$search%";
+    }
+
+    // Count total deliveries with search filter
+    $countQuery = "SELECT COUNT(DISTINCT d.delivery_id) FROM deliveries d
+        LEFT JOIN keystage k ON k.keystage_id = d.keystage_id
+        JOIN lot l ON l.lot_id = d.lot_id
+        JOIN projects p ON d.project_id = p.project_id
+        JOIN school s ON d.school_id = s.school_id
+        LEFT JOIN billing_grouped bg 
+            ON CONVERT(d.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci = 
+            CONVERT(bg.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        WHERE $searchCondition";
+    
+    $countStmt = $pdo->prepare($countQuery);
+    foreach ($searchParams as $key => $value) {
+        $countStmt->bindValue($key, $value);
+    }
+    $countStmt->execute();
+    $total_rows = $countStmt->fetchColumn();
     $total_pages = ceil($total_rows / $limit);
 
     // Fetch deliveries with status 'delivered'
@@ -41,8 +75,8 @@ try {
     JOIN projects p ON d.project_id = p.project_id
     JOIN school s ON d.school_id = s.school_id
     LEFT JOIN billing_grouped bg 
-      ON CONVERT(d.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci = 
-         CONVERT(bg.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        ON CONVERT(d.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci = 
+        CONVERT(bg.dr_no USING utf8mb4) COLLATE utf8mb4_unicode_ci
     LEFT JOIN (
         SELECT 
             x.delivery_id,
@@ -87,11 +121,15 @@ try {
         ) x
         GROUP BY x.delivery_id
     ) pkg_items ON pkg_items.delivery_id = d.delivery_id
-    WHERE d.status = 'delivered'
-      AND bg.dr_no IS NULL
-    ORDER BY d.delivery_date DESC
-    LIMIT :limit OFFSET :offset
-");
+        WHERE $searchCondition
+        AND bg.dr_no IS NULL
+        ORDER BY d.delivery_date DESC
+        LIMIT :limit OFFSET :offset
+    ");
+
+    foreach ($searchParams as $key => $value) {
+        $stmt->bindValue($key, $value);
+    }
 
     $stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
     $stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
@@ -132,6 +170,19 @@ $grouped_summary = getBillingGroupSummary($pdo);
         </div>
 
         <div class="flex-fill d-flex flex-column">
+            <!-- Search Bar for Billing Groups -->
+            <div class="p-3 border-bottom bg-white">
+                <div class="input-group input-group-sm">
+                    <input type="text" 
+                           id="groupSearchInput" 
+                           class="form-control" 
+                           placeholder="Search groups or DR...">
+                    <button class="btn btn-outline-secondary" type="button" id="clearGroupSearch">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            </div>
+
             <!-- Scrollable content area -->
             <div class="flex-fill" style="max-height: 60vh; overflow-y: auto;">
                 <div class="p-3">
@@ -140,38 +191,82 @@ $grouped_summary = getBillingGroupSummary($pdo);
                             <small>No billing groups yet</small>
                         </div>
                     <?php else: ?>
-                        <div class="list-group">
-                            <?php foreach ($grouped_summary as $group): ?>
-                                <div class="list-group-item">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <strong><?= htmlspecialchars($group['group_name']) ?></strong>
-                                            <button class="btn btn-sm btn-outline-primary edit-group-btn" 
-                                                    data-group-name="<?= htmlspecialchars($group['group_name']) ?>"
-                                                    data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                                    title="Edit group name">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                        </div>
-                                        <span class="badge bg-primary"><?= $group['dr_count'] ?></span>
+                       <!-- Billing Groups Accordion -->
+                        <div class="accordion" id="billingGroupsAccordion">
+                        <?php foreach ($grouped_summary as $index => $group): ?>
+                            <?php 
+                            $collapseId = "collapseGroup" . $index;
+                            $headingId = "headingGroup" . $index;
+                            $groupName = htmlspecialchars($group['group_name']);
+                            ?>
+                            
+                            <div class="accordion-item border-0 border-bottom">
+                            <!-- Accordion Header -->
+                            <h2 class="accordion-header" id="<?= $headingId ?>">
+                                <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
+                                    <button class="accordion-button collapsed bg-light fw-semibold flex-grow-1 border-0 shadow-none"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#<?= $collapseId ?>"
+                                            aria-expanded="false"
+                                            aria-controls="<?= $collapseId ?>">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong><?= $groupName ?></strong>
+                                        <span class="badge bg-success"><?= $group['dr_count'] ?></span>
                                     </div>
+                                    </button>
 
-                                    <?php if (!empty($group['dr_numbers'])): ?>
-                                        <div class="table table-sm mb-0">
-                                            <?php foreach ($group['dr_numbers'] as $dr_no): ?>
-                                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                                                    <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
-                                                    <div>
-                                                        <button class="btn btn-danger btn-sm" data-dr="<?= htmlspecialchars($dr_no) ?>">
-                                                            <i class="bi bi-x"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
+                                    <button class="btn btn-sm btn-outline-success ms-2 add-group-btn"
+                                            data-group-name="<?= $groupName ?>"
+                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
+                                            title="Add more to Group">
+                                    <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary ms-2 edit-group-btn"
+                                            data-group-name="<?= $groupName ?>"
+                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
+                                            title="Edit Group">
+                                    <i class="bi bi-pencil-square"></i>
+                                    </button>
                                 </div>
-                            <?php endforeach; ?>
+                            </h2>
+
+                            <!-- Accordion Body -->
+                            <div id="<?= $collapseId ?>" 
+                                class="accordion-collapse collapse" 
+                                aria-labelledby="<?= $headingId ?>" 
+                                data-bs-parent="#billingGroupsAccordion">
+                                <div class="accordion-body bg-white">
+
+                                <?php if (!empty($group['dr_numbers'])): ?>
+                                    <div class="list-group">
+                                    <?php foreach ($group['dr_numbers'] as $dr_no): ?>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
+                                        <button class="btn btn-sm btn-danger delete-group-btn" 
+                                                data-dr="<?= htmlspecialchars($dr_no) ?>"
+                                                title="Remove DR">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <p class="text-muted mb-0"><em>No DRs in this group yet.</em></p>
+                                <?php endif; ?>
+                                </div>
+                            </div>
+                            </div>
+                        <?php endforeach; ?>
+                        </div>
+
+                        <div id="noGroupResults" class="text-center text-muted py-4" style="display: none;">
+                            <i class="bi bi-search" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">No groups or DR numbers found</p>
+                        </div>
+                        <div id="noGroupResults" class="text-center text-muted py-4" style="display: none;">
+                            <i class="bi bi-search" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0">No groups or DR numbers found</p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -201,12 +296,48 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 <div class="d-flex align-items-center mb-3">
                     <h5 class="mb-0 text-dark">Manual Checking Page</h5>
                     <button class="btn btn-success ms-auto" id="addToGroupBtn">
-                        + Add to Group
+                        <i class="bi bi-plus-lg"></i>
                     </button>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="mb-3">
+                    <form method="GET" action="" class="d-flex gap-2">
+                        <input type="text" 
+                               name="search" 
+                               class="form-control" 
+                               placeholder="Search by DR No, Project, or School..." 
+                               value="<?= htmlspecialchars($search) ?>">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                        <?php if (!empty($search)): ?>
+                            <a href="?" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </a>
+                        <?php endif; ?>
+                    </form>
+                    <?php if (!empty($search)): ?>
+                        <small class="text-muted mt-2 d-block">
+                            Found <?= $total_rows ?> result<?= $total_rows != 1 ? 's' : '' ?> for "<?= htmlspecialchars($search) ?>"
+                        </small>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Table - EXACT SAME STRUCTURE as deliveries.php -->
                 <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+                    <?php if (empty($grouped_deliveries)): ?>
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                            <p class="mt-3">
+                                <?php if (!empty($search)): ?>
+                                    No deliveries found matching your search.
+                                <?php else: ?>
+                                    No deliveries available for billing.
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    <?php else: ?>
                     <table class="table table-bordered shadow-sm">
                         <thead class="table-dark">
                             <tr>
@@ -248,9 +379,11 @@ $grouped_summary = getBillingGroupSummary($pdo);
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Pagination -->
+                <?php if ($total_pages > 1): ?>
                 <nav class="mt-3">
                     <ul class="pagination justify-content-center">
                         <!-- Previous -->
@@ -279,6 +412,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
                         </li>
                     </ul>
                 </nav>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -342,6 +476,45 @@ $grouped_summary = getBillingGroupSummary($pdo);
   </div>
 </div>
 
+<!-- Edit Billing Group Modal -->
+<div class="modal fade" id="editGroupModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Edit Billing Group</h5>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="editGroupForm">
+                    <input type="hidden" id="edit_group_id" name="edit_group_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Group Name *</label>
+                        <input type="text" class="form-control" name="edit_group_name" id="edit_group_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Status *</label>
+                        <select class="form-select" name="edit_status" id="edit_status" required>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">DR Numbers in this Group</label>
+                        <div id="edit_dr_list" class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+                            <!-- DR numbers will be listed here -->
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-primary" onclick="updateBillingGroup()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php require "template/footer.php"; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -379,10 +552,10 @@ $grouped_summary = getBillingGroupSummary($pdo);
         modal.show();
     });
 
-    // Handle edit group button click (EDIT mode)
+    // Handle add group button click (Add Populate mode)
     document.addEventListener('click', function(e) {
-        if (e.target.closest('.edit-group-btn')) {
-            const btn = e.target.closest('.edit-group-btn');
+        if (e.target.closest('.add-group-btn')) {
+            const btn = e.target.closest('.add-group-btn');
             const groupName = btn.dataset.groupName;
             const groupId = btn.dataset.groupId;
             
@@ -472,7 +645,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
         });
     });
 
-// Handle remove DR from group - Show delete modal
+    // Handle remove DR from group - Show delete modal
     document.addEventListener('click', function(e) {
         const removeBtn = e.target.closest('.btn-danger[data-dr]');
 
@@ -488,5 +661,176 @@ $grouped_summary = getBillingGroupSummary($pdo);
             deleteModal.show();
         }
     });
+
+    // Billing Groups Search Functionality
+    const groupSearchInput = document.getElementById('groupSearchInput');
+    const clearGroupSearchBtn = document.getElementById('clearGroupSearch');
+    const billingGroupsAccordion = document.getElementById('billingGroupsAccordion');
+    const noGroupResults = document.getElementById('noGroupResults');
+
+    if (groupSearchInput && billingGroupsAccordion) {
+        groupSearchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const accordionItems = billingGroupsAccordion.querySelectorAll('.accordion-item');
+            let visibleCount = 0;
+
+            accordionItems.forEach(item => {
+                // Get group name from the button text
+                const accordionButton = item.querySelector('.accordion-button strong');
+                const groupName = accordionButton ? accordionButton.textContent.toLowerCase() : '';
+                
+                // Get all DR numbers from the list group items
+                const drItems = item.querySelectorAll('.list-group-item span');
+                let drNumbers = '';
+                drItems.forEach(span => {
+                    drNumbers += span.textContent.toLowerCase() + ' ';
+                });
+                
+                // Check if search term matches group name or any DR number
+                if (groupName.includes(searchTerm) || drNumbers.includes(searchTerm)) {
+                    item.style.display = '';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide no results message
+            if (visibleCount === 0 && searchTerm !== '') {
+                billingGroupsAccordion.style.display = 'none';
+                noGroupResults.style.display = 'block';
+            } else {
+                billingGroupsAccordion.style.display = '';
+                noGroupResults.style.display = 'none';
+            }
+
+            // Show/hide clear button
+            clearGroupSearchBtn.style.display = searchTerm ? 'inline-block' : 'none';
+        });
+
+        // Clear search
+        clearGroupSearchBtn.addEventListener('click', function() {
+            groupSearchInput.value = '';
+            groupSearchInput.dispatchEvent(new Event('input'));
+        });
+
+        // Initialize clear button visibility
+        clearGroupSearchBtn.style.display = 'none';
+    }
+
+
+</script>
+
+<script>
+    // Handle edit group button click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-group-btn')) {
+            const btn = e.target.closest('.edit-group-btn');
+            const groupName = btn.dataset.groupName;
+            const groupId = btn.dataset.groupId;
+            
+            // Fetch group details
+            fetch(`script/get_billing_group.php?group_id=${groupId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateEditGroupModal(
+                            data.group.group_id, 
+                            data.group.group_name, 
+                            data.group.status, 
+                            data.group.dr_numbers,
+                            data.group.status_options  // Pass the status options
+                        );
+                        
+                        // Show modal
+                        const modal = new bootstrap.Modal(document.getElementById('editGroupModal'));
+                        modal.show();
+                    } else {
+                        alert('Error loading group details: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading group details');
+                });
+        }
+    });
+        
+    // Update Edit Group Modal
+    function updateEditGroupModal(groupId, groupName, status, drNumbers, statusOptions) {   
+        document.getElementById("edit_group_id").value = groupId;
+        document.getElementById("edit_group_name").value = groupName.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+        
+        // Populate status dropdown with fetched options
+        const statusSelect = document.getElementById("edit_status");
+        statusSelect.innerHTML = '';
+        
+        statusOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option;
+            optionElement.textContent = option.charAt(0).toUpperCase() + option.slice(1); // Capitalize first letter
+            if (option === status) {
+                optionElement.selected = true;
+            }
+            statusSelect.appendChild(optionElement);
+        });
+        
+        // Populate DR numbers list
+        const drListContainer = document.getElementById("edit_dr_list");
+        drListContainer.innerHTML = '';
+        
+        if (drNumbers && drNumbers.length > 0) {
+            const ul = document.createElement('ul');
+            ul.className = 'list-unstyled mb-0';
+            drNumbers.forEach(dr => {
+                const li = document.createElement('li');
+                li.className = 'mb-1';
+                li.innerHTML = `<i class="bi bi-file-text"></i> DR No: ${dr}`;
+                ul.appendChild(li);
+            });
+            drListContainer.appendChild(ul);
+        } else {
+            drListContainer.innerHTML = '<p class="text-muted mb-0"><em>No DRs in this group</em></p>';
+        }
+    }
+
+// Update billing group
+    function updateBillingGroup() {
+        const formData = new FormData(document.getElementById('editGroupForm'));
+        
+        // Disable button during request
+        const saveBtn = event.target;
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        
+        fetch('script/update_billing_group.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    window.location.href = `?toast=${encodeURIComponent(data.message)}&type=success`;
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Changes';
+                }
+            } catch (e) {
+                console.error('Response:', text);
+                alert('Error: Invalid response from server');
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Changes';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + error);
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+        });
+    }
 
 </script>

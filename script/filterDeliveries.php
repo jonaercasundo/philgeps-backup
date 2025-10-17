@@ -193,6 +193,7 @@ foreach ($rows as $r) {
     $grouped[$r['dr_no']]['dr_no'] = $r['dr_no'];
     $grouped[$r['dr_no']]['project_name'] = $r['project_name'];
     $grouped[$r['dr_no']]['school_name'] = $r['school_name'];
+    $grouped[$r['dr_no']]['status'] = $r['status'];
     $grouped[$r['dr_no']]['deliveries'][] = $r;
 }
 echo json_encode([
