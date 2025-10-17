@@ -396,7 +396,10 @@ if ($selectedProject > 0) {
                     <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
                     <?php foreach($allProjects as $project): ?>
                         <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($project['project_name']) ?>
+                           <?php 
+                           $name = htmlspecialchars($project['project_name']);
+                           echo strlen($name) > 30 ? substr($name, 0, 80) . '…' : $name; 
+                           ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
