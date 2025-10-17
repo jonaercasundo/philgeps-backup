@@ -665,18 +665,26 @@ $grouped_summary = getBillingGroupSummary($pdo);
     // Billing Groups Search Functionality
     const groupSearchInput = document.getElementById('groupSearchInput');
     const clearGroupSearchBtn = document.getElementById('clearGroupSearch');
-    const billingGroupsList = document.getElementById('billingGroupsList');
+    const billingGroupsAccordion = document.getElementById('billingGroupsAccordion');
     const noGroupResults = document.getElementById('noGroupResults');
 
-    if (groupSearchInput && billingGroupsList) {
+    if (groupSearchInput && billingGroupsAccordion) {
         groupSearchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
-            const groupItems = billingGroupsList.querySelectorAll('.group-item');
+            const accordionItems = billingGroupsAccordion.querySelectorAll('.accordion-item');
             let visibleCount = 0;
 
-            groupItems.forEach(item => {
-                const groupName = item.dataset.groupName;
-                const drNumbers = item.dataset.drNumbers;
+            accordionItems.forEach(item => {
+                // Get group name from the button text
+                const accordionButton = item.querySelector('.accordion-button strong');
+                const groupName = accordionButton ? accordionButton.textContent.toLowerCase() : '';
+                
+                // Get all DR numbers from the list group items
+                const drItems = item.querySelectorAll('.list-group-item span');
+                let drNumbers = '';
+                drItems.forEach(span => {
+                    drNumbers += span.textContent.toLowerCase() + ' ';
+                });
                 
                 // Check if search term matches group name or any DR number
                 if (groupName.includes(searchTerm) || drNumbers.includes(searchTerm)) {
@@ -689,15 +697,15 @@ $grouped_summary = getBillingGroupSummary($pdo);
 
             // Show/hide no results message
             if (visibleCount === 0 && searchTerm !== '') {
-                billingGroupsList.style.display = 'none';
+                billingGroupsAccordion.style.display = 'none';
                 noGroupResults.style.display = 'block';
             } else {
-                billingGroupsList.style.display = '';
+                billingGroupsAccordion.style.display = '';
                 noGroupResults.style.display = 'none';
             }
 
             // Show/hide clear button
-            clearGroupSearchBtn.style.display = searchTerm ? 'block' : 'none';
+            clearGroupSearchBtn.style.display = searchTerm ? 'inline-block' : 'none';
         });
 
         // Clear search
@@ -709,6 +717,8 @@ $grouped_summary = getBillingGroupSummary($pdo);
         // Initialize clear button visibility
         clearGroupSearchBtn.style.display = 'none';
     }
+
+
 </script>
 
 <script>
