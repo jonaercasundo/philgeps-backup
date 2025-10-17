@@ -17,7 +17,8 @@ const statusColors = {
     'Warehouse': 'rgba(59, 130, 246, 0.9)',   // Blue-600
     'Delivered': 'rgba(16, 185, 129, 0.9)',     // Emerald-500
     'Accepted': 'rgba(139, 92, 246, 0.9)',   // Violet-500
-    'Pending': 'rgba(245, 158, 11, 0.9)'      // Amber-500
+    'Pending': 'rgba(245, 158, 11, 0.9)',     // Amber-500
+    'Not': 'rgba(239, 68, 68, 1)' // Red-500
 };
 
 const primaryColors = [
@@ -37,13 +38,15 @@ const colorVariants = {
         'Warehouse': 'rgba(59, 130, 246, 0.15)',
         'Delivered': 'rgba(16, 185, 129, 0.15)',
         'Accepted': 'rgba(139, 92, 246, 0.15)',
-        'Pending': 'rgba(245, 158, 11, 0.15)'
+        'Pending': 'rgba(245, 158, 11, 0.15)',
+        'Not': 'rgba(239, 68, 68, 0.15)'
     },
     border: {
         'Warehouse': 'rgba(59, 130, 246, 1)',
         'Delivered': 'rgba(16, 185, 129, 1)',
         'Accepted': 'rgba(139, 92, 246, 1)',
-        'Pending': 'rgba(245, 158, 11, 1)'
+        'Pending': 'rgba(245, 158, 11, 1)',
+        'Not': 'rgba(239, 68, 68, 1)'
     }
 };
 
@@ -742,15 +745,15 @@ new Chart(document.getElementById('changesPerWarehouseChart'), {
                   {
                       label: 'Accepted',
                       data: acceptedData,
-                      backgroundColor: '#28a745',
-                      borderColor: '#218838',
+                      backgroundColor: statusColors.Accepted,
+                      borderColor: colorVariants.border.Accepted,
                       borderWidth: 1
                   },
                   {
                       label: 'Not Accepted',
                       data: notAcceptedData,
-                      backgroundColor: '#ffc107',
-                      borderColor: '#e0a800',
+                      backgroundColor: statusColors.Not,
+                      borderColor: colorVariants.border.Not,
                       borderWidth: 1
                   }
               ]
@@ -834,15 +837,15 @@ new Chart(document.getElementById('changesPerWarehouseChart'), {
                   {
                       label: 'Delivered',
                       data: deliveredData,
-                      backgroundColor: '#17a2b8',
-                      borderColor: '#138496',
+                      backgroundColor: statusColors.Delivered,
+                      borderColor: colorVariants.border.Delivered,
                       borderWidth: 1
                   },
                   {
                       label: 'Not Delivered',
                       data: notDeliveredData,
-                      backgroundColor: '#dc3545',
-                      borderColor: '#c82333',
+                      backgroundColor: statusColors.Not,
+                      borderColor: colorVariants.border.Not,
                       borderWidth: 1
                   }
               ]
@@ -926,15 +929,15 @@ new Chart(document.getElementById('changesPerWarehouseChart'), {
                   {
                       label: 'Accepted',
                       data: acceptedData,
-                      backgroundColor: '#ffc107',
-                      borderColor: '#e0a800',
+                      backgroundColor: statusColors.Accepted,
+                      borderColor: colorVariants.border.Accepted,
                       borderWidth: 1
                   },
                   {
                       label: 'Not Accepted',
                       data: notAcceptedData,
-                      backgroundColor: '#6c757d',
-                      borderColor: '#5a6268',
+                      backgroundColor: statusColors.Not,
+                      borderColor: colorVariants.border.Not,
                       borderWidth: 1
                   }
               ]
@@ -1017,15 +1020,15 @@ new Chart(document.getElementById('changesPerWarehouseChart'), {
                   {
                       label: 'Delivered',
                       data: deliveredData,
-                      backgroundColor: '#6f42c1',
-                      borderColor: '#5a3596',
+                      backgroundColor: statusColors.Delivered,
+                      borderColor: colorVariants.border.Delivered,
                       borderWidth: 1
                   },
                   {
                       label: 'Not Delivered',
                       data: notDeliveredData,
-                      backgroundColor: '#dc3545',
-                      borderColor: '#c82333',
+                      backgroundColor: statusColors.Not,
+                      borderColor: colorVariants.border.Not,
                       borderWidth: 1
                   }
               ]
