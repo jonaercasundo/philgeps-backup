@@ -9,7 +9,6 @@ const {
   progressPerRegion,
   progressPerLot,
   inventoryHistoryTrend,
-  topUpdatedItems,
   changesPerWarehouse
 } = phpData;
 
@@ -340,24 +339,24 @@ new Chart(document.getElementById('inventoryHistoryTrendChart'), {
 });
 
 // 🟩 Top Updated Items
-new Chart(document.getElementById('topUpdatedItemsChart'), {
-  type: 'bar',
-  data: {
-    labels: topUpdatedItems.map(r => r.item_name),
-    datasets: [{
-      label: 'Updates',
-      data: topUpdatedItems.map(r => r.update_count),
-      backgroundColor: '#28a745'
-    }]
-  },
-  options: {
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { title: { display: true, text: 'Item' } },
-      y: { beginAtZero: true, title: { display: true, text: 'Updates' } }
-    }
-  }
-});
+// new Chart(document.getElementById('topUpdatedItemsChart'), {
+//   type: 'bar',
+//   data: {
+//     labels: topUpdatedItems.map(r => r.item_name),
+//     datasets: [{
+//       label: 'Updates',
+//       data: topUpdatedItems.map(r => r.update_count),
+//       backgroundColor: '#28a745'
+//     }]
+//   },
+//   options: {
+//     plugins: { legend: { display: false } },
+//     scales: {
+//       x: { title: { display: true, text: 'Item' } },
+//       y: { beginAtZero: true, title: { display: true, text: 'Updates' } }
+//     }
+//   }
+// });
 
 // 🟨 Changes per Warehouse
 new Chart(document.getElementById('changesPerWarehouseChart'), {
@@ -784,35 +783,50 @@ if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {
           const total = r.total || 1;
           return Math.round((r.delivered / total) * 100);
       });
+      const notDeliveredData = phpData.progressPerRegion.map(r => {
+          const total = r.total || 1;
+          return 100 - Math.round((r.delivered / total) * 100);
+      });
 
       new Chart(document.getElementById('deliveredPerRegionChart'), {
           type: 'bar',
           data: {
               labels: regions,
-              datasets: [{
-                  label: 'Delivered %',
-                  data: deliveredData,
-                  backgroundColor: '#17a2b8',
-                  borderColor: '#138496',
-                  borderWidth: 1
-              }]
+              datasets: [
+                  {
+                      label: 'Delivered',
+                      data: deliveredData,
+                      backgroundColor: '#17a2b8',
+                      borderColor: '#138496',
+                      borderWidth: 1
+                  },
+                  {
+                      label: 'Not Delivered',
+                      data: notDeliveredData,
+                      backgroundColor: '#dc3545',
+                      borderColor: '#c82333',
+                      borderWidth: 1
+                  }
+              ]
           },
           options: {
               responsive: true,
               maintainAspectRatio: false,
               scales: {
+                  x: {
+                      stacked: true,
+                      title: {
+                          display: true,
+                          text: 'Regions'
+                      }
+                  },
                   y: {
+                      stacked: true,
                       beginAtZero: true,
                       max: 100,
                       title: {
                           display: true,
                           text: 'Percentage (%)'
-                      }
-                  },
-                  x: {
-                      title: {
-                          display: true,
-                          text: 'Regions'
                       }
                   }
               },
@@ -821,12 +835,34 @@ if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {
                       callbacks: {
                           label: function(context) {
                               const regionData = phpData.progressPerRegion[context.dataIndex];
-                              return `Delivered: ${regionData.delivered}/${regionData.total} (${context.parsed.y}%)`;
+                              if (context.dataset.label === 'Delivered') {
+                                  return `Delivered: ${regionData.delivered}/${regionData.total} (${context.parsed.y}%)`;
+                              } else {
+                                  return `Not Delivered: ${regionData.total - regionData.delivered}/${regionData.total} (${context.parsed.y}%)`;
+                              }
                           }
                       }
                   }
               }
-          }
+          },
+          plugins: [{
+              afterDatasetsDraw: function(chart) {
+                  const ctx = chart.ctx;
+                  chart.data.datasets.forEach((dataset, i) => {
+                      const meta = chart.getDatasetMeta(i);
+                      meta.data.forEach((bar, index) => {
+                          const data = dataset.data[index];
+                          if (data > 0) {
+                              ctx.fillStyle = '#fff';
+                              ctx.font = 'bold 12px Arial';
+                              ctx.textAlign = 'center';
+                              ctx.textBaseline = 'middle';
+                              ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
+                          }
+                      });
+                  });
+              }
+          }]
       });
   } else {
       createEmptyChart(document.getElementById('deliveredPerRegionChart'), 'No region data available');

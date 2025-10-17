@@ -622,7 +622,7 @@ if ($selectedProject > 0) {
   </div>
 
   <!-- Chart: Top Updated Items -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="top-updated-items">
+  <!-- <div class="col-lg-6 mb-4 chart-item" data-chart-id="top-updated-items">
     <div class="card shadow-sm h-80">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0">🏷️ Top Updated Items</h6>
@@ -637,7 +637,7 @@ if ($selectedProject > 0) {
         <canvas id="topUpdatedItemsChart" height="200"></canvas>
       </div>
     </div>
-  </div>
+  </div> -->
 
   <!-- Chart: Inventory Changes per Warehouse -->
   <div class="col-lg-6 mb-4 chart-item" data-chart-id="changes-per-warehouse">
@@ -821,7 +821,6 @@ if ($selectedProject > 0) {
         progressPerRegion: <?= json_encode($progressPerRegion) ?>,
         progressPerLot: <?= json_encode($progressPerLot) ?> ,
         inventoryHistoryTrend: <?= json_encode($inventoryHistoryTrend) ?>,
-        topUpdatedItems: <?= json_encode($topUpdatedItems) ?>,
         changesPerWarehouse: <?= json_encode($changesPerWarehouse) ?>
     };
 </script>
