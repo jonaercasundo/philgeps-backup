@@ -174,7 +174,7 @@ foreach ($ids as $id) {
     }
 
     // PAGE 1 (ARG)
-    $today = date("y-m-d");
+    $today = date("Y-M-d");
 $html .= "
 <div class='label'>
     <div style='text-align:center;'><img class='logoimg' src='$logoBase64'></div>
