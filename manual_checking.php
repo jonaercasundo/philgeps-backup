@@ -191,41 +191,75 @@ $grouped_summary = getBillingGroupSummary($pdo);
                             <small>No billing groups yet</small>
                         </div>
                     <?php else: ?>
-                        <div class="list-group" id="billingGroupsList">
-                            <?php foreach ($grouped_summary as $group): ?>
-                                <div class="list-group-item group-item"
-                                    data-group-name="<?= htmlspecialchars(strtolower($group['group_name'])) ?>"
-                                    data-dr-numbers="<?= htmlspecialchars(strtolower(implode(' ', $group['dr_numbers']))) ?>">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <strong><?= htmlspecialchars($group['group_name']) ?></strong>
-                                            <span class="badge bg-success"><?= $group['dr_count'] ?></span>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-success edit-group-btn"data-group-name="<?= htmlspecialchars($group['group_name']) ?>"
-                                                data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                                    data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                                    title="Add more to Group">
-                                                <i class="bi bi-plus"></i>
-                                        </button>
+                       <!-- Billing Groups Accordion -->
+                        <div class="accordion" id="billingGroupsAccordion">
+                        <?php foreach ($grouped_summary as $index => $group): ?>
+                            <?php 
+                            $collapseId = "collapseGroup" . $index;
+                            $headingId = "headingGroup" . $index;
+                            $groupName = htmlspecialchars($group['group_name']);
+                            ?>
+                            
+                            <div class="accordion-item border-0 border-bottom">
+                            <!-- Accordion Header -->
+                            <h2 class="accordion-header" id="<?= $headingId ?>">
+                                <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
+                                    <button class="accordion-button collapsed bg-light fw-semibold flex-grow-1 border-0 shadow-none"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#<?= $collapseId ?>"
+                                            aria-expanded="false"
+                                            aria-controls="<?= $collapseId ?>">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong><?= $groupName ?></strong>
+                                        <span class="badge bg-success"><?= $group['dr_count'] ?></span>
                                     </div>
+                                    </button>
 
-                                    <?php if (!empty($group['dr_numbers'])): ?>
-                                        <div class="table table-sm mb-0">
-                                            <?php foreach ($group['dr_numbers'] as $dr_no): ?>
-                                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
-                                                    <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
-                                                    <div>
-                                                        <button class="btn btn-sm btn-danger d-inline-flex align-items-center justify-content-center px-2 py-1" data-dr="<?= htmlspecialchars($dr_no) ?>">
-                                                            <i class="bi bi-x"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php endif; ?>
+                                    <button class="btn btn-sm btn-outline-success ms-2 add-group-btn"
+                                            data-group-name="<?= $groupName ?>"
+                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
+                                            title="Add more to Group">
+                                    <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary ms-2 edit-group-btn"
+                                            data-group-name="<?= $groupName ?>"
+                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
+                                            title="Edit Group">
+                                    <i class="bi bi-pencil-square"></i>
+                                    </button>
                                 </div>
-                            <?php endforeach; ?>
+                            </h2>
+
+                            <!-- Accordion Body -->
+                            <div id="<?= $collapseId ?>" 
+                                class="accordion-collapse collapse" 
+                                aria-labelledby="<?= $headingId ?>" 
+                                data-bs-parent="#billingGroupsAccordion">
+                                <div class="accordion-body bg-white">
+
+                                <?php if (!empty($group['dr_numbers'])): ?>
+                                    <div class="list-group">
+                                    <?php foreach ($group['dr_numbers'] as $dr_no): ?>
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>DR No: <?= htmlspecialchars($dr_no) ?></span>
+                                        <button class="btn btn-sm btn-danger delete-group-btn" 
+                                                data-dr="<?= htmlspecialchars($dr_no) ?>"
+                                                title="Remove DR">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <p class="text-muted mb-0"><em>No DRs in this group yet.</em></p>
+                                <?php endif; ?>
+                                </div>
+                            </div>
+                            </div>
+                        <?php endforeach; ?>
                         </div>
+
                         <div id="noGroupResults" class="text-center text-muted py-4" style="display: none;">
                             <i class="bi bi-search" style="font-size: 2rem;"></i>
                             <p class="mt-2 mb-0">No groups or DR numbers found</p>
@@ -262,7 +296,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 <div class="d-flex align-items-center mb-3">
                     <h5 class="mb-0 text-dark">Manual Checking Page</h5>
                     <button class="btn btn-success ms-auto" id="addToGroupBtn">
-                        + Add to Group
+                        <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>
 
@@ -275,7 +309,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
                                placeholder="Search by DR No, Project, or School..." 
                                value="<?= htmlspecialchars($search) ?>">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search"></i> Search
+                            <i class="bi bi-search"></i>
                         </button>
                         <?php if (!empty($search)): ?>
                             <a href="?" class="btn btn-secondary">
@@ -481,8 +515,8 @@ $grouped_summary = getBillingGroupSummary($pdo);
 
     // Handle edit group button click (EDIT mode)
     document.addEventListener('click', function(e) {
-        if (e.target.closest('.edit-group-btn')) {
-            const btn = e.target.closest('.edit-group-btn');
+        if (e.target.closest('.add-group-btn')) {
+            const btn = e.target.closest('.add-group-btn');
             const groupName = btn.dataset.groupName;
             const groupId = btn.dataset.groupId;
             
