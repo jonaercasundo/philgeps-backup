@@ -476,6 +476,45 @@ $grouped_summary = getBillingGroupSummary($pdo);
   </div>
 </div>
 
+<!-- Edit Billing Group Modal -->
+<div class="modal fade" id="editGroupModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Edit Billing Group</h5>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="editGroupForm">
+                    <input type="hidden" id="edit_group_id" name="edit_group_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Group Name *</label>
+                        <input type="text" class="form-control" name="edit_group_name" id="edit_group_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Status *</label>
+                        <select class="form-select" name="edit_status" id="edit_status" required>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">DR Numbers in this Group</label>
+                        <div id="edit_dr_list" class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+                            <!-- DR numbers will be listed here -->
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-primary" onclick="updateBillingGroup()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php require "template/footer.php"; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -513,7 +552,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
         modal.show();
     });
 
-    // Handle edit group button click (EDIT mode)
+    // Handle add group button click (Add Populate mode)
     document.addEventListener('click', function(e) {
         if (e.target.closest('.add-group-btn')) {
             const btn = e.target.closest('.add-group-btn');
@@ -670,4 +709,118 @@ $grouped_summary = getBillingGroupSummary($pdo);
         // Initialize clear button visibility
         clearGroupSearchBtn.style.display = 'none';
     }
+</script>
+
+<script>
+    // Handle edit group button click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.edit-group-btn')) {
+            const btn = e.target.closest('.edit-group-btn');
+            const groupName = btn.dataset.groupName;
+            const groupId = btn.dataset.groupId;
+            
+            // Fetch group details
+            fetch(`script/get_billing_group.php?group_id=${groupId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateEditGroupModal(
+                            data.group.group_id, 
+                            data.group.group_name, 
+                            data.group.status, 
+                            data.group.dr_numbers,
+                            data.group.status_options  // Pass the status options
+                        );
+                        
+                        // Show modal
+                        const modal = new bootstrap.Modal(document.getElementById('editGroupModal'));
+                        modal.show();
+                    } else {
+                        alert('Error loading group details: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading group details');
+                });
+        }
+    });
+        
+    // Update Edit Group Modal
+    function updateEditGroupModal(groupId, groupName, status, drNumbers, statusOptions) {   
+        document.getElementById("edit_group_id").value = groupId;
+        document.getElementById("edit_group_name").value = groupName.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+        
+        // Populate status dropdown with fetched options
+        const statusSelect = document.getElementById("edit_status");
+        statusSelect.innerHTML = '';
+        
+        statusOptions.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option;
+            optionElement.textContent = option.charAt(0).toUpperCase() + option.slice(1); // Capitalize first letter
+            if (option === status) {
+                optionElement.selected = true;
+            }
+            statusSelect.appendChild(optionElement);
+        });
+        
+        // Populate DR numbers list
+        const drListContainer = document.getElementById("edit_dr_list");
+        drListContainer.innerHTML = '';
+        
+        if (drNumbers && drNumbers.length > 0) {
+            const ul = document.createElement('ul');
+            ul.className = 'list-unstyled mb-0';
+            drNumbers.forEach(dr => {
+                const li = document.createElement('li');
+                li.className = 'mb-1';
+                li.innerHTML = `<i class="bi bi-file-text"></i> DR No: ${dr}`;
+                ul.appendChild(li);
+            });
+            drListContainer.appendChild(ul);
+        } else {
+            drListContainer.innerHTML = '<p class="text-muted mb-0"><em>No DRs in this group</em></p>';
+        }
+    }
+
+// Update billing group
+    function updateBillingGroup() {
+        const formData = new FormData(document.getElementById('editGroupForm'));
+        
+        // Disable button during request
+        const saveBtn = event.target;
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        
+        fetch('script/update_billing_group.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    window.location.href = `?toast=${encodeURIComponent(data.message)}&type=success`;
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save Changes';
+                }
+            } catch (e) {
+                console.error('Response:', text);
+                alert('Error: Invalid response from server');
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Changes';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error: ' + error);
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+        });
+    }
+
 </script>
