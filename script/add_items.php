@@ -57,22 +57,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Match 2D (HxW) or 3D (HxWxL) formats
             if (preg_match('/^([\d\.]+)x([\d\.]+)x([\d\.]+)$/', $dimStr, $m)) {
-                $h = (float)$m[1];
+                $l = (float)$m[1];
                 $w = (float)$m[2];
-                $l = (float)$m[3];
-                $dimKey = "{$h}x{$w}x{$l}";
+                $h= (float)$m[3];
+                $dimKey = "{$l}x{$w}x{$h}";
             } elseif (preg_match('/^([\d\.]+)x([\d\.]+)$/', $dimStr, $m)) {
                 // If only 2 dimensions are given, assume L = 0
-                $h = (float)$m[1];
+                $l = (float)$m[1];
                 $w = (float)$m[2];
-                $l = 0;
-                $dimKey = "{$h}x{$w}x{$l}";
+                $h = 0;
+                $dimKey = "{$l}x{$w}x{$h}";
             } else {
                 // Invalid or missing dimensions
-                $h = $w = $l = 0;
+                $l = $w = $h = 0;
                 $dimKey = "0x0x0";
             }
-
 
             $lastDim = $dimKey;
 
