@@ -210,13 +210,16 @@ $html .= "
 </div>
 <div style='page-break-after:always;'></div>";
     // PAGE 2 (QR Codes)
-    $html .= "<table width='100%' cellspacing='0' cellpadding='10'>";
+    $html .= "
+    <div class='label'>
+        <div style='text-align:right;'><small>Date: $today</small><br><small>AR: ".$delivery['dr_no']."</small>
+    </div>
+    <table width='100%' cellspacing='0' cellpadding='10'>";
     $col = 0;
     foreach ($allQrs as $q) {
         if ($col % 2 == 0) $html .= "<tr>";
         $html .= "
-        <div class='label'>
-    <div style='text-align:right;'><small>Date: $today</small><br><small>AR: ".$delivery['dr_no']."</small></div>
+
             <td align='center' style='border:1px solid #000; padding:10px;'>
                 <img src='{$q['qr']}'><br>
                 <small>{$q['orderId']}</small><br>
