@@ -39,20 +39,27 @@ $logoPath = __DIR__ . "/assets/uploads/logo/logo.webp";
 $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
 
 
-$html = "<style>
-@page { margin: 20mm; }
-body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
-.label { width: 100%; height:100%; }
-.footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; padding-top: 5px; }
-.header-table { padding-bottom: 8px; }
-.order-info, .project-text { font-size: 13px; font-weight: bold; }
-.packing-list { padding-top: 6px; font-size: 11px; }
-table.packing-list { border-collapse: collapse; width: 100%; font-size: 12px; }
-table.packing-list th, table.packing-list td { border: 1px solid #000; padding: 6px 8px; }
-.logoimg { max-width: 250px; height: 80px; }
-.qrbox img { width: 120px; height: auto; margin-bottom: 5px; }
-.qrbox small { display: block; font-size: 12px; font-weight: bold; }
-</style>";
+$html = "<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
+
+    <style>
+    @page { margin: 20mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
+    .label { width: 100%; height:100%; }
+    .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; padding-top: 5px; }
+    .header-table { padding-bottom: 8px; }
+    .order-info, .project-text { font-size: 13px; font-weight: bold; }
+    .packing-list { padding-top: 6px; font-size: 11px; }
+    table.packing-list { border-collapse: collapse; width: 100%; font-size: 12px; }
+    table.packing-list th, table.packing-list td { border: 1px solid #000; padding: 6px 8px; }
+    .logoimg { max-width: 250px; height: 80px; }
+    .qrbox img { width: 120px; height: auto; margin-bottom: 5px; }
+    .qrbox small { display: block; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>";
 
 foreach ($ids as $id) {
     $id = intval(trim($id));
@@ -82,7 +89,7 @@ foreach ($ids as $id) {
     foreach ($deliveries as $delivery) {
         // Get package data
         $stmt = $pdo->prepare("
-            SELECT p.package_id, pc.item_id, pc.qty, i.item_name
+            SELECT p.package_id, p.length, p.width, p.height, pc.item_id, pc.qty, i.item_name
             FROM package p
             JOIN package_content pc ON pc.package_id = p.package_id
             JOIN item i ON i.item_id = pc.item_id
@@ -113,6 +120,15 @@ foreach ($ids as $id) {
 
         $int = 1;
         foreach ($package_status as $package) {
+            // Get package dimensions
+            $stmt = $pdo->prepare("
+                SELECT length, width, height
+                FROM package
+                WHERE package_id = :package_id
+            ");
+            $stmt->execute([':package_id' => $package['package_id']]);
+            $dimensions = $stmt->fetch(PDO::FETCH_ASSOC);
+
             // Items for this package
             $stmt = $pdo->prepare("
                 SELECT pc.qty, i.item_name
@@ -125,6 +141,7 @@ foreach ($ids as $id) {
 
             $group['packages'][] = [
                 'package_num' => "Package $int of $package_count",
+                'dimensions'  => $dimensions,
                 'items'       => $package_items
             ];
 
@@ -158,15 +175,28 @@ foreach ($ids as $id) {
                             <div class='packing-list'>
                                 <table class='packing-list'>";
         foreach ($group['packages'] as $pkg) {
+            // Format dimensions
+            $dimensionText = '';
+            if ($pkg['dimensions'] && isset($pkg['dimensions']['length'])) {
+                $l = $pkg['dimensions']['length'] ?? 'N/A';
+                $w = $pkg['dimensions']['width'] ?? 'N/A';
+                $h = $pkg['dimensions']['height'] ?? 'N/A';
+                $dimensionText = "{$l} × {$w} × {$h}";
+            } else {
+                $dimensionText = "Dimensions: N/A";
+            }
             $itemHolder .= "<tr>
-                                <td colspan='2' style='font-weight:bold;background:#f0f0f0'>
+                                <td style='width:50%;'>
                                     <small>{$pkg['package_num']}</small>
+                                </td>
+                                <td style='width:50%; text-align:center;'>
+                                    <small class='dimension-text'>{$dimensionText}</small>
                                 </td>
                             </tr>";
             foreach ($pkg['items'] as $item) {
                 $itemHolder .= "<tr>
-                                    <td>{$item['item_name']}</td>
-                                    <td width='20px' style='text-align:center;'>".$item['qty']."</td>
+                                    <td  style='width:80%;'>" . htmlspecialchars($item['item_name'], ENT_QUOTES, 'UTF-8') . "</td>
+                                    <td  style='width:20%; text-align:center;'>".$item['qty']."</td>
                                 </tr>";
             }
         }
