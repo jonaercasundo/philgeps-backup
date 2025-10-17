@@ -188,7 +188,7 @@ $html .= "
     <h3 style='border-top:2px solid #000; padding-top:10px; text-align:center;'>ACKNOWLEDGEMENT OF RECEIPT OF GOODS</h3>
     <p>
         The undersigned hereby acknowledges the receipt of goods pursuant to Contract No. {$first['contract_no']} 
-        (LOT {$first['lot_name']}) between METRO MOBILIA CORPORATION and DEPARTMENT OF EDUCATION-CENTRAL OFFICE.<br><br>
+        (LOT {$first['lot_name']}) between METRO MOBILIA CORPORATION and DEPARTMENT OF EDUCATION-BUREAU OF LEARNING RESOURCES-CEBU (BLR-CEBU).<br><br>
         School Destination: {$first['address']}<br>
         School ID: {$first['school_id']}
     </p>
