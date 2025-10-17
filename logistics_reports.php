@@ -41,8 +41,8 @@
 </table>
 
 <div class="mt-3">
-  <button class="btn btn-danger" onclick="exportPDF()">Export PDF</button>
-  <button class="btn btn-success" onclick="exportExcel()">Export Excel</button>
+  <!-- <button class="btn btn-danger" onclick="exportPDF()">Export PDF</button> -->
+  <button class="btn btn-success" onclick="exportExcel()">Export CSV</button>
 </div>
 
 <?php require "template/footer.php"; ?>

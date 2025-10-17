@@ -60,6 +60,8 @@ function getFilters() {
                     </td>
                     <td colspan ="1">
                         <button class="btn btn-secondary mb-1" onclick="generateARs()"><i class="bi bi-qr-code fs-4"></i></button>
+                        ${group.status === 'delivered' ? `
+                                <a class="btn btn-success mb-1" href="manual_checking.php" target="_blank"><i class="bi bi-clipboard-check fs-4"></i></a>` : ""}
                     </td>
                 </tr>
                 ${group.deliveries.map(d => `
@@ -83,8 +85,6 @@ function getFilters() {
                                 <i class="bi bi-pencil-square fs-4"></i>
                             </button>
                             ${d.has_photos ? `<a class="btn btn-primary mb-1" href="deliveries_details.php?id=${d.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
-                            ${d.status === 'delivered' ? `
-                                <a class="btn btn-success mb-1" href="manual_checking.php" target="_blank"><i class="bi bi-clipboard-check fs-4"></i></a>` : ""}
                         </td>
                     </tr>
                 `).join("")}
