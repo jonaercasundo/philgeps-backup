@@ -15,10 +15,10 @@ const {
 // Modern Professional Color Scheme
 const statusColors = {
     'Warehouse': 'rgba(59, 130, 246, 0.9)',   // Blue-600
-    'Delivered': 'rgba(16, 185, 129, 0.9)',     // Emerald-500
-    'Accepted': 'rgba(139, 92, 246, 0.9)',   // Violet-500
-    'Pending': 'rgba(245, 158, 11, 0.9)',     // Amber-500
-    'Not': 'rgba(239, 68, 68, 1)' // Red-500
+    'Delivered': '#198754',     // Emerald-500
+    'Accepted': '#fbc02d',   // Violet-500
+    'Pending': '#dc3545',     // Amber-500
+    'Not': 'rgba(200, 122, 122, 0.85)' // Red-500
 };
 
 const primaryColors = [
@@ -34,20 +34,20 @@ const primaryColors = [
 
 // Professional color variants
 const colorVariants = {
-    light: {
-        'Warehouse': 'rgba(59, 130, 246, 0.15)',
-        'Delivered': 'rgba(16, 185, 129, 0.15)',
-        'Accepted': 'rgba(139, 92, 246, 0.15)',
-        'Pending': 'rgba(245, 158, 11, 0.15)',
-        'Not': 'rgba(239, 68, 68, 0.15)'
-    },
-    border: {
-        'Warehouse': 'rgba(59, 130, 246, 1)',
-        'Delivered': 'rgba(16, 185, 129, 1)',
-        'Accepted': 'rgba(139, 92, 246, 1)',
-        'Pending': 'rgba(245, 158, 11, 1)',
-        'Not': 'rgba(239, 68, 68, 1)'
-    }
+  light: {
+    'Warehouse': 'rgba(59, 130, 246, 0.15)',  // light blue tint
+    'Delivered': 'rgba(25, 135, 84, 0.15)',   // light green tint
+    'Accepted': 'rgba(251, 192, 45, 0.15)',   // light yellow tint
+    'Pending': 'rgba(220, 53, 69, 0.15)',     // light red tint
+    'Not': 'rgba(146, 33, 33, 0.15)'          // light dark-red tint
+  },
+  border: {
+    'Warehouse': 'rgba(59, 130, 246, 1)',     // strong blue
+    'Delivered': 'rgba(25, 135, 84, 1)',      // strong green
+    'Accepted': 'rgba(251, 192, 45, 1)',      // strong yellow
+    'Pending': 'rgba(220, 53, 69, 1)',        // strong red
+    'Not': 'rgba(146, 33, 33, 1)'             // strong dark-red
+  }
 };
 
 // Group inventory data
@@ -306,39 +306,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 🎯 Inventory History (Daily Changes)
 new Chart(document.getElementById('inventoryHistoryTrendChart'), {
-  type: 'line',
-  data: {
-    labels: inventoryHistoryTrend.map(r => r.change_date), // e.g. ['2025-01-01', '2025-01-02', ...]
-    datasets: [{
-      label: 'Inventory Changes',
-      data: inventoryHistoryTrend.map(r => r.total_changes),
-      borderColor: '#007bff',
-      backgroundColor: 'rgba(0, 123, 255, 0.2)',
-      borderWidth: 2,
-      fill: true,
-      tension: 0.3, // smooth curve
-      pointRadius: 2
-    }]
-  },
-  options: {
-    plugins: {
-      legend: { display: false },
-      title: {
-        display: true,
-        text: 'Inventory History (Daily Changes)'
-      }
+    type: 'line',
+    data: {
+        labels: inventoryHistoryTrend.map(r => r.change_date), // e.g. ['2025-01-01', '2025-01-02', ...]
+        datasets: [{
+        label: 'Inventory Changes',
+        data: inventoryHistoryTrend.map(r => r.total_changes),
+        borderColor: '#007bff',
+        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3, // smooth curve
+        pointRadius: 2
+        }]
     },
-    scales: {
-      x: {
-        title: { display: true, text: 'Date' },
-        ticks: { maxRotation: 45, minRotation: 45 }
-      },
-      y: {
-        beginAtZero: true,
-        title: { display: true, text: 'Total Changes' }
-      }
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+        legend: { display: false },
+        title: {
+            display: true,
+            text: 'Inventory History (Daily Changes)'
+        }
+        },
+        scales: {
+        x: {
+            title: { display: true, text: 'Date' },
+            ticks: { maxRotation: 45, minRotation: 45 }
+        },
+        y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Total Changes' }
+        }
+        }
     }
-  }
 });
 
 // 🟩 Top Updated Items
@@ -363,22 +365,22 @@ new Chart(document.getElementById('inventoryHistoryTrendChart'), {
 
 // 🟨 Changes per Warehouse
 new Chart(document.getElementById('changesPerWarehouseChart'), {
-  type: 'bar',
-  data: {
+    type: 'bar',
+    data: {
     labels: changesPerWarehouse.map(r => r.warehouse_name),
     datasets: [{
-      label: 'Changes',
-      data: changesPerWarehouse.map(r => r.total_changes),
-      backgroundColor: '#ffc107'
-    }]
-  },
-  options: {
+        label: 'Changes',
+        data: changesPerWarehouse.map(r => r.total_changes),
+        backgroundColor: '#ffc107'
+        }]
+    },
+    options: {
     plugins: { legend: { display: false } },
     scales: {
-      x: { title: { display: true, text: 'Warehouse' } },
-      y: { beginAtZero: true, title: { display: true, text: 'Changes' } }
+        x: { title: { display: true, text: 'Warehouse' } },
+        y: { beginAtZero: true, title: { display: true, text: 'Changes' } }
+        }
     }
-  }
 });
   // 3. Today's User Activity (Doughnut)
   // if (todayUserActivity.length > 0) {
@@ -520,576 +522,576 @@ new Chart(document.getElementById('changesPerWarehouseChart'), {
   // }
 
   // Inventory by Warehouse - Separate Charts
-  if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {
-      const container = document.getElementById('warehouseChartsContainer');
-      
-      // Group items by warehouse
-      const warehouseGroups = {};
-      phpData.inventoryByWarehouse.forEach(r => {
-          if (!warehouseGroups[r.warehouse_name]) {
-              warehouseGroups[r.warehouse_name] = [];
-          }
-          warehouseGroups[r.warehouse_name].push(r);
-      });
-      
-      const containerWarehouse = document.querySelector('#warehouseChartsContainer');
-      containerWarehouse.innerHTML = ''; // clear before generating
+if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {
+    const container = document.getElementById('warehouseChartsContainer');
+    
+    // Group items by warehouse
+    const warehouseGroups = {};
+    phpData.inventoryByWarehouse.forEach(r => {
+        if (!warehouseGroups[r.warehouse_name]) {
+            warehouseGroups[r.warehouse_name] = [];
+        }
+        warehouseGroups[r.warehouse_name].push(r);
+    });
+    
+    const containerWarehouse = document.querySelector('#warehouseChartsContainer');
+    containerWarehouse.innerHTML = ''; // clear before generating
 
-      let row = null;
-      const warehouseNames = Object.keys(warehouseGroups);
-      const totalCharts = warehouseNames.length + 1; // +1 for the Inventory Quantity chart
+    let row = null;
+    const warehouseNames = Object.keys(warehouseGroups);
+    const totalCharts = warehouseNames.length + 1; // +1 for the Inventory Quantity chart
 
-      warehouseNames.forEach((warehouseName, index) => {
-          const items = warehouseGroups[warehouseName];
-          const itemCount = items.length;
-          const totalQty = items.reduce((sum, item) => sum + parseInt(item.qty), 0);
+    warehouseNames.forEach((warehouseName, index) => {
+        const items = warehouseGroups[warehouseName];
+        const itemCount = items.length;
+        const totalQty = items.reduce((sum, item) => sum + parseInt(item.qty), 0);
 
-          // Sort items by quantity (descending)
-          items.sort((a, b) => parseInt(b.qty) - parseInt(a.qty));
+        // Sort items by quantity (descending)
+        items.sort((a, b) => parseInt(b.qty) - parseInt(a.qty));
 
-          // Create a new row for every 2 cards
-          if (index % 2 === 0) {
-              row = document.createElement('div');
-              row.className = 'row';
-              containerWarehouse.appendChild(row);
-          }
+        // Create a new row for every 2 cards
+        if (index % 2 === 0) {
+            row = document.createElement('div');
+            row.className = 'row';
+            containerWarehouse.appendChild(row);
+        }
 
-          const col = document.createElement('div');
-          col.className = 'col-lg-6 col-md-6 mb-3';
-          col.innerHTML = `
-              <div class="card h-100">
-                  <div class="card-header bg-light">
-                      <h6 class="mb-1">${warehouseName}</h6>
-                      <small class="text-muted">${itemCount} items | Total: ${totalQty} units</small>
-                  </div>
-                  <div class="card-body" style="height: 400px; overflow-y: auto;">
-                      <canvas id="warehouseChart_${index}" width="600" height="${Math.max(400, items.length * 20)}"></canvas>
-                  </div>
-              </div>
-          `;
+        const col = document.createElement('div');
+        col.className = 'col-lg-6 col-md-6 mb-3';
+        col.innerHTML = `
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h6 class="mb-1">${warehouseName}</h6>
+                    <small class="text-muted">${itemCount} items | Total: ${totalQty} units</small>
+                </div>
+                <div class="card-body" style="height: 400px; overflow-y: auto;">
+                    <canvas id="warehouseChart_${index}" width="600" height="${Math.max(400, items.length * 20)}"></canvas>
+                </div>
+            </div>
+        `;
 
-          row.appendChild(col);
+        row.appendChild(col);
 
           // Initialize chart
-          new Chart(document.getElementById(`warehouseChart_${index}`), {
-              type: 'bar',
-              data: {
-                  labels: items.map(item => item.item_name),
-                  datasets: [{
-                      label: 'Quantity',
-                      data: items.map(item => parseInt(item.qty)),
-                      backgroundColor: items.map((_, i) => primaryColors[i % primaryColors.length]),
-                      borderColor: items.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
-                      borderWidth: 1.5,
-                      borderRadius: 4,
-                      borderSkipped: false
-                  }]
-              },
-              options: {
-                  indexAxis: 'y',
-                  responsive: false,
-                  maintainAspectRatio: false,
-                  plugins: {
-                      legend: { display: false },
-                      tooltip: {
-                          backgroundColor: '#fff',
-                          titleColor: '#333',
-                          bodyColor: '#666',
-                          borderColor: '#ddd',
-                          borderWidth: 2,
-                          padding: 12,
-                          titleFont: { size: 13, weight: 'bold' },
-                          bodyFont: { size: 12 },
-                          callbacks: {
-                              label: function(context) {
-                                  const item = items[context.dataIndex];
-                                  const percentage = totalQty > 0 ? ((item.qty / totalQty) * 100).toFixed(1) : 0;
-                                  return `${parseInt(item.qty).toLocaleString()} ${item.unit} (${percentage}%)`;
-                              }
-                          }
-                      }
-                  },
-                  scales: {
-                      x: {
-                          beginAtZero: true,
-                          title: { display: true, text: 'Quantity' },
-                          grid: { color: '#eee' },
-                          ticks: { precision: 0 }
-                      },
-                      y: {
-                          title: { display: false },
-                          grid: { display: false },
-                          ticks: {
-                              autoSkip: false,
-                              font: { size: 11 }
-                          }
-                      }
-                  }
-              }
-          });
-      });
+        new Chart(document.getElementById(`warehouseChart_${index}`), {
+            type: 'bar',
+            data: {
+                labels: items.map(item => item.item_name),
+                datasets: [{
+                    label: 'Quantity',
+                    data: items.map(item => parseInt(item.qty)),
+                    backgroundColor: items.map((_, i) => primaryColors[i % primaryColors.length]),
+                    borderColor: items.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+                    borderWidth: 1.5,
+                    borderRadius: 4,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: false,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#fff',
+                        titleColor: '#333',
+                        bodyColor: '#666',
+                        borderColor: '#ddd',
+                        borderWidth: 2,
+                        padding: 12,
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            label: function(context) {
+                                const item = items[context.dataIndex];
+                                const percentage = totalQty > 0 ? ((item.qty / totalQty) * 100).toFixed(1) : 0;
+                                return `${parseInt(item.qty).toLocaleString()} ${item.unit} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Quantity' },
+                        grid: { color: '#eee' },
+                        ticks: { precision: 0 }
+                    },
+                    y: {
+                        title: { display: false },
+                        grid: { display: false },
+                        ticks: {
+                            autoSkip: false,
+                            font: { size: 11 }
+                        }
+                    }
+                }
+            }
+        });
+    });
 
-      // ADD INVENTORY QUANTITY CHART AT THE END
-      const chartIndex = warehouseNames.length;
-      
-      // Create a new row if the last warehouse chart was the 2nd in a row (even index)
-      if (chartIndex % 2 === 0) {
-          row = document.createElement('div');
-          row.className = 'row';
-          containerWarehouse.appendChild(row);
-      }
+    // ADD INVENTORY QUANTITY CHART AT THE END
+    const chartIndex = warehouseNames.length;
+    
+    // Create a new row if the last warehouse chart was the 2nd in a row (even index)
+    if (chartIndex % 2 === 0) {
+        row = document.createElement('div');
+        row.className = 'row';
+        containerWarehouse.appendChild(row);
+    }
 
-      // Group by item and calculate totals for overall inventory
-      const itemTotals = {};
-      inventoryData.forEach(item => {
-          itemTotals[item.item_name] = (itemTotals[item.item_name] || 0) + parseInt(item.total_qty);
-      });
+    // Group by item and calculate totals for overall inventory
+    const itemTotals = {};
+    inventoryData.forEach(item => {
+        itemTotals[item.item_name] = (itemTotals[item.item_name] || 0) + parseInt(item.total_qty);
+    });
 
-      const labels = Object.keys(itemTotals);
-      const totals = Object.values(itemTotals);
+    const labels = Object.keys(itemTotals);
+    const totals = Object.values(itemTotals);
 
-      const col = document.createElement('div');
-      col.className = 'col-lg-6 col-md-6 mb-3';
-      col.innerHTML = `
-          <div class="card h-100">
-              <div class="card-header bg-light">
-                  <h6 class="mb-1">📦 Overall Inventory Quantity</h6>
-                  <small class="text-muted">${labels.length} items total</small>
-              </div>
-              <div class="card-body" style="height: 400px; overflow-y: auto;">
-                  <canvas id="overallInventoryChart" width="600" height="${Math.max(400, labels.length * 20)}"></canvas>
-              </div>
-          </div>
-      `;
+    const col = document.createElement('div');
+    col.className = 'col-lg-6 col-md-6 mb-3';
+    col.innerHTML = `
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h6 class="mb-1">📦 Overall Inventory Quantity</h6>
+                <small class="text-muted">${labels.length} items total</small>
+            </div>
+            <div class="card-body" style="height: 400px; overflow-y: auto;">
+                <canvas id="overallInventoryChart" width="600" height="${Math.max(400, labels.length * 20)}"></canvas>
+            </div>
+        </div>
+    `;
 
-      row.appendChild(col);
+    row.appendChild(col);
 
-      // Initialize overall inventory chart
-      new Chart(document.getElementById('overallInventoryChart'), {
-          type: 'bar',
-          data: {
-              labels: labels,
-              datasets: [{
-                  label: 'Total Quantity',
-                  data: totals,
-                  backgroundColor: labels.map((_, i) => primaryColors[i % primaryColors.length]),
-                  borderColor: labels.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
-                  borderWidth: 1.5,
-                  borderRadius: 4,
-                  borderSkipped: false
-              }]
-          },
-          options: {
-              indexAxis: 'y',
-              responsive: false,
-              maintainAspectRatio: false,
-              plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                      backgroundColor: '#fff',
-                      titleColor: '#333',
-                      bodyColor: '#666',
-                      borderColor: '#ddd',
-                      borderWidth: 2,
-                      padding: 12,
-                      titleFont: { size: 13, weight: 'bold' },
-                      bodyFont: { size: 12 },
-                      callbacks: {
-                          label: function(context) {
-                              return `Total: ${context.parsed.x.toLocaleString()}`;
-                          }
-                      }
-                  }
-              },
-              scales: {
-                  x: {
-                      beginAtZero: true,
-                      title: { display: true, text: 'Total Quantity' },
-                      grid: { color: '#eee' },
-                      ticks: { precision: 0 }
-                  },
-                  y: {
-                      title: { display: false },
-                      grid: { display: false },
-                      ticks: {
-                          autoSkip: false,
-                          font: { size: 11 }
-                      }
-                  }
-              }
-          }
-      });
+    // Initialize overall inventory chart
+    new Chart(document.getElementById('overallInventoryChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Quantity',
+                data: totals,
+                backgroundColor: labels.map((_, i) => primaryColors[i % primaryColors.length]),
+                borderColor: labels.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+                borderWidth: 1.5,
+                borderRadius: 4,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: false,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#fff',
+                    titleColor: '#333',
+                    bodyColor: '#666',
+                    borderColor: '#ddd',
+                    borderWidth: 2,
+                    padding: 12,
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    callbacks: {
+                        label: function(context) {
+                            return `Total: ${context.parsed.x.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Total Quantity' },
+                    grid: { color: '#eee' },
+                    ticks: { precision: 0 }
+                },
+                y: {
+                    title: { display: false },
+                    grid: { display: false },
+                    ticks: {
+                        autoSkip: false,
+                        font: { size: 11 }
+                    }
+                }
+            }
+        }
+    });
 
-  } else {
-      const containerWarehouse = document.getElementById('warehouseChartsContainer');
-      containerWarehouse.innerHTML = '<div class="col-12 text-center text-muted py-5"><p>No inventory data available</p></div>';
-  }
+} else {
+    const containerWarehouse = document.getElementById('warehouseChartsContainer');
+    containerWarehouse.innerHTML = '<div class="col-12 text-center text-muted py-5"><p>No inventory data available</p></div>';
+}
   
   // Progress by Region - Accepted Percentage
-  if (phpData.progressPerRegion && phpData.progressPerRegion.length > 0) {
-      const regions = phpData.progressPerRegion.map(r => r.region);
-      const acceptedData = phpData.progressPerRegion.map(r => {
-          const total = r.total || 1;
-          return Math.round((r.accepted / total) * 100);
-      });
-      const notAcceptedData = phpData.progressPerRegion.map(r => {
-          const total = r.total || 1;
-          return 100 - Math.round((r.accepted / total) * 100);
-      });
+if (phpData.progressPerRegion && phpData.progressPerRegion.length > 0) {
+    const regions = phpData.progressPerRegion.map(r => r.region);
+    const acceptedData = phpData.progressPerRegion.map(r => {
+        const total = r.total || 1;
+        return Math.round((r.accepted / total) * 100);
+    });
+    const notAcceptedData = phpData.progressPerRegion.map(r => {
+        const total = r.total || 1;
+        return 100 - Math.round((r.accepted / total) * 100);
+    });
 
-      new Chart(document.getElementById('acceptedPerRegionChart'), {
-          type: 'bar',
-          data: {
-              labels: regions,
-              datasets: [
-                  {
-                      label: 'Accepted',
-                      data: acceptedData,
-                      backgroundColor: statusColors.Accepted,
-                      borderColor: colorVariants.border.Accepted,
-                      borderWidth: 1
-                  },
-                  {
-                      label: 'Not Accepted',
-                      data: notAcceptedData,
-                      backgroundColor: statusColors.Not,
-                      borderColor: colorVariants.border.Not,
-                      borderWidth: 1
-                  }
-              ]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                  x: {
-                      stacked: true,
-                      title: {
-                          display: true,
-                          text: 'Regions'
-                      }
-                  },
-                  y: {
-                      stacked: true,
-                      beginAtZero: true,
-                      max: 100,
-                      title: {
-                          display: true,
-                          text: 'Percentage (%)'
-                      }
-                  }
-              },
-              plugins: {
-                  tooltip: {
-                      callbacks: {
-                          label: function(context) {
-                              const regionData = phpData.progressPerRegion[context.dataIndex];
-                              if (context.dataset.label === 'Accepted') {
-                                  return `Accepted: ${regionData.accepted}/${regionData.total} (${context.parsed.y}%)`;
-                              } else {
-                                  return `Not Accepted: ${regionData.total - regionData.accepted}/${regionData.total} (${context.parsed.y}%)`;
-                              }
-                          }
-                      }
-                  }
-              }
-          },
-          plugins: [{
-              afterDatasetsDraw: function(chart) {
-                  const ctx = chart.ctx;
-                  chart.data.datasets.forEach((dataset, i) => {
-                      const meta = chart.getDatasetMeta(i);
-                      meta.data.forEach((bar, index) => {
-                          const data = dataset.data[index];
-                          if (data > 0) {
-                              ctx.fillStyle = '#fff';
-                              ctx.font = 'bold 12px Arial';
-                              ctx.textAlign = 'center';
-                              ctx.textBaseline = 'middle';
-                              ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
-                          }
-                      });
-                  });
-              }
-          }]
-      });
-  } else {
-      createEmptyChart(document.getElementById('acceptedPerRegionChart'), 'No region data available');
-  }
+    new Chart(document.getElementById('acceptedPerRegionChart'), {
+        type: 'bar',
+        data: {
+            labels: regions,
+            datasets: [
+                {
+                    label: 'Accepted',
+                    data: acceptedData,
+                    backgroundColor: statusColors.Accepted,
+                    borderColor: colorVariants.border.Accepted,
+                    borderWidth: 1
+                },
+                {
+                    label: 'Not Accepted',
+                    data: notAcceptedData,
+                    backgroundColor: statusColors.Not,
+                    borderColor: colorVariants.border.Not,
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Regions'
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage (%)'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const regionData = phpData.progressPerRegion[context.dataIndex];
+                            if (context.dataset.label === 'Accepted') {
+                                return `Accepted: ${regionData.accepted}/${regionData.total} (${context.parsed.y}%)`;
+                            } else {
+                                return `Not Accepted: ${regionData.total - regionData.accepted}/${regionData.total} (${context.parsed.y}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((bar, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) {
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
+                        }
+                    });
+                });
+            }
+        }]
+    });
+} else {
+    createEmptyChart(document.getElementById('acceptedPerRegionChart'), 'No region data available');
+}
 
   // Progress by Region - Delivered Percentage
-  if (phpData.progressPerRegion && phpData.progressPerRegion.length > 0) {
-      const regions = phpData.progressPerRegion.map(r => r.region);
-      const deliveredData = phpData.progressPerRegion.map(r => {
-          const total = r.total || 1;
-          return Math.round((r.delivered / total) * 100);
-      });
-      const notDeliveredData = phpData.progressPerRegion.map(r => {
-          const total = r.total || 1;
-          return 100 - Math.round((r.delivered / total) * 100);
-      });
+if (phpData.progressPerRegion && phpData.progressPerRegion.length > 0) {
+    const regions = phpData.progressPerRegion.map(r => r.region);
+    const deliveredData = phpData.progressPerRegion.map(r => {
+        const total = r.total || 1;
+        return Math.round((r.delivered / total) * 100);
+    });
+    const notDeliveredData = phpData.progressPerRegion.map(r => {
+        const total = r.total || 1;
+        return 100 - Math.round((r.delivered / total) * 100);
+    });
 
-      new Chart(document.getElementById('deliveredPerRegionChart'), {
-          type: 'bar',
-          data: {
-              labels: regions,
-              datasets: [
-                  {
-                      label: 'Delivered',
-                      data: deliveredData,
-                      backgroundColor: statusColors.Delivered,
-                      borderColor: colorVariants.border.Delivered,
-                      borderWidth: 1
-                  },
-                  {
-                      label: 'Not Delivered',
-                      data: notDeliveredData,
-                      backgroundColor: statusColors.Not,
-                      borderColor: colorVariants.border.Not,
-                      borderWidth: 1
-                  }
-              ]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                  x: {
-                      stacked: true,
-                      title: {
-                          display: true,
-                          text: 'Regions'
-                      }
-                  },
-                  y: {
-                      stacked: true,
-                      beginAtZero: true,
-                      max: 100,
-                      title: {
-                          display: true,
-                          text: 'Percentage (%)'
-                      }
-                  }
-              },
-              plugins: {
-                  tooltip: {
-                      callbacks: {
-                          label: function(context) {
-                              const regionData = phpData.progressPerRegion[context.dataIndex];
-                              if (context.dataset.label === 'Delivered') {
-                                  return `Delivered: ${regionData.delivered}/${regionData.total} (${context.parsed.y}%)`;
-                              } else {
-                                  return `Not Delivered: ${regionData.total - regionData.delivered}/${regionData.total} (${context.parsed.y}%)`;
-                              }
-                          }
-                      }
-                  }
-              }
-          },
-          plugins: [{
-              afterDatasetsDraw: function(chart) {
-                  const ctx = chart.ctx;
-                  chart.data.datasets.forEach((dataset, i) => {
-                      const meta = chart.getDatasetMeta(i);
-                      meta.data.forEach((bar, index) => {
-                          const data = dataset.data[index];
-                          if (data > 0) {
-                              ctx.fillStyle = '#fff';
-                              ctx.font = 'bold 12px Arial';
-                              ctx.textAlign = 'center';
-                              ctx.textBaseline = 'middle';
-                              ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
-                          }
-                      });
-                  });
-              }
-          }]
-      });
-  } else {
-      createEmptyChart(document.getElementById('deliveredPerRegionChart'), 'No region data available');
-  }
+    new Chart(document.getElementById('deliveredPerRegionChart'), {
+        type: 'bar',
+        data: {
+            labels: regions,
+            datasets: [
+                {
+                    label: 'Delivered',
+                    data: deliveredData,
+                    backgroundColor: statusColors.Delivered,
+                    borderColor: colorVariants.border.Delivered,
+                    borderWidth: 1
+                },
+                {
+                    label: 'Not Delivered',
+                    data: notDeliveredData,
+                    backgroundColor: statusColors.Not,
+                    borderColor: colorVariants.border.Not,
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Regions'
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage (%)'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const regionData = phpData.progressPerRegion[context.dataIndex];
+                            if (context.dataset.label === 'Delivered') {
+                                return `Delivered: ${regionData.delivered}/${regionData.total} (${context.parsed.y}%)`;
+                            } else {
+                                return `Not Delivered: ${regionData.total - regionData.delivered}/${regionData.total} (${context.parsed.y}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((bar, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) {
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
+                        }
+                    });
+                });
+            }
+        }]
+    });
+} else {
+    createEmptyChart(document.getElementById('deliveredPerRegionChart'), 'No region data available');
+}
 
   // Progress by Lot - Accepted Percentage
-  if (phpData.progressPerLot && phpData.progressPerLot.length > 0) {
-      const lots = phpData.progressPerLot.map(l => l.lot_name);
-      const acceptedData = phpData.progressPerLot.map(l => {
-          const total = l.total || 1;
-          return Math.round((l.accepted / total) * 100);
-      });
-      const notAcceptedData = phpData.progressPerLot.map(l => {
-          const total = l.total || 1;
-          return 100 - Math.round((l.accepted / total) * 100);
-      });
+if (phpData.progressPerLot && phpData.progressPerLot.length > 0) {
+    const lots = phpData.progressPerLot.map(l => l.lot_name);
+    const acceptedData = phpData.progressPerLot.map(l => {
+        const total = l.total || 1;
+        return Math.round((l.accepted / total) * 100);
+    });
+    const notAcceptedData = phpData.progressPerLot.map(l => {
+        const total = l.total || 1;
+        return 100 - Math.round((l.accepted / total) * 100);
+    });
 
-      new Chart(document.getElementById('acceptedPerLotChart'), {
-          type: 'bar',
-          data: {
-              labels: lots,
-              datasets: [
-                  {
-                      label: 'Accepted',
-                      data: acceptedData,
-                      backgroundColor: statusColors.Accepted,
-                      borderColor: colorVariants.border.Accepted,
-                      borderWidth: 1
-                  },
-                  {
-                      label: 'Not Accepted',
-                      data: notAcceptedData,
-                      backgroundColor: statusColors.Not,
-                      borderColor: colorVariants.border.Not,
-                      borderWidth: 1
-                  }
-              ]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                  x: {
-                      stacked: true,
-                      title: {
-                          display: true,
-                          text: 'Lots'
-                      }
-                  },
-                  y: {
-                      stacked: true,
-                      beginAtZero: true,
-                      max: 100,
-                      title: {
-                          display: true,
-                          text: 'Percentage (%)'
-                      }
-                  }
-              },
-              plugins: {
-                  tooltip: {
-                      callbacks: {
-                          label: function(context) {
-                              const lotData = phpData.progressPerLot[context.dataIndex];
-                              if (context.dataset.label === 'Accepted') {
-                                  return `Accepted: ${lotData.accepted}/${lotData.total} (${context.parsed.y}%)`;
-                              } else {
-                                  return `Not Accepted: ${lotData.total - lotData.accepted}/${lotData.total} (${context.parsed.y}%)`;
-                              }
-                          }
-                      }
-                  }
-              }
-          },
-          plugins: [{
-              afterDatasetsDraw: function(chart) {
-                  const ctx = chart.ctx;
-                  chart.data.datasets.forEach((dataset, i) => {
-                      const meta = chart.getDatasetMeta(i);
-                      meta.data.forEach((bar, index) => {
-                          const data = dataset.data[index];
-                          if (data > 0) {
-                              ctx.fillStyle = '#fff';
-                              ctx.font = 'bold 12px Arial';
-                              ctx.textAlign = 'center';
-                              ctx.textBaseline = 'middle';
-                              ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
-                          }
-                      });
-                  });
-              }
-          }]
-      });
-  } else {
-      createEmptyChart(document.getElementById('acceptedPerLotChart'), 'No lot data available');
-  }
+    new Chart(document.getElementById('acceptedPerLotChart'), {
+        type: 'bar',
+        data: {
+            labels: lots,
+            datasets: [
+                {
+                    label: 'Accepted',
+                    data: acceptedData,
+                    backgroundColor: statusColors.Accepted,
+                    borderColor: colorVariants.border.Accepted,
+                    borderWidth: 1
+                },
+                {
+                    label: 'Not Accepted',
+                    data: notAcceptedData,
+                    backgroundColor: statusColors.Not,
+                    borderColor: colorVariants.border.Not,
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Lots'
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage (%)'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const lotData = phpData.progressPerLot[context.dataIndex];
+                            if (context.dataset.label === 'Accepted') {
+                                return `Accepted: ${lotData.accepted}/${lotData.total} (${context.parsed.y}%)`;
+                            } else {
+                                return `Not Accepted: ${lotData.total - lotData.accepted}/${lotData.total} (${context.parsed.y}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((bar, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) {
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
+                        }
+                    });
+                });
+            }
+        }]
+    });
+} else {
+    createEmptyChart(document.getElementById('acceptedPerLotChart'), 'No lot data available');
+}
 
-  if (phpData.progressPerLot && phpData.progressPerLot.length > 0) {
-      const lots = phpData.progressPerLot.map(l => l.lot_name);
-      const deliveredData = phpData.progressPerLot.map(l => {
-          const total = l.total || 1;
-          return Math.round((l.delivered / total) * 100);
-      });
-      const notDeliveredData = phpData.progressPerLot.map(l => {
-          const total = l.total || 1;
-          return 100 - Math.round((l.delivered / total) * 100);
-      });
+if (phpData.progressPerLot && phpData.progressPerLot.length > 0) {
+    const lots = phpData.progressPerLot.map(l => l.lot_name);
+    const deliveredData = phpData.progressPerLot.map(l => {
+        const total = l.total || 1;
+        return Math.round((l.delivered / total) * 100);
+    });
+    const notDeliveredData = phpData.progressPerLot.map(l => {
+        const total = l.total || 1;
+        return 100 - Math.round((l.delivered / total) * 100);
+    });
 
-      new Chart(document.getElementById('deliveredPerLotChart'), {
-          type: 'bar',
-          data: {
-              labels: lots,
-              datasets: [
-                  {
-                      label: 'Delivered',
-                      data: deliveredData,
-                      backgroundColor: statusColors.Delivered,
-                      borderColor: colorVariants.border.Delivered,
-                      borderWidth: 1
-                  },
-                  {
-                      label: 'Not Delivered',
-                      data: notDeliveredData,
-                      backgroundColor: statusColors.Not,
-                      borderColor: colorVariants.border.Not,
-                      borderWidth: 1
-                  }
-              ]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                  x: {
-                      stacked: true,
-                      title: {
-                          display: true,
-                          text: 'Lots'
-                      }
-                  },
-                  y: {
-                      stacked: true,
-                      beginAtZero: true,
-                      max: 100,
-                      title: {
-                          display: true,
-                          text: 'Percentage (%)'
-                      }
-                  }
-              },
-              plugins: {
-                  tooltip: {
-                      callbacks: {
-                          label: function(context) {
-                              const lotData = phpData.progressPerLot[context.dataIndex];
-                              if (context.dataset.label === 'Delivered') {
-                                  return `Delivered: ${lotData.delivered}/${lotData.total} (${context.parsed.y}%)`;
-                              } else {
-                                  return `Not Delivered: ${lotData.total - lotData.delivered}/${lotData.total} (${context.parsed.y}%)`;
-                              }
-                          }
-                      }
-                  }
-              }
-          },
-          plugins: [{
-              afterDatasetsDraw: function(chart) {
-                  const ctx = chart.ctx;
-                  chart.data.datasets.forEach((dataset, i) => {
-                      const meta = chart.getDatasetMeta(i);
-                      meta.data.forEach((bar, index) => {
-                          const data = dataset.data[index];
-                          if (data > 0) {
-                              ctx.fillStyle = '#fff';
-                              ctx.font = 'bold 12px Arial';
-                              ctx.textAlign = 'center';
-                              ctx.textBaseline = 'middle';
-                              ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
-                          }
-                      });
-                  });
-              }
-          }]
-      });
-  } else {
-      createEmptyChart(document.getElementById('deliveredPerLotChart'), 'No lot data available');
-  }
+    new Chart(document.getElementById('deliveredPerLotChart'), {
+        type: 'bar',
+        data: {
+            labels: lots,
+            datasets: [
+                {
+                    label: 'Delivered',
+                    data: deliveredData,
+                    backgroundColor: statusColors.Delivered,
+                    borderColor: colorVariants.border.Delivered,
+                    borderWidth: 1
+                },
+                {
+                    label: 'Not Delivered',
+                    data: notDeliveredData,
+                    backgroundColor: statusColors.Not,
+                    borderColor: colorVariants.border.Not,
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    stacked: true,
+                    title: {
+                        display: true,
+                        text: 'Lots'
+                    }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Percentage (%)'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const lotData = phpData.progressPerLot[context.dataIndex];
+                            if (context.dataset.label === 'Delivered') {
+                                return `Delivered: ${lotData.delivered}/${lotData.total} (${context.parsed.y}%)`;
+                            } else {
+                                return `Not Delivered: ${lotData.total - lotData.delivered}/${lotData.total} (${context.parsed.y}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [{
+            afterDatasetsDraw: function(chart) {
+                const ctx = chart.ctx;
+                chart.data.datasets.forEach((dataset, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    meta.data.forEach((bar, index) => {
+                        const data = dataset.data[index];
+                        if (data > 0) {
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
+                        }
+                    });
+                });
+            }
+        }]
+    });
+} else {
+    createEmptyChart(document.getElementById('deliveredPerLotChart'), 'No lot data available');
+}
 
 });
