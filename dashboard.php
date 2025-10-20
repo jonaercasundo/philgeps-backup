@@ -14,6 +14,7 @@ try {
 
     $projectFilter = $selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "";
     $deliveryProjectFilter = $selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "";
+    $selectedDate = $_GET['selectedDate'] ?? date('Y-m-d');
 
     $stmt = $pdo->query("SHOW TABLES");
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -64,24 +65,24 @@ try {
 
     $totalDeliveries = ($deliveryTotals['pending'] ?? 0) + ($deliveryTotals['accepted'] ?? 0) + ($deliveryTotals['delivered'] ?? 0);
     $completionRate = $totalDeliveries > 0 ? round(($deliveryTotals['delivered'] ?? 0) / $totalDeliveries * 100, 2) : 0;
-
     $pendingPercent = $totalDeliveries > 0 ? round(($deliveryTotals['pending'] / $totalDeliveries) * 100) : 0;
     $acceptedPercent = $totalDeliveries > 0 ? round(($deliveryTotals['accepted'] / $totalDeliveries) * 100) : 0;
     $deliveredPercent = $totalDeliveries > 0 ? round(($deliveryTotals['delivered'] / $totalDeliveries) * 100) : 0;
 
+    // BILLING SUMMARY //
     $stmt = $pdo->query("
         SELECT
             (SELECT COUNT(*) FROM grouping) AS total_groups,
             (SELECT COUNT(DISTINCT dr_no) FROM billing_grouped) AS total_drs,
             (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g
-             JOIN billing_grouped bg ON bg.group_id = g.group_id 
-             WHERE status = 'for billing') AS for_billing_count,
+            JOIN billing_grouped bg ON bg.group_id = g.group_id 
+            WHERE status = 'for billing') AS for_billing_count,
             (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
-             JOIN billing_grouped bg ON bg.group_id = g.group_id 
-             WHERE status = 'billed') AS billed_count,
+            JOIN billing_grouped bg ON bg.group_id = g.group_id 
+            WHERE status = 'billed') AS billed_count,
             (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
-             JOIN billing_grouped bg ON bg.group_id = g.group_id 
-             WHERE status = 'paid') AS paid_count
+            JOIN billing_grouped bg ON bg.group_id = g.group_id 
+            WHERE status = 'paid') AS paid_count
     ");
     
     $billingTotals = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -92,6 +93,55 @@ try {
     $billedPercent = $totalGroups > 0 ? round(($billingTotals['billed_count'] / $totalDr) * 100) : 0;
     $paidPercent = $totalGroups > 0 ? round(($billingTotals['paid_count'] / $totalDr) * 100) : 0;
 
+    // SALES GENERATION SUMMARY //
+    $projectStatusQuery = "
+        SELECT 
+            COUNT(*) AS total,
+            CASE p.status
+                WHEN 'Pending Evaluation' THEN 'Pending Evaluation'
+                WHEN 'For Award' THEN 'For Award'
+                WHEN 'For Implementation' THEN 'For Implementation'
+                WHEN 'Ongoing' THEN 'Ongoing'
+                WHEN 'Delivered' THEN 'Delivered'
+                WHEN 'Completed' THEN 'Completed'
+                ELSE p.status
+            END AS status
+        FROM projects p
+        " . ($selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "") . "
+        GROUP BY 
+            CASE p.status
+                WHEN 'Pending Evaluation' THEN 'Pending Evaluation'
+                WHEN 'For Award' THEN 'For Award'
+                WHEN 'For Implementation' THEN 'For Implementation'
+                WHEN 'Ongoing' THEN 'Ongoing'
+                WHEN 'Delivered' THEN 'Delivered'
+                WHEN 'Completed' THEN 'Completed'
+                ELSE p.status
+            END
+        ORDER BY total DESC;
+    ";
+
+    $stmt = $pdo->query($projectStatusQuery);
+    $projectStatusOverview = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $opportunityQuery = "
+        SELECT 
+            project_id,
+            project_name,
+            contract_amount,
+            ABC,
+            (ABC - contract_amount) AS variance,
+            ROUND((ABC / contract_amount) * 100, 2) AS percentage_of_target
+        FROM projects
+        " . ($selectedProject > 0 ? "WHERE project_id = $selectedProject" : "") . "
+        ORDER BY project_name
+    ";
+
+    $stmt = $pdo->query($opportunityQuery);
+    $opportunity = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // SALES GENERATION SUMMARY //
+
+    // OPERATION SUMMARY //
     $deliveryStatusQuery = "
         SELECT 
             COUNT(*) AS total,
@@ -139,34 +189,7 @@ try {
     $stmt = $pdo->query($monthlyTrendQuery);
     $monthlyDeliveryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $todayActivityQuery = "
-        SELECT 
-          DATE_FORMAT(al.created_at, '%H:%i') as time_label,
-          HOUR(al.created_at) as hour,
-          MINUTE(al.created_at) as minute,
-          CASE 
-              WHEN u.warehouse_id IS NULL THEN 'Office'
-              ELSE w.warehouse_name
-          END AS activity_type,
-          COUNT(*) as total_activities,
-          CONCAT( al.action ) as activity_list
-      FROM activity_logs al
-      JOIN users u ON al.user_id = u.user_id
-      LEFT JOIN warehouse w ON u.warehouse_id = w.warehouse_id
-      WHERE DATE(al.created_at) = CURDATE()
-      GROUP BY 
-          DATE_FORMAT(al.created_at, '%H:%i'),
-          CASE 
-              WHEN u.warehouse_id IS NULL THEN 'Office'
-              ELSE w.warehouse_name
-          END
-      ORDER BY hour, minute, activity_type
-    ";
-
-    $stmt = $pdo->query($todayActivityQuery);
-    $todayUserActivity = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $inventoryQuery = "
+        $inventoryQuery = "
         SELECT 
             ii.item_name,
             SUM(i.qty) as total_qty
@@ -180,36 +203,6 @@ try {
     $stmt = $pdo->query($inventoryQuery);
     $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $selectedDate = $_GET['selectedDate'] ?? date('Y-m-d');
-
-    $inventoryByWarehouseQuery = "
-        SELECT 
-            w.warehouse_name,
-            i.item_name,
-            i.unit,
-            COALESCE(
-                (SELECT ih.new_qty
-                FROM inventory_history ih
-                WHERE ih.item_id = i.item_id 
-                  AND ih.warehouse_id = w.warehouse_id 
-                  AND DATE(ih.changed_at) <= :selectedDate
-                ORDER BY ih.changed_at DESC 
-                LIMIT 1),
-                inv.qty
-            ) as qty
-        FROM inventory inv
-        JOIN item i ON inv.item_id = i.item_id
-        JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
-        WHERE inv.inventory_status = 'Approved'
-            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
-        HAVING qty > 0
-        ORDER BY w.warehouse_name, i.item_name
-    ";
-
-    $stmt = $pdo->prepare($inventoryByWarehouseQuery);
-    $stmt->execute(['selectedDate' => $selectedDate]);
-    $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     $inventoryHistoryQuery = "
         SELECT 
             DATE(changed_at) AS change_date,
@@ -221,19 +214,6 @@ try {
     ";
     $stmt = $pdo->query($inventoryHistoryQuery);
     $inventoryHistoryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $topUpdatedItemsQuery = "
-        SELECT 
-            i.item_name,
-            COUNT(*) AS update_count
-        FROM inventory_history ih
-        JOIN item i ON ih.item_id = i.item_id
-        GROUP BY i.item_name
-        ORDER BY update_count DESC
-        LIMIT 5
-    ";
-    $stmt = $pdo->query($topUpdatedItemsQuery);
-    $topUpdatedItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $changesPerWarehouseQuery = "
         SELECT 
@@ -281,6 +261,75 @@ try {
 
     $stmt = $pdo->query($progressPerLotQuery);
     $progressPerLot = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $inventoryByWarehouseQuery = "
+        SELECT 
+            w.warehouse_name,
+            i.item_name,
+            i.unit,
+            COALESCE(
+                (SELECT ih.new_qty
+                FROM inventory_history ih
+                WHERE ih.item_id = i.item_id 
+                  AND ih.warehouse_id = w.warehouse_id 
+                  AND DATE(ih.changed_at) <= :selectedDate
+                ORDER BY ih.changed_at DESC 
+                LIMIT 1),
+                inv.qty
+            ) as qty
+        FROM inventory inv
+        JOIN item i ON inv.item_id = i.item_id
+        JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
+        WHERE inv.inventory_status = 'Approved'
+            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+        HAVING qty > 0
+        ORDER BY w.warehouse_name, i.item_name
+    ";
+
+    $stmt = $pdo->prepare($inventoryByWarehouseQuery);
+    $stmt->execute(['selectedDate' => $selectedDate]);
+    $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // OPERATION SUMMARY //
+
+    $todayActivityQuery = "
+        SELECT 
+          DATE_FORMAT(al.created_at, '%H:%i') as time_label,
+          HOUR(al.created_at) as hour,
+          MINUTE(al.created_at) as minute,
+          CASE 
+              WHEN u.warehouse_id IS NULL THEN 'Office'
+              ELSE w.warehouse_name
+          END AS activity_type,
+          COUNT(*) as total_activities,
+          CONCAT( al.action ) as activity_list
+      FROM activity_logs al
+      JOIN users u ON al.user_id = u.user_id
+      LEFT JOIN warehouse w ON u.warehouse_id = w.warehouse_id
+      WHERE DATE(al.created_at) = CURDATE()
+      GROUP BY 
+          DATE_FORMAT(al.created_at, '%H:%i'),
+          CASE 
+              WHEN u.warehouse_id IS NULL THEN 'Office'
+              ELSE w.warehouse_name
+          END
+      ORDER BY hour, minute, activity_type
+    ";
+
+    $stmt = $pdo->query($todayActivityQuery);
+    $todayUserActivity = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $topUpdatedItemsQuery = "
+        SELECT 
+            i.item_name,
+            COUNT(*) AS update_count
+        FROM inventory_history ih
+        JOIN item i ON ih.item_id = i.item_id
+        GROUP BY i.item_name
+        ORDER BY update_count DESC
+        LIMIT 5
+    ";
+    $stmt = $pdo->query($topUpdatedItemsQuery);
+    $topUpdatedItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $divisionDeliveriesQuery = "
         SELECT 
@@ -376,7 +425,7 @@ if ($selectedProject > 0) {
     </div>
 
     <!-- RIGHT: Sales Generation Summary -->
-    <div class="col-md-8 col-12 chart-item" data-chart-id="production-summary">
+    <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-bold">🚚 SALES GENERATION SUMMARY</h6>
@@ -448,11 +497,14 @@ if ($selectedProject > 0) {
           <div class="row g-3 mt-2">
             <div class="col-md-5">
               <div class="card shadow-sm h-100">
-                <div class="card-header bg-light">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
                   <h6 class="mb-0">Projects</h6>
+                  <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                    <i class="bi bi-printer"></i>
+                  </a>
                 </div>
                 <div class="card-body">
-                  <!-- <canvas id="deliveryStatusChart" height="200"></canvas> -->
+                  <canvas id="projectStatusChart" height="200"></canvas>
                 </div>
               </div>
             </div>
@@ -471,7 +523,7 @@ if ($selectedProject > 0) {
       </div>
     </div>
 
-    <div class="col-md-12 col-12 chart-item" data-chart-id="production-summary">
+    <div class="col-md-12 col-12 chart-item" data-chart-id="operation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-bold">🚚 OPPORTUNITY PIPELINE</h6>
@@ -481,11 +533,16 @@ if ($selectedProject > 0) {
           <div class="row g-3 mt-2">
             <div class="col-md-12">
               <div class="card shadow-sm h-100">
-                <div class="card-header bg-light">
-                  <h6 class="mb-0">Projects</h6>
-                </div>
-                <div class="card-body">
-                  <!-- <canvas id="deliveryStatusChart" height="200"></canvas> -->
+                <div class="card shadow-sm h-100">
+                  <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">OPPORTUNITY</h6>
+                    <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                      <i class="bi bi-printer"></i>
+                    </a>
+                  </div>
+                  <div class="card-body">
+                    <canvas id="opportunityChart" height="200"></canvas>
+                  </div>
                 </div>
               </div>
             </div>
@@ -494,11 +551,11 @@ if ($selectedProject > 0) {
       </div>
     </div>
 
-    <!-- LEFT: Production Summary -->
-    <div class="col-md-8 col-12 chart-item" data-chart-id="production-summary">
+    <!-- LEFT: Operation Summary -->
+    <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">🚚 PRODUCTION SUMMARY</h6>
+          <h6 class="mb-0 fw-bold">🚚 OPERATION SUMMARY</h6>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
@@ -863,7 +920,9 @@ if ($selectedProject > 0) {
         progressPerRegion: <?= json_encode($progressPerRegion) ?>,
         progressPerLot: <?= json_encode($progressPerLot) ?> ,
         inventoryHistoryTrend: <?= json_encode($inventoryHistoryTrend) ?>,
-        changesPerWarehouse: <?= json_encode($changesPerWarehouse) ?>
+        changesPerWarehouse: <?= json_encode($changesPerWarehouse) ?>,
+        projectStatusOverview: <?= json_encode($projectStatusOverview) ?>,
+        opportunity: <?= json_encode($opportunity) ?>,
     };
 </script>
 

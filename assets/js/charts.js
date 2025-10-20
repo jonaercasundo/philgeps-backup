@@ -1,15 +1,17 @@
 // Access the global phpData object created in the main PHP file.
 const {
-  deliveryStatusOverview,
-  monthlyDeliveryTrend,
-  selectedProject,
-  inventoryData,
-  stockLevelData,
-  inventoryByWarehouse,
-  progressPerRegion,
-  progressPerLot,
-  inventoryHistoryTrend,
-  changesPerWarehouse
+    deliveryStatusOverview,
+    monthlyDeliveryTrend,
+    selectedProject,
+    inventoryData,
+    stockLevelData,
+    inventoryByWarehouse,
+    progressPerRegion,
+    progressPerLot,
+    inventoryHistoryTrend,
+    changesPerWarehouse,
+    projectStatusOverview,
+    opportunity
 } = phpData;
 
 // Modern Professional Color Scheme
@@ -304,44 +306,182 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('monthlyDeliveryTrendChart'), 'No monthly trend data available');
   }
 
-// 🎯 Inventory History (Daily Changes)
-new Chart(document.getElementById('inventoryHistoryTrendChart'), {
-    type: 'line',
-    data: {
-        labels: inventoryHistoryTrend.map(r => r.change_date), // e.g. ['2025-01-01', '2025-01-02', ...]
+    // 📊 Project Status Overview (Pie Chart)
+    if (projectStatusOverview.length > 0) {
+    const totalOverall = projectStatusOverview.reduce((sum, r) => sum + r.total, 0);
+
+    new Chart(document.getElementById('projectStatusChart'), {
+        type: 'pie',
+        data: {
+        labels: projectStatusOverview.map(r => 
+            `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`
+        ),
         datasets: [{
-        label: 'Inventory Changes',
-        data: inventoryHistoryTrend.map(r => r.total_changes),
-        borderColor: '#007bff',
-        backgroundColor: 'rgba(0, 123, 255, 0.2)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.3, // smooth curve
-        pointRadius: 2
+            data: projectStatusOverview.map(r => r.total),
+            backgroundColor: projectStatusOverview.map((r, i) =>
+            colorVariants.light[r.status] || primaryColors[i % primaryColors.length]
+            ),
+            borderColor: projectStatusOverview.map((r, i) =>
+            colorVariants.border[r.status] || primaryColors[i % primaryColors.length]
+            ),
+            borderWidth: 2
         }]
-    },
-    options: {
+        },
+        options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-        legend: { display: false },
-        title: {
-            display: true,
-            text: 'Inventory History (Daily Changes)'
-        }
-        },
-        scales: {
-        x: {
-            title: { display: true, text: 'Date' },
-            ticks: { maxRotation: 45, minRotation: 45 }
-        },
-        y: {
-            beginAtZero: true,
-            title: { display: true, text: 'Total Changes' }
+            legend: {
+            position: 'bottom',
+            labels: {
+                boxWidth: 14,
+                font: { size: 12 }
+            }
+            }
         }
         }
+    });
+    } else {
+    createEmptyChart(document.getElementById('projectStatusChart'), 'No project data available');
     }
-});
+
+    // 📊 OPPORTUNITY
+    if (phpData.opportunity && phpData.opportunity.length > 0) {
+        const projects = phpData.opportunity.map(p => p.project_name);
+        const contractData = phpData.opportunity.map(p => parseFloat(p.contract_amount) || 0);
+        const abcData = phpData.opportunity.map(p => parseFloat(p.ABC) || 0);
+        const percentageData = phpData.opportunity.map(p => parseFloat(p.percentage_of_target) || 0);
+
+        new Chart(document.getElementById('opportunityChart'), {
+            type: 'bar',
+            data: {
+                labels: projects,
+                datasets: [
+                    {
+                        label: 'Contract Amount',
+                        data: contractData,
+                        backgroundColor: '#007bff', // Blue
+                        borderColor: '#0056b3',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'ABC (Target)',
+                        data: abcData,
+                        backgroundColor: '#28a745', // Green
+                        borderColor: '#1e7e34',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Projects'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount ($)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const projectData = phpData.opportunity[context.dataIndex];
+                                if (context.dataset.label === 'Contract Amount') {
+                                    return `Contract: $${projectData.contract_amount}`;
+                                } else {
+                                    const percentage = projectData.percentage_of_target;
+                                    const variance = projectData.variance;
+                                    const varianceText = variance >= 0 ? `+$${variance}` : `-$${Math.abs(variance)}`;
+                                    return `ABC: $${projectData.ABC} (${percentage}% of contract, ${varianceText})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const data = dataset.data[index];
+                            if (data > 0) {
+                                ctx.fillStyle = '#fff';
+                                ctx.font = 'bold 10px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                
+                                // Format large numbers with K/M suffixes
+                                let displayText = '';
+                                if (data >= 1000000) {
+                                    displayText = '$' + (data / 1000000).toFixed(1) + 'M';
+                                } else if (data >= 1000) {
+                                    displayText = '$' + (data / 1000).toFixed(1) + 'K';
+                                } else {
+                                    displayText = '$' + data;
+                                }
+                                
+                                ctx.fillText(displayText, bar.x, bar.y - 10);
+                            }
+                        });
+                    });
+                }
+            }]
+        });
+    } else {
+        createEmptyChart(document.getElementById('opportunityChart'), 'No project financial data available');
+    }
+
+
+    // 🎯 Inventory History (Daily Changes)
+    new Chart(document.getElementById('inventoryHistoryTrendChart'), {
+        type: 'line',
+        data: {
+            labels: inventoryHistoryTrend.map(r => r.change_date), // e.g. ['2025-01-01', '2025-01-02', ...]
+            datasets: [{
+            label: 'Inventory Changes',
+            data: inventoryHistoryTrend.map(r => r.total_changes),
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.2)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3, // smooth curve
+            pointRadius: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+            legend: { display: false },
+            title: {
+                display: true,
+                text: 'Inventory History (Daily Changes)'
+            }
+            },
+            scales: {
+            x: {
+                title: { display: true, text: 'Date' },
+                ticks: { maxRotation: 45, minRotation: 45 }
+            },
+            y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Total Changes' }
+            }
+            }
+        }
+    });
 
 // 🟩 Top Updated Items
 // new Chart(document.getElementById('topUpdatedItemsChart'), {
