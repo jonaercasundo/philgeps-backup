@@ -1,14 +1,23 @@
 <?php
 session_start();
+set_time_limit(0); // disable timeout
+ini_set('memory_limit', '1024M'); // give it 1GB memory
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 require __DIR__ . '/vendor/autoload.php';
 require 'config/db.php';
 
 use Dompdf\Dompdf;
+use Dompdf\Options;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
-
+$options = new Options();
+$options->set([
+    'isRemoteEnabled' => true,
+    'isHtml5ParserEnabled' => true,
+    'dpi' => 72
+]);
+$dompdf = new Dompdf($options);
 // ---- Handle both POST and GET safely ----
 
 // Accept either comma-separated string or array
