@@ -90,11 +90,7 @@ foreach ($lotKeystages as $lotKeystage) {
 
             $qr = Builder::create()
                 ->writer(new PngWriter())
-                ->data(json_encode([
-                    'action' => 'addPackage',
-                    'package' => $packageRef['package_id'],
-                    'qty' => 1
-                ]))
+                ->data($packageRef['package_id'])
                 ->size(150)
                 ->margin(0)
                 ->build();
@@ -105,6 +101,7 @@ foreach ($lotKeystages as $lotKeystage) {
                 <td>
                     <img src='data:image/png;base64,{$qrData}'><br>
                     <small>Package $packageIndex of $packageCount</small>
+                    <small>".$packageRef['package_id']."</small>
                 </td>
             ";
 
