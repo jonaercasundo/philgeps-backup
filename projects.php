@@ -104,7 +104,8 @@ try {
                     $fields = [
                         ['label'=>'PhilGEPS Ref No','name'=>'ref_no','type'=>'text', 'id'=>'ref_no'],
                         ['label'=>'Project Name','name'=>'project_name','type'=>'text', 'id' =>'project_name'],
-                        ['label'=>'Contract Amount','name'=>'contract_amount','type'=>'text', 'id'=>'contract_formatter']
+                        ['label'=>'Contract Amount','name'=>'contract_amount','type'=>'text', 'id'=>'contract_formatter'],
+                        ['label'=>'ABC','name'=>'ABC','type'=>'text', 'id'=>'ABC_formatter']
                     ];
                     foreach($fields as $f):
                     ?>
@@ -114,6 +115,7 @@ try {
                     </div>
                     <?php endforeach; ?>
                     <input type="hidden" name="rawNumber" id="rawNumber">
+                    <input type="hidden" name="rawNumber2" id="rawNumber2">
                     <div class="mb-3">
                         <label for="agency">Agency</label>
                         <select name="agency" class="form-control" onchange="changeAgency(this.value)" required>
@@ -148,6 +150,7 @@ try {
 
 <script>
 const rawNumber   = document.getElementById("rawNumber");
+const rawNumber2   = document.getElementById("rawNumber2");
 document.getElementById("contract_formatter").addEventListener("input", function (e) {
  let value = e.target.value.replace(/,/g, ""); // strip commas
 
@@ -166,6 +169,26 @@ document.getElementById("contract_formatter").addEventListener("input", function
 
     rawNumber.value = value; // store raw value in hidden input
 });
+
+document.getElementById("ABC_formatter").addEventListener("input", function (e) {
+ let value = e.target.value.replace(/,/g, ""); // strip commas
+
+    // only allow digits + decimal point
+    if (!/^\d*\.?\d*$/.test(value)) {
+        e.target.value = e.target.value.slice(0, -1); 
+        return;
+    }
+
+    if (value) {
+        // split int & decimal
+        let parts = value.split(".");
+        parts[0] = Number(parts[0]).toLocaleString(); 
+        e.target.value = parts.join(".");
+    }
+
+    rawNumber2.value = value; // store raw value in hidden input
+});
+
 function changeAgency(agency) {
     if(agency === "Deped") {
         document.getElementById("includeKeystage").classList.remove("visually-hidden");

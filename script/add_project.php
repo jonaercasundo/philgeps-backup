@@ -1,33 +1,36 @@
 <?php
 session_start();
 header('Content-Type: application/json');
-require "../config/db.php"; // adjust
-if (isset($_POST['keystage'])) {
-    $keystage = $_POST['keystage']; // "1"
-} else {
-$keystage = 0; // or NULL, depending on your logic
-}
+require "../config/db.php";
+
+$keystage = isset($_POST['keystage']) ? $_POST['keystage'] : 0;
+
+// Set ref_no to NULL if empty or not set
+$ref_no = !empty($_POST['ref_no']) ? $_POST['ref_no'] : null;
+
 try {
     $stmt = $pdo->prepare("INSERT INTO projects 
-        (ref_no, agency, project_name, contract_amount, keystage, start_date, end_date) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)");
+        (ref_no, agency, project_name, contract_amount, keystage, start_date, end_date, ABC) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt->execute([
-        $_POST['ref_no'],
+        $ref_no,
         $_POST['agency'],
         $_POST['project_name'],
         $_POST['rawNumber'],
         $keystage,
         $_POST['start_date'],
-        $_POST['end_date']
+        $_POST['end_date'],
+        $_POST['rawNumber2']
     ]);
 
     $stmt = $pdo->prepare("INSERT INTO activity_logs 
         (user_id, action) 
-        VALUES (?,?)");
+        VALUES (?, ?)");
     $stmt->execute([
         $_SESSION['user_id'],
-        $_SESSION['name']." Added Project ".$_POST['project_name']
+        $_SESSION['name'] . " Added Project " . $_POST['project_name']
     ]);
+
     echo json_encode(["success" => true]);
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
