@@ -20,41 +20,124 @@ try {
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
     $schoolTable = in_array('school', $tables) ? 'school' : 'schools';
 
-    $placesQuery = "
-        SELECT 
-            s.region,
-            p.project_id,
-            p.project_name,
-            COUNT(DISTINCT s.school_id) AS total_schools,
-            SUM(CASE WHEN d.status = 'Delivered' THEN 1 ELSE 0 END) AS delivered_count
-        FROM deliveries d
-        JOIN $schoolTable s ON d.school_id = s.school_id
-        JOIN projects p ON d.project_id = p.project_id
-        " . ($selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "") . "
-        GROUP BY s.region, p.project_id, p.project_name
-        ORDER BY p.project_name, s.region
-    ";
-    
-    $stmt = $pdo->query($placesQuery);
-    $placesDelivered = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+    // PROJECT SUMMARY //
     if ($selectedProject > 0) {
         $stmt = $pdo->query("
             SELECT
                 (SELECT COUNT(*) FROM projects WHERE status='Pending Evaluation') AS pendingProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='For Award') AS forAwardProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='For Implementation') AS forImplementationProjects,
                 (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
-                (SELECT COUNT(*) FROM projects WHERE status='Completed') AS completedProjects,
-                (SELECT COUNT(*) FROM deliveries WHERE status='pending' AND project_id = $selectedProject) AS pending,
-                (SELECT COUNT(*) FROM deliveries WHERE status='accepted' AND project_id = $selectedProject) AS accepted,
-                (SELECT COUNT(*) FROM deliveries WHERE status='delivered' AND project_id = $selectedProject) AS delivered
+                (SELECT COUNT(*) FROM projects WHERE status='Delivered') AS deliveredProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Completed') AS completedProjects
             FROM projects WHERE project_id = $selectedProject
         ");
     } else {
         $stmt = $pdo->query("
             SELECT
-              (SELECT COUNT(*) FROM projects WHERE status='Pending Evaluation') AS pendingProjects,
-              (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
-              (SELECT COUNT(*) FROM projects WHERE status='Completed') AS completedProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Pending Evaluation') AS pendingProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='For Award') AS forAwardProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='For Implementation') AS forImplementationProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Delivered') AS deliveredProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Completed') AS completedProjects
+        ");
+    }
+
+    $projectTotals = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $totalProjects = ($projectTotals['pendingProjects'] ?? 0) + 
+                    ($projectTotals['forAwardProjects'] ?? 0) + 
+                    ($projectTotals['forImplementationProjects'] ?? 0) + 
+                    ($projectTotals['activeProjects'] ?? 0) + 
+                    ($projectTotals['deliveredProjects'] ?? 0) + 
+                    ($projectTotals['completedProjects'] ?? 0);
+    $inEvaluationPercent = $totalProjects > 0 ? round(($projectTotals['pendingProjects'] ?? 0) / $totalProjects * 100, 2) : 0;
+    $inEvaluationCount = $projectTotals['pendingProjects'] ?? 0;
+
+    // BUDGET UTILIZATION QUERY
+    if ($selectedProject > 0) {
+        $budgetStmt = $pdo->query("
+            SELECT 
+                SUM(contract_amount) AS total_contract,
+                SUM(ABC) AS total_abc,
+                COUNT(*) AS total_projects
+            FROM projects 
+            WHERE project_id = $selectedProject
+            AND contract_amount > 0
+        ");
+    } else {
+        $budgetStmt = $pdo->query("
+            SELECT 
+                SUM(contract_amount) AS total_contract,
+                SUM(ABC) AS total_abc,
+                COUNT(*) AS total_projects
+            FROM projects 
+            WHERE contract_amount > 0
+        ");
+    }
+
+    $budgetData = $budgetStmt->fetch(PDO::FETCH_ASSOC);
+    $utilizationRate = $budgetData['total_contract'] > 0 ? 
+        round(($budgetData['total_abc'] / $budgetData['total_contract']) * 100, 2) : 0;
+
+    // BUDGET VARIANCE QUERY
+    if ($selectedProject > 0) {
+        $varianceStmt = $pdo->query("
+            SELECT 
+                project_name,
+                contract_amount,
+                ABC,
+                (ABC - contract_amount) AS variance_amount,
+                CASE 
+                    WHEN contract_amount > 0 THEN ROUND(((ABC - contract_amount) / contract_amount) * 100, 2)
+                    ELSE 0 
+                END AS variance_percent
+            FROM projects 
+            WHERE project_id = $selectedProject
+            AND contract_amount > 0
+        ");
+    } else {
+        $varianceStmt = $pdo->query("
+            SELECT 
+                project_name,
+                contract_amount,
+                ABC,
+                (ABC - contract_amount) AS variance_amount,
+                CASE 
+                    WHEN contract_amount > 0 THEN ROUND(((ABC - contract_amount) / contract_amount) * 100, 2)
+                    ELSE 0 
+                END AS variance_percent
+            FROM projects 
+            WHERE contract_amount > 0
+        ");
+    }
+
+    $varianceData = $varianceStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $overBudgetCount = 0;
+    $underBudgetCount = 0;
+    foreach ($varianceData as $project) {
+        if ($project['variance_percent'] > 0) $overBudgetCount++;
+        if ($project['variance_percent'] < 0) $underBudgetCount++;
+    }
+
+    $overBudgetPercent = count($varianceData) > 0 ? round(($overBudgetCount / count($varianceData)) * 100, 2) : 0;
+
+    // PROJECT SUMMARY //
+
+    // OPERATION SUMMARY //
+    if ($selectedProject > 0) {
+        $stmt = $pdo->query("
+            SELECT
+                (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='pending' AND project_id = $selectedProject) AS pending,
+                (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='accepted' AND project_id = $selectedProject) AS accepted,
+                (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='delivered' AND project_id = $selectedProject) AS delivered
+            FROM projects WHERE project_id = $selectedProject
+        ");
+    } else {
+        $stmt = $pdo->query("
+            SELECT
               (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='pending') AS pending,
               (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='accepted') AS accepted,
               (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='delivered') AS delivered
@@ -68,6 +151,7 @@ try {
     $pendingPercent = $totalDeliveries > 0 ? round(($deliveryTotals['pending'] / $totalDeliveries) * 100) : 0;
     $acceptedPercent = $totalDeliveries > 0 ? round(($deliveryTotals['accepted'] / $totalDeliveries) * 100) : 0;
     $deliveredPercent = $totalDeliveries > 0 ? round(($deliveryTotals['delivered'] / $totalDeliveries) * 100) : 0;
+    // OPERATION SUMMARY //
 
     // BILLING SUMMARY //
     $stmt = $pdo->query("
@@ -92,8 +176,9 @@ try {
     $forBillingPercent = $totalGroups > 0 ? round(($billingTotals['for_billing_count'] / $totalDr) * 100) : 0;
     $billedPercent = $totalGroups > 0 ? round(($billingTotals['billed_count'] / $totalDr) * 100) : 0;
     $paidPercent = $totalGroups > 0 ? round(($billingTotals['paid_count'] / $totalDr) * 100) : 0;
+    // BILLING SUMMARY //
 
-    // SALES GENERATION SUMMARY //
+    // SALES GENERATION CHARTS //
     $projectStatusQuery = "
         SELECT 
             COUNT(*) AS total,
@@ -107,7 +192,6 @@ try {
                 ELSE p.status
             END AS status
         FROM projects p
-        " . ($selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "") . "
         GROUP BY 
             CASE p.status
                 WHEN 'Pending Evaluation' THEN 'Pending Evaluation'
@@ -126,22 +210,21 @@ try {
 
     $opportunityQuery = "
         SELECT 
-            project_id,
             project_name,
             contract_amount,
             ABC,
-            (ABC - contract_amount) AS variance,
-            ROUND((ABC / contract_amount) * 100, 2) AS percentage_of_target
+            (ABC - contract_amount) AS variance
         FROM projects
-        " . ($selectedProject > 0 ? "WHERE project_id = $selectedProject" : "") . "
-        ORDER BY project_name
+        WHERE contract_amount > 0
+        AND status IN ('Pending Evaluation', 'For Award', 'For Implementation')
+        ORDER BY ABS(ABC - contract_amount) DESC
     ";
 
     $stmt = $pdo->query($opportunityQuery);
     $opportunity = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    // SALES GENERATION SUMMARY //
+    // SALES GENERATION CHARTS //
 
-    // OPERATION SUMMARY //
+    // OPERATION CHARTS //
     $deliveryStatusQuery = "
         SELECT 
             COUNT(*) AS total,
@@ -164,7 +247,6 @@ try {
             END
         ORDER BY total DESC;
     ";
-    
     $stmt = $pdo->query($deliveryStatusQuery);
     $deliveryStatusOverview = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -185,22 +267,32 @@ try {
       GROUP BY month, status
       ORDER BY month, status;
     ";
-    
     $stmt = $pdo->query($monthlyTrendQuery);
     $monthlyDeliveryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $inventoryQuery = "
+    $inventoryQuery = "
         SELECT 
             ii.item_name,
-            SUM(i.qty) as total_qty
+            COALESCE(
+                (SELECT ih.new_qty
+                FROM inventory_history ih
+                WHERE ih.item_id = ii.item_id 
+                  AND DATE(ih.changed_at) <= :selectedDate
+                ORDER BY ih.changed_at DESC 
+                LIMIT 1),
+                SUM(i.qty)
+            ) as total_qty
         FROM inventory i
         JOIN item ii ON i.item_id = ii.item_id
         JOIN warehouse w ON i.warehouse_id = w.warehouse_id
-        WHERE inventory_status = 'Approved'
+        WHERE i.inventory_status = 'Approved'
+        " . ($selectedProject > 0 ? "AND ii.project_id = $selectedProject" : "") . "
         GROUP BY ii.item_id, ii.item_name
-        HAVING SUM(i.qty) > 0
+        HAVING total_qty > 0
     ";
-    $stmt = $pdo->query($inventoryQuery);
+
+    $stmt = $pdo->prepare($inventoryQuery);
+    $stmt->execute(['selectedDate' => $selectedDate]);
     $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $inventoryHistoryQuery = "
@@ -285,12 +377,12 @@ try {
         HAVING qty > 0
         ORDER BY w.warehouse_name, i.item_name
     ";
-
     $stmt = $pdo->prepare($inventoryByWarehouseQuery);
     $stmt->execute(['selectedDate' => $selectedDate]);
     $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    // OPERATION SUMMARY //
+    // OPERATION CHARTS //
 
+    // NOT USED //
     $todayActivityQuery = "
         SELECT 
           DATE_FORMAT(al.created_at, '%H:%i') as time_label,
@@ -331,6 +423,24 @@ try {
     $stmt = $pdo->query($topUpdatedItemsQuery);
     $topUpdatedItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $placesQuery = "
+        SELECT 
+            s.region,
+            p.project_id,
+            p.project_name,
+            COUNT(DISTINCT s.school_id) AS total_schools,
+            SUM(CASE WHEN d.status = 'Delivered' THEN 1 ELSE 0 END) AS delivered_count
+        FROM deliveries d
+        JOIN $schoolTable s ON d.school_id = s.school_id
+        JOIN projects p ON d.project_id = p.project_id
+        " . ($selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "") . "
+        GROUP BY s.region, p.project_id, p.project_name
+        ORDER BY p.project_name, s.region
+    ";
+    
+    $stmt = $pdo->query($placesQuery);
+    $placesDelivered = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     $divisionDeliveriesQuery = "
         SELECT 
             s.division AS province,
@@ -360,8 +470,8 @@ try {
             'percentage' => (float)$row['percentage']
         ];
     }
-
     echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision) . ";</script>";
+    // NOT USED //
 
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
@@ -401,24 +511,49 @@ if ($selectedProject > 0) {
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
-          <div id="projectSummaryContainer" class="sortable-container">
-            <?php 
-            $projectCards = [
-                ['title'=>'Pending Projects','value'=>$deliveryTotals['pendingProjects'],'class'=>'danger','icon'=>'⏳'],
-                ['title'=>'Ongoing Projects','value'=>$deliveryTotals['activeProjects'],'class'=>'warning','icon'=>'🚀'],
-                ['title'=>'Complete Projects','value'=>$deliveryTotals['completedProjects'],'class'=>'success','icon'=>'✅']
-            ];
-            foreach($projectCards as $c): ?>
-            <div class="card text-bg-<?=$c['class']?> mb-2 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
-              <div class="card-body p-3 d-flex align-items-center">
-                <div class="me-3" style="font-size: 2rem;"><?=$c['icon']?></div>
-                <div class="flex-grow-1">
-                  <h6 class="mb-1 small"><?= $c['title'] ?></h6>
-                  <h4 class="mb-0 fw-bold"><?= $c['value'] ?></h4>
+          <div class="row g-3">
+            <div class="col-md-12">
+              <div id="projectSummaryContainer" class="sortable-container">
+                <div class="card text-bg-primary mb-2 summary-card" data-card-id="projects-stuck-planning">
+                  <div class="card-body p-3 text-center">
+                    <div style="font-size: 2.5rem; margin-bottom: 10px;">⏳</div>
+                    <small class="d-block opacity-75">Projects in Evaluation Phase</small>
+                    <h3 class="mb-2 fw-bold"><?= $inEvaluationPercent ?>%</h3>
+                    <small class="d-block opacity-75"><?= $inEvaluationCount ?> awaiting review</small>
+                  </div>
+                </div>
+                <?php 
+                $projectCards = [
+                    ['title'=>'Pending Projects','value'=>$projectTotals['pendingProjects'],'class'=>'danger','icon'=>'⏳'],
+                    ['title'=>'Ongoing Projects','value'=>$projectTotals['activeProjects'],'class'=>'warning','icon'=>'🚀'],
+                    ['title'=>'Complete Projects','value'=>$projectTotals['completedProjects'],'class'=>'success','icon'=>'✅']
+                ];
+                foreach($projectCards as $c): ?>
+                <!-- <div class="card text-bg-<?=$c['class']?> mb-2 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
+                  <div class="card-body p-3 d-flex align-items-center">
+                    <div class="me-3" style="font-size: 2rem;"><?=$c['icon']?></div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 small"><?= $c['title'] ?></h6>
+                      <h4 class="mb-0 fw-bold"><?= $c['value'] ?></h4>
+                    </div>
+                  </div>
+                </div> -->
+                <?php endforeach; ?>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0">Projects</h6>
+                  <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                    <i class="bi bi-printer"></i>
+                  </a>
+                </div>
+                <div class="card-body">
+                  <canvas id="projectStatusChart" height="200"></canvas>
                 </div>
               </div>
             </div>
-            <?php endforeach; ?>
           </div>
         </div>
       </div>
@@ -432,83 +567,43 @@ if ($selectedProject > 0) {
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
-
-          <!-- Project Filter Inside the Card -->
-          <!-- <div class="row mb-3">
-            <div class="col-12">
-              <div class="card shadow-sm border-0 bg-light">
-                <div class="card-body py-2">
-                  <h6 class="card-title mb-2">Filter by Project</h6>
-                  <form method="GET" id="projectFilterForm">
-                      <div class="input-group input-group-sm">
-                          <select class="form-select form-select-sm" name="project_id" id="projectSelect">
-                              <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
-                              <?php foreach($allProjects as $project): ?>
-                                  <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
-                                    <?php 
-                                    $name = htmlspecialchars($project['project_name']);
-                                    echo strlen($name) > 30 ? substr($name, 0, 80) . '…' : $name; 
-                                    ?>
-                                  </option>
-                              <?php endforeach; ?>
-                          </select>
-                          <?php if($selectedProject > 0): ?>
-                              <a href="?" class="btn btn-outline-secondary btn-sm">
-                                  ❌ Clear
-                              </a>
-                          <?php endif; ?>
-                      </div>
-                  </form>
+          <!-- <div id="deliverySummaryContainer" class="sortable-container">
+            <div class="row g-2">
+                <?php 
+                $metricCards = [
+                    [
+                        'title' => 'Budget Utilization', 
+                        'value' => $utilizationRate . '%', 
+                        'class' => 'info', 
+                        'icon' => '💰', 
+                        'percent' => $utilizationRate,
+                        'subtitle' => 'ABC vs Contract'
+                    ],
+                ];
+                
+                foreach($metricCards as $c): ?>
+                <div class="col-md-3 col-6">
+                    <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
+                        <div class="card-body p-3 text-center">
+                            <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
+                            <small class="d-block opacity-75"><?= $c['title'] ?></small>
+                            <h3 class="mb-2 fw-bold"><?= $c['value'] ?></h3>
+                            <small class="d-block opacity-75 mb-2"><?= $c['subtitle'] ?></small>
+                            <?php if (isset($c['percent'])): ?>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-light" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
-              </div>
+                <?php endforeach; ?>
             </div>
           </div> -->
 
-          <div id="deliverySummaryContainer" class="sortable-container">
-            <div class="row g-2">
-              <?php 
-              $deliveryCards = [
-                  ['title'=>'*In Progress','value'=>$deliveryTotals['pending'] ?? 0,'class'=>'danger','icon'=>'⏳', 'percent'=>$pendingPercent],
-                  ['title'=>'*In Logistics','value'=>$deliveryTotals['accepted'] ?? 0,'class'=>'warning','icon'=>'🚚', 'percent'=>$acceptedPercent],
-                  ['title'=>'*Delivered','value'=>$deliveryTotals['delivered'] ?? 0,'class'=>'success','icon'=>'📦', 'percent'=>$deliveredPercent],
-                  ['title'=>'*Completion Rate','value'=>$completionRate . '%','class'=>'primary','icon'=>'📊',
-                  'percent'=>$completionRate]
-              ];
-              foreach($deliveryCards as $c): ?>
-              <div class="col-md-3 col-6">
-                <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
-                  <div class="card-body p-3 text-center">
-                    <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
-                    <small class="d-block opacity-75"><?= $c['title'] ?></small>
-                    <h3 class="mb-2 fw-bold"><?= $c['value'] ?></h3>
-                    <?php if (isset($c['percent'])): ?>
-                    <div class="progress" style="height: 6px;">
-                      <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
-                    </div>
-                    <?php endif; ?>
-                  </div>
-                </div>
-              </div>
-              <?php endforeach; ?>
-            </div>
-          </div>
-
           <!-- Projects and Cash Flow -->
-          <div class="row g-3 mt-2">
-            <div class="col-md-5">
-              <div class="card shadow-sm h-100">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Projects</h6>
-                  <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-                    <i class="bi bi-printer"></i>
-                  </a>
-                </div>
-                <div class="card-body">
-                  <canvas id="projectStatusChart" height="200"></canvas>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-7">
+          <div class="row g-3">
+            <div class="col-md-12">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                   <h6 class="mb-0"> Cash Flow</h6>
@@ -518,12 +613,22 @@ if ($selectedProject > 0) {
                 </div>
               </div>
             </div>
+            <div class="col-md-12">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0"> Budget Variance</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="opportunityChart" height="200"></canvas>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-12 col-12 chart-item" data-chart-id="operation-summary">
+    <!-- <div class="col-md-12 col-12 chart-item" data-chart-id="operation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-bold">🚚 OPPORTUNITY PIPELINE</h6>
@@ -549,7 +654,7 @@ if ($selectedProject > 0) {
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- LEFT: Operation Summary -->
     <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
