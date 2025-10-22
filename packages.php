@@ -51,7 +51,7 @@ try {
                 p.width,
                 p.height,
                 p.length,
-                CONCAT(p.width,'x',p.height,'x',p.length) AS Dimension
+                CONCAT(p.length,'x',p.width,'x',p.height) AS Dimension
             FROM package p
             LEFT JOIN package_content pc ON p.package_id = pc.package_id
             LEFT JOIN item i ON pc.item_id = i.item_id
