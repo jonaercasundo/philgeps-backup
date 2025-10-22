@@ -123,7 +123,6 @@ try {
     }
 
     $overBudgetPercent = count($varianceData) > 0 ? round(($overBudgetCount / count($varianceData)) * 100, 2) : 0;
-
     // PROJECT SUMMARY //
 
     // OPERATION SUMMARY //
@@ -507,7 +506,7 @@ if ($selectedProject > 0) {
     <div class="col-md-4 col-12 chart-item" data-chart-id="project-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">📦 PROJECT SUMMARY</h6>
+          <h6 class="mb-0 fw-bold">🚀 PROJECT SUMMARY</h6>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
@@ -563,7 +562,7 @@ if ($selectedProject > 0) {
     <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">🚚 SALES GENERATION SUMMARY</h6>
+          <h6 class="mb-0 fw-bold">🪙 SALES GENERATION SUMMARY</h6>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
@@ -664,7 +663,6 @@ if ($selectedProject > 0) {
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
-
           <!-- Project Filter Inside the Card -->
           <div class="row mb-3">
             <div class="col-12">
@@ -775,17 +773,17 @@ if ($selectedProject > 0) {
     <div class="col-md-8 col-12 chart-item" data-chart-id="charts-section">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">🚚 Operation</h6>
+          <h6 class="mb-0 fw-bold">🚚 OPERATION</h6>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
           <!-- Delivery Status by Lot -->
           <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
-              <h6 class="mb-0">Delivery Status by Lot</h6>
+              <h6 class="mb-0">Deliveries Status by Lot</h6>
             </div>
             <div class="card-body">
-              <canvas id="deliveredPerLotChart" height="200"></canvas>
+              <canvas id="deliveryStatusPerLotChart" height="200"></canvas>
             </div>
           </div>
           <div class="card shadow-sm mb-4">
@@ -879,6 +877,20 @@ if ($selectedProject > 0) {
     </div>
 
     <!-- Progress by Lot Charts -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">✅ Delivered by Lot (%)</h6>
+          <a href="report/print_accepted_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+            <i class="bi bi-printer"></i>
+          </a>
+        </div>
+        <div class="card-body">
+          <canvas id="deliveredPerLotChart" height="250"></canvas>
+        </div>
+      </div>
+    </div>
+
     <div class="col-lg-6">
       <div class="card shadow-sm">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">

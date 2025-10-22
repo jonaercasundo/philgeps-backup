@@ -14,45 +14,63 @@ const {
     opportunity
 } = phpData;
 
-// Simplified Green-Yellow-Red Color Scheme
-const statusColors = {
-    'Warehouse': '#fbc02d',   // Yellow
+// Delivery Status Colors (Green-Yellow-Red)
+const deliveryStatusColors = {
     'Delivered': '#198754',   // Green
     'Accepted': '#fbc02d',    // Yellow
     'Pending': '#dc3545',     // Red
-    'Not': '#dc3545'          // Red
+    'Cancelled': '#b02a37',   // Darker Red
+    'Not': '#a52834'          // Even Darker Red
+};
+
+// Project Status Colors (Green-Yellow-Red)  
+const projectStatusColors = {
+    'Pending Evaluation': '#dc3545',     // Red
+    'For Award': '#fbc02d',              // Yellow  
+    'For Implementation': '#e6b422',     // Darker Yellow
+    'Ongoing': '#d4a81e',                // Even Darker Yellow
+    'Delivered': '#198754',              // Green
+    'Completed': '#157347'               // Darker Green
 };
 
 const primaryColors = [
-    'rgba(59, 130, 246, 0.8)',   // Blue
-    'rgba(16, 185, 129, 0.8)',   // Emerald
-    'rgba(139, 92, 246, 0.8)',   // Violet
-    'rgba(245, 158, 11, 0.8)',   // Amber
-    'rgba(99, 102, 241, 0.8)',   // Indigo
-    'rgba(14, 165, 233, 0.8)',   // Sky
-    'rgba(100, 116, 139, 0.8)',  // Slate
-    'rgba(168, 85, 247, 0.8)'    // Purple
+    '#198754',   // Green
+    '#157347',   // Darker Green
+    '#fbc02d',   // Yellow  
+    '#e6b422',   // Darker Yellow
+    '#dc3545',   // Red
+    '#b02a37',   // Darker Red
+    '#22c55e',   // Bright Green
+    '#facc15'    // Bright Yellow
 ];
 
-// Simplified color variants
+// Color variants
 const colorVariants = {
     light: {
-        'Warehouse': 'rgba(251, 192, 45, 0.15)',   // light yellow
-        'Delivered': 'rgba(25, 135, 84, 0.15)',    // light green
-        'Accepted': 'rgba(251, 192, 45, 0.15)',    // light yellow
-        'Pending': 'rgba(220, 53, 69, 0.15)',      // light red
-        'Not': 'rgba(220, 53, 69, 0.15)'           // light red
+        'Delivered': 'rgba(25, 135, 84, 0.15)',
+        'Accepted': 'rgba(251, 192, 45, 0.15)',
+        'Pending': 'rgba(220, 53, 69, 0.15)',
+        'Cancelled': 'rgba(176, 42, 55, 0.15)',
+        'Pending Evaluation': 'rgba(220, 53, 69, 0.15)',
+        'For Award': 'rgba(251, 192, 45, 0.15)',
+        'For Implementation': 'rgba(230, 180, 34, 0.15)',
+        'Ongoing': 'rgba(212, 168, 30, 0.15)',
+        'Completed': 'rgba(21, 115, 71, 0.15)'
     },
     border: {
-        'Warehouse': '#fbc02d',   // yellow
-        'Delivered': '#198754',   // green
-        'Accepted': '#fbc02d',    // yellow
-        'Pending': '#dc3545',     // red
-        'Not': '#dc3545'          // red
+        'Delivered': '#198754',
+        'Accepted': '#fbc02d',
+        'Pending': '#dc3545',
+        'Cancelled': '#b02a37',
+        'Pending Evaluation': '#dc3545',
+        'For Award': '#fbc02d',
+        'For Implementation': '#e6b422',
+        'Ongoing': '#d4a81e',
+        'Completed': '#157347'
     }
 };
 
-// Group inventory data
+// Group inventory data for Inventory by Warehouse chart
 const itemGroups = {};
 inventoryData.forEach(row => {
     const { item_name, qty, warehouse_name } = row;
@@ -94,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Document ready function to ensure the DOM is loaded before running scripts
 document.addEventListener('DOMContentLoaded', function() {
 
-  // Initialize Sortable
+    // Initialize Sortable
     let sortable = new Sortable(document.getElementById('draggable-dashboard'), {
         animation: 150,
         ghostClass: 'blue-background-class',
@@ -114,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('projectFilterForm').submit();
     });
 
-  // Save layout function
+    // Save layout function
     function saveLayout() {
         const items = document.querySelectorAll('.chart-item');
         const layout = [];
@@ -243,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ),
             datasets: [{
             data: deliveryStatusOverview.map(r => r.total),
-            backgroundColor: deliveryStatusOverview.map(r => statusColors[r.status] || primaryColors[0]),
+            backgroundColor: deliveryStatusOverview.map(r => deliveryStatusColors[r.status] || primaryColors[0]),
             borderColor: deliveryStatusOverview.map(r => colorVariants.border[r.status] || primaryColors[0]),
             borderWidth: 2
             }]
@@ -266,44 +284,55 @@ document.addEventListener('DOMContentLoaded', function() {
         const months = [...new Set(monthlyDeliveryTrend.map(r => r.month))];
         const statuses = [...new Set(monthlyDeliveryTrend.map(r => r.status))];
 
+        // Map SQL status names to deliveryStatusColors keys
+        const statusMap = {
+            'Schools': 'Delivered',
+            'Logistics': 'Accepted', 
+            'Warehouse': 'Pending'
+        };
+
         // Build datasets for each status
-        const datasets = statuses.map((status, idx) => ({
-        label: status,
-        data: months.map(month => {
-            const row = monthlyDeliveryTrend.find(r => r.month === month && r.status === status);
-            return row ? row.total : 0; // 0 if no data for that month+status
-        }),
-        borderColor: statusColors[status] || primaryColors[idx % primaryColors.length],
-        backgroundColor: colorVariants.light[status] || primaryColors[idx % primaryColors.length].replace('0.8', '0.2'),
-        borderWidth: 3,
-        tension: 0.4,
-        fill: true,
-        pointBackgroundColor: statusColors[status] || primaryColors[idx % primaryColors.length],
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 5,
-        pointHoverRadius: 7
-        }));
+        const datasets = statuses.map((status) => {
+            const colorKey = statusMap[status] || status;
+            
+            return {
+                label: status,
+                data: months.map(month => {
+                    const row = monthlyDeliveryTrend.find(r => r.month === month && r.status === status);
+                    return row ? row.total : 0;
+                }),
+                borderColor: deliveryStatusColors[colorKey],
+                backgroundColor: colorVariants.light[colorKey],
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: deliveryStatusColors[colorKey],
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            };
+        });
 
         new Chart(document.getElementById('monthlyDeliveryTrendChart'), {
-        type: 'line',
-        data: {
-            labels: months,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-            y: {
-                beginAtZero: true
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
             }
-            }
-        }
         });
     } else {
         createEmptyChart(
-        document.getElementById('monthlyDeliveryTrendChart'), 'No monthly trend data available');
+            document.getElementById('monthlyDeliveryTrendChart'), 'No monthly trend data available');
     }
 
     // 📊 Project Status Overview (Pie Chart)
@@ -318,11 +347,11 @@ document.addEventListener('DOMContentLoaded', function() {
         ),
         datasets: [{
             data: projectStatusOverview.map(r => r.total),
-            backgroundColor: projectStatusOverview.map((r, i) =>
-            colorVariants.light[r.status] || primaryColors[i % primaryColors.length]
+            backgroundColor: projectStatusOverview.map(r => 
+                projectStatusColors[r.status]
             ),
-            borderColor: projectStatusOverview.map((r, i) =>
-            colorVariants.border[r.status] || primaryColors[i % primaryColors.length]
+            borderColor: projectStatusOverview.map(r => 
+                projectStatusColors[r.status]
             ),
             borderWidth: 2
         }]
@@ -437,7 +466,6 @@ document.addEventListener('DOMContentLoaded', function() {
         createEmptyChart(document.getElementById('opportunityChart'), 'No project financial data available');
     }
 
-
     // 🎯 Inventory History (Daily Changes)
     new Chart(document.getElementById('inventoryHistoryTrendChart'), {
         type: 'line',
@@ -477,26 +505,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-// 🟩 Top Updated Items
-// new Chart(document.getElementById('topUpdatedItemsChart'), {
-//   type: 'bar',
-//   data: {
-//     labels: topUpdatedItems.map(r => r.item_name),
-//     datasets: [{
-//       label: 'Updates',
-//       data: topUpdatedItems.map(r => r.update_count),
-//       backgroundColor: '#28a745'
-//     }]
-//   },
-//   options: {
-//     plugins: { legend: { display: false } },
-//     scales: {
-//       x: { title: { display: true, text: 'Item' } },
-//       y: { beginAtZero: true, title: { display: true, text: 'Updates' } }
-//     }
-//   }
-// });
-
     // 🟨 Changes per Warehouse
     new Chart(document.getElementById('changesPerWarehouseChart'), {
         type: 'bar',
@@ -516,145 +524,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-
-// 3. Today's User Activity (Doughnut)
-// if (todayUserActivity.length > 0) {
-//     const activityTypes = [...new Set(todayUserActivity.map(r => r.activity_type))];
-//     const timeLabels = [...new Set(todayUserActivity.map(r => r.time_label))].sort();
-    
-//     const activityDetails = {};
-//     todayUserActivity.forEach(r => {
-//         activityDetails[`${r.time_label}-${r.activity_type}`] = r.activity_list?.split('|||') || [];
-//     });
-    
-//     const datasets = activityTypes.map((type, i) => {
-//         const color = statusColors[type] || primaryColors[i % primaryColors.length];
-//         const bgColor = colorVariants.light[type] || color.replace('0.8', '0.1');
-        
-//         return {
-//             label: type,
-//             data: timeLabels.map(t => todayUserActivity.find(r => r.time_label === t && r.activity_type === type)?.total_activities || 0),
-//             borderColor: colorVariants.border[type] || color,
-//             backgroundColor: bgColor,
-//             borderWidth: 3,
-//             tension: 0.4,
-//             fill: true,
-//             pointBackgroundColor: color,
-//             pointBorderColor: '#ffffff',
-//             pointBorderWidth: 2,
-//             pointRadius: 4,
-//             pointHoverRadius: 6
-//         };
-//     });
-
-//     new Chart(document.getElementById('todayActivityChart'), {
-//         type: 'line',
-//         data: { labels: timeLabels, datasets },
-//         options: {
-//             responsive: true,
-//             maintainAspectRatio: false,
-//             interaction: { mode: 'nearest', intersect: true },
-//             plugins: {
-//                 legend: { 
-//                   position: 'top',
-//                   labels: {
-//                       usePointStyle: true,
-//                       padding: 15
-//                   }
-//               },
-//                 tooltip: {
-//                     backgroundColor: '#fff',
-//                     titleColor: '#333',
-//                     bodyColor: '#666',
-//                     borderColor: '#ddd',
-//                     borderWidth: 2,
-//                     padding: 12,
-//                     displayColors: true,
-//                     titleFont: { size: 13, weight: 'bold' },
-//                     bodyFont: { size: 12 },
-//                     callbacks: {
-//                         title: ctx => ctx[0].dataset.label + ' Activity',
-//                         label: ctx => {
-//                             const key = `${timeLabels[ctx.dataIndex]}-${ctx.dataset.label}`;
-//                             const activities = activityDetails[key] || [];
-//                             return activities.length > 0 ? activities.slice(0, 5) : `${ctx.parsed.y} Activities at ${ctx.label}`;
-//                         },
-//                         afterLabel: ctx => {
-//                             const key = `${timeLabels[ctx.dataIndex]}-${ctx.dataset.label}`;
-//                             const activities = activityDetails[key] || [];
-//                             return activities.length > 5 ? `... and ${activities.length - 5} more` : null;
-//                         }
-//                     }
-//                 }
-//             },
-//             scales: {
-//                 y: { beginAtZero: true, ticks: { stepSize: 1 } },
-//                 x: { 
-//                     grid: { display: false },
-//                     ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 20 }
-//                 }
-//             }
-//         }
-//     });
-// } else {
-//     createEmptyChart(document.getElementById('todayActivityChart'), 'No activity today');
-// }
-
-// 4. Places Delivered (Horizontal Bar) - by schools reached
-// if (placesDelivered.length > 0) {
-//   new Chart(document.getElementById('placesDeliveredChart'), {
-//     type: 'bar',
-//     data: {
-//       labels: placesDelivered.map(r => r.project_name + ' (' + r.region + ')'),
-//       datasets: [{
-//         label: 'Schools per Region',
-//         data: placesDelivered.map(r => r.total_schools),
-//         backgroundColor: placesDelivered.map((_, i) => primaryColors[i % primaryColors.length]),
-//         borderColor: placesDelivered.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
-//         borderWidth: 2,
-//         borderRadius: 4,
-//         borderSkipped: false
-//       }]
-//     },
-//     options: {
-//       indexAxis: 'y',
-//       responsive: true,
-//       maintainAspectRatio: false,
-//       plugins: {
-//               legend: {
-//                   display: false
-//               },
-//               tooltip: {
-//                   callbacks: {
-//                       afterLabel: function(context) {
-//                           const region = placesDelivered[context.dataIndex];
-//                           return `Delivered: ${region.delivered_count} schools`;
-//                       }
-//                   }
-//               }
-//           },
-//           scales: {
-//               x: {
-//                   beginAtZero: true,
-//                   title: {
-//                       display: true,
-//                       text: 'Number of Schools'
-//                   }
-//               },
-//               y: {
-//                   grid: {
-//                       display: false
-//                   },
-//                   ticks: {
-//                       autoSkip: false
-//                   }
-//               }
-//           }
-//       }
-//   });
-// } else {
-//   createEmptyChart(document.getElementById('placesDeliveredChart'), 'No places delivered data available');
-// }
 
     // Inventory by Warehouse - Separate Charts
     if (phpData.inventoryByWarehouse && phpData.inventoryByWarehouse.length > 0) {
@@ -882,14 +751,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     {
                         label: 'Accepted',
                         data: acceptedData,
-                        backgroundColor: statusColors.Accepted,
+                        backgroundColor: deliveryStatusColors.Accepted,
                         borderColor: colorVariants.border.Accepted,
                         borderWidth: 1
                     },
                     {
                         label: 'Not Accepted',
                         data: notAcceptedData,
-                        backgroundColor: statusColors.Not,
+                        backgroundColor: deliveryStatusColors.Not,
                         borderColor: colorVariants.border.Not,
                         borderWidth: 1
                     }
@@ -974,14 +843,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     {
                         label: 'Delivered',
                         data: deliveredData,
-                        backgroundColor: statusColors.Delivered,
+                        backgroundColor: deliveryStatusColors.Delivered,
                         borderColor: colorVariants.border.Delivered,
                         borderWidth: 1
                     },
                     {
                         label: 'Not Delivered',
                         data: notDeliveredData,
-                        backgroundColor: statusColors.Not,
+                        backgroundColor: deliveryStatusColors.Not,
                         borderColor: colorVariants.border.Not,
                         borderWidth: 1
                     }
@@ -1066,14 +935,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     {
                         label: 'Accepted',
                         data: acceptedData,
-                        backgroundColor: statusColors.Accepted,
+                        backgroundColor: deliveryStatusColors.Accepted,
                         borderColor: colorVariants.border.Accepted,
                         borderWidth: 1
                     },
                     {
                         label: 'Not Accepted',
                         data: notAcceptedData,
-                        backgroundColor: statusColors.Not,
+                        backgroundColor: deliveryStatusColors.Not,
                         borderColor: colorVariants.border.Not,
                         borderWidth: 1
                     }
@@ -1138,6 +1007,7 @@ document.addEventListener('DOMContentLoaded', function() {
         createEmptyChart(document.getElementById('acceptedPerLotChart'), 'No lot data available');
     }
 
+    // Progress by Lot - Delivered Percentage
     if (phpData.progressPerLot && phpData.progressPerLot.length > 0) {
         const lots = phpData.progressPerLot.map(l => l.lot_name);
         const deliveredData = phpData.progressPerLot.map(l => {
@@ -1157,14 +1027,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     {
                         label: 'Delivered',
                         data: deliveredData,
-                        backgroundColor: statusColors.Delivered,
+                        backgroundColor: deliveryStatusColors.Delivered,
                         borderColor: colorVariants.border.Delivered,
                         borderWidth: 1
                     },
                     {
                         label: 'Not Delivered',
                         data: notDeliveredData,
-                        backgroundColor: statusColors.Not,
+                        backgroundColor: deliveryStatusColors.Not,
                         borderColor: colorVariants.border.Not,
                         borderWidth: 1
                     }
@@ -1228,5 +1098,278 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         createEmptyChart(document.getElementById('deliveredPerLotChart'), 'No lot data available');
     }
+
+    // Combined Progress by Lot - Accepted & Delivered Percentage
+    if (phpData.progressPerLot && phpData.progressPerLot.length > 0) {
+        const lots = phpData.progressPerLot.map(l => l.lot_name);
+        
+        const acceptedData = phpData.progressPerLot.map(l => {
+            const total = l.total || 1;
+            return Math.round((l.accepted / total) * 100);
+        });
+        
+        const deliveredData = phpData.progressPerLot.map(l => {
+            const total = l.total || 1;
+            return Math.round((l.delivered / total) * 100);
+        });
+        
+        const pendingData = phpData.progressPerLot.map(l => {
+            const total = l.total || 1;
+            const acceptedPercent = Math.round((l.accepted / total) * 100);
+            const deliveredPercent = Math.round((l.delivered / total) * 100);
+            return 100 - acceptedPercent - deliveredPercent;
+        });
+
+        new Chart(document.getElementById('deliveryStatusPerLotChart'), {
+            type: 'bar',
+            data: {
+                labels: lots,
+                datasets: [
+                    {
+                        label: 'Delivered',
+                        data: deliveredData,
+                        backgroundColor: deliveryStatusColors.Delivered,
+                        borderColor: colorVariants.border.Delivered,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Accepted',
+                        data: acceptedData,
+                        backgroundColor: deliveryStatusColors.Accepted,
+                        borderColor: colorVariants.border.Accepted,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Pending',
+                        data: pendingData,
+                        backgroundColor: deliveryStatusColors.Pending,
+                        borderColor: colorVariants.border.Pending,
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Lots'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Percentage (%)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const lotData = phpData.progressPerLot[context.dataIndex];
+                                const total = lotData.total || 1;
+                                
+                                switch(context.dataset.label) {
+                                    case 'Delivered':
+                                        return `Delivered: ${lotData.delivered}/${total} (${context.parsed.y}%)`;
+                                    case 'Accepted':
+                                        return `Accepted: ${lotData.accepted}/${total} (${context.parsed.y}%)`;
+                                    case 'Pending':
+                                        const pending = total - lotData.accepted - lotData.delivered;
+                                        return `Pending: ${pending}/${total} (${context.parsed.y}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const data = dataset.data[index];
+                            if (data > 0) {
+                                ctx.fillStyle = '#fff';
+                                ctx.font = 'bold 12px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
+                            }
+                        });
+                    });
+                }
+            }]
+        });
+    } else {
+        createEmptyChart(document.getElementById('deliveryStatusPerLotChart'), 'No lot data available');
+    }
+
+    
+    // 🟩 Top Updated Items
+    // new Chart(document.getElementById('topUpdatedItemsChart'), {
+    //   type: 'bar',
+    //   data: {
+    //     labels: topUpdatedItems.map(r => r.item_name),
+    //     datasets: [{
+    //       label: 'Updates',
+    //       data: topUpdatedItems.map(r => r.update_count),
+    //       backgroundColor: '#28a745'
+    //     }]
+    //   },
+    //   options: {
+    //     plugins: { legend: { display: false } },
+    //     scales: {
+    //       x: { title: { display: true, text: 'Item' } },
+    //       y: { beginAtZero: true, title: { display: true, text: 'Updates' } }
+    //     }
+    //   }
+    // });
+    // 3. Today's User Activity (Doughnut)
+    // if (todayUserActivity.length > 0) {
+    //     const activityTypes = [...new Set(todayUserActivity.map(r => r.activity_type))];
+    //     const timeLabels = [...new Set(todayUserActivity.map(r => r.time_label))].sort();
+        
+    //     const activityDetails = {};
+    //     todayUserActivity.forEach(r => {
+    //         activityDetails[`${r.time_label}-${r.activity_type}`] = r.activity_list?.split('|||') || [];
+    //     });
+        
+    //     const datasets = activityTypes.map((type, i) => {
+    //         const color = deliveryStatusColors[type] || primaryColors[i % primaryColors.length];
+    //         const bgColor = colorVariants.light[type] || color.replace('0.8', '0.1');
+            
+    //         return {
+    //             label: type,
+    //             data: timeLabels.map(t => todayUserActivity.find(r => r.time_label === t && r.activity_type === type)?.total_activities || 0),
+    //             borderColor: colorVariants.border[type] || color,
+    //             backgroundColor: bgColor,
+    //             borderWidth: 3,
+    //             tension: 0.4,
+    //             fill: true,
+    //             pointBackgroundColor: color,
+    //             pointBorderColor: '#ffffff',
+    //             pointBorderWidth: 2,
+    //             pointRadius: 4,
+    //             pointHoverRadius: 6
+    //         };
+    //     });
+
+    //     new Chart(document.getElementById('todayActivityChart'), {
+    //         type: 'line',
+    //         data: { labels: timeLabels, datasets },
+    //         options: {
+    //             responsive: true,
+    //             maintainAspectRatio: false,
+    //             interaction: { mode: 'nearest', intersect: true },
+    //             plugins: {
+    //                 legend: { 
+    //                   position: 'top',
+    //                   labels: {
+    //                       usePointStyle: true,
+    //                       padding: 15
+    //                   }
+    //               },
+    //                 tooltip: {
+    //                     backgroundColor: '#fff',
+    //                     titleColor: '#333',
+    //                     bodyColor: '#666',
+    //                     borderColor: '#ddd',
+    //                     borderWidth: 2,
+    //                     padding: 12,
+    //                     displayColors: true,
+    //                     titleFont: { size: 13, weight: 'bold' },
+    //                     bodyFont: { size: 12 },
+    //                     callbacks: {
+    //                         title: ctx => ctx[0].dataset.label + ' Activity',
+    //                         label: ctx => {
+    //                             const key = `${timeLabels[ctx.dataIndex]}-${ctx.dataset.label}`;
+    //                             const activities = activityDetails[key] || [];
+    //                             return activities.length > 0 ? activities.slice(0, 5) : `${ctx.parsed.y} Activities at ${ctx.label}`;
+    //                         },
+    //                         afterLabel: ctx => {
+    //                             const key = `${timeLabels[ctx.dataIndex]}-${ctx.dataset.label}`;
+    //                             const activities = activityDetails[key] || [];
+    //                             return activities.length > 5 ? `... and ${activities.length - 5} more` : null;
+    //                         }
+    //                     }
+    //                 }
+    //             },
+    //             scales: {
+    //                 y: { beginAtZero: true, ticks: { stepSize: 1 } },
+    //                 x: { 
+    //                     grid: { display: false },
+    //                     ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 20 }
+    //                 }
+    //             }
+    //         }
+    //     });
+    // } else {
+    //     createEmptyChart(document.getElementById('todayActivityChart'), 'No activity today');
+    // }
+
+    // 4. Places Delivered (Horizontal Bar) - by schools reached
+    // if (placesDelivered.length > 0) {
+    //   new Chart(document.getElementById('placesDeliveredChart'), {
+    //     type: 'bar',
+    //     data: {
+    //       labels: placesDelivered.map(r => r.project_name + ' (' + r.region + ')'),
+    //       datasets: [{
+    //         label: 'Schools per Region',
+    //         data: placesDelivered.map(r => r.total_schools),
+    //         backgroundColor: placesDelivered.map((_, i) => primaryColors[i % primaryColors.length]),
+    //         borderColor: placesDelivered.map((_, i) => primaryColors[i % primaryColors.length].replace('0.8', '1')),
+    //         borderWidth: 2,
+    //         borderRadius: 4,
+    //         borderSkipped: false
+    //       }]
+    //     },
+    //     options: {
+    //       indexAxis: 'y',
+    //       responsive: true,
+    //       maintainAspectRatio: false,
+    //       plugins: {
+    //               legend: {
+    //                   display: false
+    //               },
+    //               tooltip: {
+    //                   callbacks: {
+    //                       afterLabel: function(context) {
+    //                           const region = placesDelivered[context.dataIndex];
+    //                           return `Delivered: ${region.delivered_count} schools`;
+    //                       }
+    //                   }
+    //               }
+    //           },
+    //           scales: {
+    //               x: {
+    //                   beginAtZero: true,
+    //                   title: {
+    //                       display: true,
+    //                       text: 'Number of Schools'
+    //                   }
+    //               },
+    //               y: {
+    //                   grid: {
+    //                       display: false
+    //                   },
+    //                   ticks: {
+    //                       autoSkip: false
+    //                   }
+    //               }
+    //           }
+    //       }
+    //   });
+    // } else {
+    //   createEmptyChart(document.getElementById('placesDeliveredChart'), 'No places delivered data available');
+    // }
 
 });
