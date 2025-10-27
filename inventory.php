@@ -31,7 +31,7 @@
 
         <!-- USB Scanner Input -->
         <div class="px-3 py-2 border-top flex-shrink-0">
-        <input type="text" id="usbScannerInput" class="form-control" placeholder="Scan with USB scanner here" autofocus>
+            <input type="text" id="usbScannerInput" class="form-control" placeholder="Scan with USB scanner here" autofocus>
         </div>
 
 
@@ -564,4 +564,12 @@ function rejectInventory() {
     // Start scanner
     html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
     html5QrcodeScanner.render(onScanSuccess);
+</script>
+
+<!-- auto focus on scanner input -->
+<script>
+setTimeout(() => {
+    const scanner = document.getElementById('usbScannerInput');
+    if (scanner) scanner.focus();
+}, 100);
 </script>

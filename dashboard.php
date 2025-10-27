@@ -461,7 +461,7 @@ if ($selectedProject > 0) {
                     <div style="font-size: 2.5rem; margin-bottom: 10px;">⏳</div>
                     <small class="d-block opacity-75">Projects in Evaluation Phase</small>
                     <h3 class="mb-2 fw-bold"><?= $inEvaluationPercent ?>%</h3>
-                    <small class="d-block opacity-75"><?= $inEvaluationCount ?> awaiting review</small>
+                    <small class="d-block opacity-75"><?= $inEvaluationCount ?> pending evaluation</small>
                   </div>
                 </div>
                 <?php 
