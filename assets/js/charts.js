@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 📊 Project Status Overview (Pie Chart)
     if (projectStatusOverview.length > 0) {
-    const totalOverall = projectStatusOverview.reduce((sum, r) => sum + r.total, 0);
+    const totalOverall = projectStatusOverview.reduce((sum, r) => sum + parseFloat(r.total || 0), 0);
 
     new Chart(document.getElementById('projectStatusChart'), {
         type: 'pie',
