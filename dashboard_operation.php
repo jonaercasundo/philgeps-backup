@@ -13,6 +13,8 @@ try {
     $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
     $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+
+    $projectFilter = $selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "";
     // Get progress by region data
     $progressPerRegionQuery = "
         SELECT 
@@ -166,11 +168,42 @@ if ($selectedProject > 0) {
 ?>
 <!-- Dashboard Header with Controls -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>Dashboard</h2>
+  <h2>Production Dashboard</h2>
 </div>
 <div class="container-fluid">
   <!-- Additional Charts Section -->
   <div class="row g-4 mb-4">
+    <!-- Project Filter Inside the Card -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="card shadow-sm border-0 bg-light">
+          <div class="card-body py-2">
+            <h6 class="card-title mb-2">Filter by Project</h6>
+            <form method="GET" id="projectFilterForm">
+              <div class="input-group input-group-sm">
+                <select class="form-select form-select-sm" name="project_id" id="projectSelect" onchange="this.form.submit()">
+                  <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
+                  <?php foreach($allProjects as $project): ?>
+                    <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
+                      <?php 
+                      $name = htmlspecialchars($project['project_name']);
+                      echo strlen($name) > 30 ? substr($name, 0, 80) . '…' : $name; 
+                      ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+                <?php if($selectedProject > 0): ?>
+                  <a href="?" class="btn btn-outline-secondary btn-sm">
+                    ❌ Clear
+                  </a>
+                <?php endif; ?>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Inventory by Warehouse -->
     <div class="col-12">
       <div class="card shadow-sm">

@@ -54,32 +54,7 @@ try {
                     ($projectTotals['completedProjects'] ?? 0);
     $inEvaluationPercent = $totalProjects > 0 ? round(($projectTotals['pendingProjects'] ?? 0) / $totalProjects * 100, 2) : 0;
     $inEvaluationCount = $projectTotals['pendingProjects'] ?? 0;
-
-    // BUDGET UTILIZATION QUERY
-    if ($selectedProject > 0) {
-        $budgetStmt = $pdo->query("
-            SELECT 
-                SUM(contract_amount) AS total_contract,
-                SUM(ABC) AS total_abc,
-                COUNT(*) AS total_projects
-            FROM projects 
-            WHERE project_id = $selectedProject
-            AND contract_amount > 0
-        ");
-    } else {
-        $budgetStmt = $pdo->query("
-            SELECT 
-                SUM(contract_amount) AS total_contract,
-                SUM(ABC) AS total_abc,
-                COUNT(*) AS total_projects
-            FROM projects 
-            WHERE contract_amount > 0
-        ");
-    }
-
-    $budgetData = $budgetStmt->fetch(PDO::FETCH_ASSOC);
-    $utilizationRate = $budgetData['total_contract'] > 0 ? 
-        round(($budgetData['total_abc'] / $budgetData['total_contract']) * 100, 2) : 0;
+     // PROJECT SUMMARY //
 
     // BUDGET VARIANCE QUERY
     if ($selectedProject > 0) {
@@ -214,13 +189,26 @@ try {
             ABC,
             (ABC - contract_amount) AS variance
         FROM projects
-        WHERE contract_amount > 0
-        AND status IN ('Pending Evaluation', 'For Award', 'For Implementation')
+        WHERE status IN ('Pending Evaluation', 'For Award', 'For Implementation')
         ORDER BY ABS(ABC - contract_amount) DESC
     ";
 
     $stmt = $pdo->query($opportunityQuery);
     $opportunity = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $itemVarianceQuery = "
+        SELECT 
+            item_name,
+            price AS our_price,
+            supplier_price AS factory_price,
+            (price - supplier_price) AS variance
+        FROM item
+        WHERE price > 0 AND supplier_price > 0
+        ORDER BY ABS(price - supplier_price) DESC
+    ";
+
+    $stmt = $pdo->query($itemVarianceQuery);
+    $itemVariance = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // SALES GENERATION CHARTS //
 
     // OPERATION CHARTS //
@@ -308,35 +296,6 @@ try {
     $stmt = $pdo->query($inventoryHistoryQuery);
     $inventoryHistoryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $changesPerWarehouseQuery = "
-        SELECT 
-            w.warehouse_name,
-            COUNT(*) AS total_changes
-        FROM inventory_history ih
-        JOIN warehouse w ON ih.warehouse_id = w.warehouse_id
-        GROUP BY w.warehouse_name
-        ORDER BY total_changes DESC
-    ";
-    $stmt = $pdo->query($changesPerWarehouseQuery);
-    $changesPerWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $progressPerRegionQuery = "
-        SELECT 
-            s.region,
-            COUNT(*) AS total,
-            SUM(CASE WHEN d.status = 'pending' THEN 1 ELSE 0 END) AS pending,
-            SUM(CASE WHEN d.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
-            SUM(CASE WHEN d.status = 'accepted' THEN 1 ELSE 0 END) AS accepted
-        FROM deliveries d
-        JOIN school s ON s.school_id = d.school_id
-        " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
-        GROUP BY s.region
-        ORDER BY s.region
-    ";
-
-    $stmt = $pdo->query($progressPerRegionQuery);
-    $progressPerRegion = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
     $progressPerLotQuery = "
         SELECT 
             l.lot_name,
@@ -354,36 +313,9 @@ try {
 
     $stmt = $pdo->query($progressPerLotQuery);
     $progressPerLot = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $inventoryByWarehouseQuery = "
-        SELECT 
-            w.warehouse_name,
-            i.item_name,
-            i.unit,
-            COALESCE(
-                (SELECT ih.new_qty
-                FROM inventory_history ih
-                WHERE ih.item_id = i.item_id 
-                  AND ih.warehouse_id = w.warehouse_id 
-                  AND DATE(ih.changed_at) <= :selectedDate
-                ORDER BY ih.changed_at DESC 
-                LIMIT 1),
-                inv.qty
-            ) as qty
-        FROM inventory inv
-        JOIN item i ON inv.item_id = i.item_id
-        JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
-        WHERE inv.inventory_status = 'Approved'
-            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
-        HAVING qty > 0
-        ORDER BY w.warehouse_name, i.item_name
-    ";
-    $stmt = $pdo->prepare($inventoryByWarehouseQuery);
-    $stmt->execute(['selectedDate' => $selectedDate]);
-    $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // OPERATION CHARTS //
 
-
+    // MAP DATA //
     $divisionDeliveriesQuery = "
         SELECT 
             s.division AS province,
@@ -414,6 +346,7 @@ try {
         ];
     }
     echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision) . ";</script>";
+    // MAP DATA //
 
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
@@ -492,7 +425,7 @@ if ($selectedProject > 0) {
                   </a>
                 </div>
                 <div class="card-body">
-                  <canvas id="projectStatusChart" height="200"></canvas>
+                  <canvas id="projectStatusChart" height="470"></canvas>
                 </div>
               </div>
             </div>
@@ -505,53 +438,22 @@ if ($selectedProject > 0) {
     <div class="col-md-8 col-12 chart-item" data-chart-id="sales-generation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">🪙 SALES GENERATION SUMMARY</h6>
+          <a href="dashboard_sales.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>" style="text-decoration: none; color: inherit;">
+              <h6 class="mb-0 fw-bold">🪙 SALES GENERATION SUMMARY</h6>
+          </a>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
-          <!-- <div id="deliverySummaryContainer" class="sortable-container">
-            <div class="row g-2">
-                <?php 
-                $metricCards = [
-                    [
-                        'title' => 'Budget Utilization', 
-                        'value' => $utilizationRate . '%', 
-                        'class' => 'info', 
-                        'icon' => '💰', 
-                        'percent' => $utilizationRate,
-                        'subtitle' => 'ABC vs Contract'
-                    ],
-                ];
-                
-                foreach($metricCards as $c): ?>
-                <div class="col-md-3 col-6">
-                    <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
-                        <div class="card-body p-3 text-center">
-                            <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
-                            <small class="d-block opacity-75"><?= $c['title'] ?></small>
-                            <h3 class="mb-2 fw-bold"><?= $c['value'] ?></h3>
-                            <small class="d-block opacity-75 mb-2"><?= $c['subtitle'] ?></small>
-                            <?php if (isset($c['percent'])): ?>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar bg-light" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-          </div> -->
 
           <!-- Projects and Cash Flow -->
           <div class="row g-3">
             <div class="col-md-12">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0"> Cash Flow</h6>
+                  <h6 class="mb-0"> Item Price Variance</h6>
                 </div>
                 <div class="card-body">
-                  <!-- <canvas id="monthlyDeliveryTrendChart" height="200"></canvas> -->
+                  <canvas id="itemPriceVarianceChart" height="300"></canvas>
                 </div>
               </div>
             </div>
@@ -561,7 +463,7 @@ if ($selectedProject > 0) {
                   <h6 class="mb-0"> Budget Variance</h6>
                 </div>
                 <div class="card-body">
-                  <canvas id="opportunityChart" height="200"></canvas>
+                  <canvas id="opportunityChart" height="300"></canvas>
                 </div>
               </div>
             </div>
@@ -574,7 +476,9 @@ if ($selectedProject > 0) {
     <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <a href="dashboard_operation.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>" style="text-decoration: none; color: inherit;">
           <h6 class="mb-0 fw-bold">🚚 OPERATION SUMMARY</h6>
+          </a>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
@@ -621,7 +525,6 @@ if ($selectedProject > 0) {
               ];
               foreach($deliveryCards as $c): ?>
               <div class="col-md-3 col-6">
-                <a href="dashboard_operation.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>" class="text-decoration-none">
                   <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
                     <div class="card-body p-3 text-center">
                       <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
@@ -634,7 +537,6 @@ if ($selectedProject > 0) {
                       <?php endif; ?>
                     </div>
                   </div>
-                </a>
               </div>
               <?php endforeach; ?>
             </div>
@@ -840,6 +742,7 @@ if ($selectedProject > 0) {
         inventoryHistoryTrend: <?= json_encode($inventoryHistoryTrend) ?>,
         projectStatusOverview: <?= json_encode($projectStatusOverview) ?>,
         opportunity: <?= json_encode($opportunity) ?>,
+        itemVariance: <?= json_encode($itemVariance) ?>,
     };
 </script>
 

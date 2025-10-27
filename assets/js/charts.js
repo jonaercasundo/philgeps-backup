@@ -8,6 +8,7 @@ const {
     inventoryHistoryTrend,
     projectStatusOverview,
     opportunity,
+    progressPerLot,
 } = phpData;
 
 // Delivery Status Colors (Green-Yellow-Red)
@@ -357,96 +358,226 @@ document.addEventListener('DOMContentLoaded', function() {
     createEmptyChart(document.getElementById('projectStatusChart'), 'No project data available');
     }
 
-    // 📊 BUDGET VARIANCE -
+    // 📊 BUDGET VARIANCE
     if (phpData.opportunity && phpData.opportunity.length > 0) {
-    const projects = phpData.opportunity.map(p => p.project_name);
-    const contractData = phpData.opportunity.map(p => {
-        const total = (parseFloat(p.contract_amount) || 0) + (parseFloat(p.ABC) || 0);
-        return total > 0 ? Math.round((parseFloat(p.contract_amount) / total) * 100) : 0;
-    });
-    const abcData = phpData.opportunity.map(p => {
-        const total = (parseFloat(p.contract_amount) || 0) + (parseFloat(p.ABC) || 0);
-        return total > 0 ? Math.round((parseFloat(p.ABC) / total) * 100) : 0;
-    });
+        const projects = phpData.opportunity.map(p => p.project_name);
+        const contractData = phpData.opportunity.map(p => parseFloat(p.contract_amount) || 0);
+        const abcData = phpData.opportunity.map(p => parseFloat(p.ABC) || 0);
 
-    new Chart(document.getElementById('opportunityChart'), {
-        type: 'bar',
-        data: {
-            labels: projects,
-            datasets: [
-                {
-                    label: 'Contract Amount',
-                    data: contractData,
-                    backgroundColor: '#198754',
-                    borderColor: '#146c43',
-                    borderWidth: 1
-                },
-                {
-                    label: 'ABC',
-                    data: abcData,
-                    backgroundColor: '#fbc02d',
-                    borderColor: '#f9a825',
-                    borderWidth: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    stacked: true,
-                    title: {
-                        display: true,
-                        text: 'Projects'
+        new Chart(document.getElementById('opportunityChart'), {
+            type: 'bar',
+            data: {
+                labels: projects,
+                datasets: [
+                    {
+                        label: 'Contract Amount',
+                        data: contractData,
+                        backgroundColor: '#198754',
+                        borderColor: '#146c43',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'ABC',
+                        data: abcData,
+                        backgroundColor: '#fbc02d',
+                        borderColor: '#f9a825',
+                        borderWidth: 1
                     }
-                },
-                y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    max: 100,
-                    title: {
-                        display: true,
-                        text: 'Percentage (%)'
-                    }
-                }
+                ]
             },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const projectData = phpData.opportunity[context.dataIndex];
-                            if (context.dataset.label === 'Contract Amount') {
-                                return `Contract: ₱${projectData.contract_amount} (${context.parsed.y}%)`;
-                            } else {
-                                return `ABC: ₱${projectData.ABC} (${context.parsed.y}%)`;
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Projects'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount (₱)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₱' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                return `${context.dataset.label}: ₱${value.toLocaleString()}`;
+                            },
+                            afterLabel: function(context) {
+                                const projectData = phpData.opportunity[context.dataIndex];
+                                const contractAmount = parseFloat(projectData.contract_amount) || 0;
+                                const abc = parseFloat(projectData.ABC) || 0;
+                                const total = contractAmount + abc;
+                                
+                                if (total > 0) {
+                                    const percentage = context.dataset.label === 'Contract Amount' 
+                                        ? Math.round((contractAmount / total) * 100)
+                                        : Math.round((abc / total) * 100);
+                                    return `(${percentage}%)`;
+                                }
+                                return '';
                             }
                         }
                     }
                 }
-            }
-        },
-        plugins: [{
-            afterDatasetsDraw: function(chart) {
-                const ctx = chart.ctx;
-                chart.data.datasets.forEach((dataset, i) => {
-                    const meta = chart.getDatasetMeta(i);
-                    meta.data.forEach((bar, index) => {
-                        const data = dataset.data[index];
-                        if (data > 0) {
-                            ctx.fillStyle = '#fff';
-                            ctx.font = 'bold 12px Arial';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
-                        }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const data = dataset.data[index];
+                            if (data > 0) {
+                                const projectData = phpData.opportunity[index];
+                                const contractAmount = parseFloat(projectData.contract_amount) || 0;
+                                const abc = parseFloat(projectData.ABC) || 0;
+                                const total = contractAmount + abc;
+                                
+                                if (total > 0) {
+                                    const percentage = i === 0 
+                                        ? Math.round((contractAmount / total) * 100)
+                                        : Math.round((abc / total) * 100);
+                                    
+                                    ctx.fillStyle = '#fff';
+                                    ctx.font = 'bold 12px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(percentage + '%', bar.x, bar.y + (bar.height / 2));
+                                }
+                            }
+                        });
                     });
-                });
-            }
-        }]
-    });
+                }
+            }]
+        });
     } else {
         createEmptyChart(document.getElementById('opportunityChart'), 'No project financial data available');
+    }
+
+    // 📊 ITEM PRICE VARIANCE CHART
+    if (phpData.itemVariance && phpData.itemVariance.length > 0) {
+        const items = phpData.itemVariance.map(p => p.item_name);
+        const ourPriceData = phpData.itemVariance.map(p => parseFloat(p.our_price) || 0);
+        const factoryPriceData = phpData.itemVariance.map(p => parseFloat(p.factory_price) || 0);
+
+        new Chart(document.getElementById('itemPriceVarianceChart'), {
+            type: 'bar',
+            data: {
+                labels: items,
+                datasets: [
+                    {
+                        label: 'Price',
+                        data: ourPriceData,
+                        backgroundColor: '#198754', 
+                        borderColor: '#146c43',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Factory Price',
+                        data: factoryPriceData,
+                        backgroundColor: '#fbc02d',
+                        borderColor: '#f9a825',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: {
+                            display: true,
+                            text: 'Items'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Price (₱)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₱' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                return `${context.dataset.label}: ₱${value.toLocaleString()}`;
+                            },
+                            afterLabel: function(context) {
+                                const itemData = phpData.itemVariance[context.dataIndex];
+                                const ourPrice = parseFloat(itemData.our_price) || 0;
+                                const factoryPrice = parseFloat(itemData.factory_price) || 0;
+                                const total = ourPrice + factoryPrice;
+                                
+                                if (total > 0) {
+                                    const percentage = context.dataset.label === 'Our Price' 
+                                        ? Math.round((ourPrice / total) * 100)
+                                        : Math.round((factoryPrice / total) * 100);
+                                    return `(${percentage}%)`;
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const data = dataset.data[index];
+                            if (data > 0) {
+                                const itemData = phpData.itemVariance[index];
+                                const ourPrice = parseFloat(itemData.our_price) || 0;
+                                const factoryPrice = parseFloat(itemData.factory_price) || 0;
+                                const total = ourPrice + factoryPrice;
+                                
+                                if (total > 0) {
+                                    const percentage = i === 0 
+                                        ? Math.round((ourPrice / total) * 100)
+                                        : Math.round((factoryPrice / total) * 100);
+                                    
+                                    ctx.fillStyle = '#fff';
+                                    ctx.font = 'bold 12px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(percentage + '%', bar.x, bar.y + (bar.height / 2));
+                                }
+                            }
+                        });
+                    });
+                }
+            }]
+        });
+    } else {
+        createEmptyChart(document.getElementById('itemPriceVarianceChart'), 'No item price variance data available');
     }
 
     // 🎯 Inventory History (Daily Changes)
