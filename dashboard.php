@@ -251,20 +251,22 @@ try {
 
     $monthlyTrendQuery = "
         SELECT 
-          DATE_FORMAT(d.delivered_date, '%Y-%m') AS month,
-          CASE d.status
-              WHEN 'warehouse' THEN 'Warehouse'
-              WHEN 'accepted'  THEN 'Logistics'
-              WHEN 'delivered' THEN 'Schools'
-              ELSE d.status
-          END AS status,
-          COUNT(*) AS total
-      FROM deliveries d
-      WHERE d.delivered_date IS NOT NULL
-        AND d.status <> 'pending'
-        " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-      GROUP BY month, status
-      ORDER BY month, status;
+            DATE_FORMAT(d.delivered_date, '%Y-%m') AS month,
+            CASE 
+                WHEN d.status = 'warehouse' THEN 'Warehouse'
+                WHEN d.status = 'delivered' THEN 'Schools'
+                WHEN d.status = 'accepted' THEN COALESCE(lg.logistic_name, 'Logistics')
+                ELSE d.status
+            END AS status,
+            COUNT(*) AS total
+        FROM deliveries d
+        LEFT JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
+        LEFT JOIN logistics lg ON ll.logistics_id = lg.logistic_id
+        WHERE d.delivered_date IS NOT NULL
+            AND d.status <> 'pending'
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY month, status
+        ORDER BY month, status;
     ";
     $stmt = $pdo->query($monthlyTrendQuery);
     $monthlyDeliveryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -381,64 +383,6 @@ try {
     $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // OPERATION CHARTS //
 
-    // NOT USED //
-    $todayActivityQuery = "
-        SELECT 
-          DATE_FORMAT(al.created_at, '%H:%i') as time_label,
-          HOUR(al.created_at) as hour,
-          MINUTE(al.created_at) as minute,
-          CASE 
-              WHEN u.warehouse_id IS NULL THEN 'Office'
-              ELSE w.warehouse_name
-          END AS activity_type,
-          COUNT(*) as total_activities,
-          CONCAT( al.action ) as activity_list
-      FROM activity_logs al
-      JOIN users u ON al.user_id = u.user_id
-      LEFT JOIN warehouse w ON u.warehouse_id = w.warehouse_id
-      WHERE DATE(al.created_at) = CURDATE()
-      GROUP BY 
-          DATE_FORMAT(al.created_at, '%H:%i'),
-          CASE 
-              WHEN u.warehouse_id IS NULL THEN 'Office'
-              ELSE w.warehouse_name
-          END
-      ORDER BY hour, minute, activity_type
-    ";
-
-    $stmt = $pdo->query($todayActivityQuery);
-    $todayUserActivity = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $topUpdatedItemsQuery = "
-        SELECT 
-            i.item_name,
-            COUNT(*) AS update_count
-        FROM inventory_history ih
-        JOIN item i ON ih.item_id = i.item_id
-        GROUP BY i.item_name
-        ORDER BY update_count DESC
-        LIMIT 5
-    ";
-    $stmt = $pdo->query($topUpdatedItemsQuery);
-    $topUpdatedItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $placesQuery = "
-        SELECT 
-            s.region,
-            p.project_id,
-            p.project_name,
-            COUNT(DISTINCT s.school_id) AS total_schools,
-            SUM(CASE WHEN d.status = 'Delivered' THEN 1 ELSE 0 END) AS delivered_count
-        FROM deliveries d
-        JOIN $schoolTable s ON d.school_id = s.school_id
-        JOIN projects p ON d.project_id = p.project_id
-        " . ($selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "") . "
-        GROUP BY s.region, p.project_id, p.project_name
-        ORDER BY p.project_name, s.region
-    ";
-    
-    $stmt = $pdo->query($placesQuery);
-    $placesDelivered = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $divisionDeliveriesQuery = "
         SELECT 
@@ -470,7 +414,6 @@ try {
         ];
     }
     echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision) . ";</script>";
-    // NOT USED //
 
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
@@ -559,7 +502,7 @@ if ($selectedProject > 0) {
     </div>
 
     <!-- RIGHT: Sales Generation Summary -->
-    <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
+    <div class="col-md-8 col-12 chart-item" data-chart-id="sales-generation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-bold">🪙 SALES GENERATION SUMMARY</h6>
@@ -627,34 +570,6 @@ if ($selectedProject > 0) {
       </div>
     </div>
 
-    <!-- <div class="col-md-12 col-12 chart-item" data-chart-id="operation-summary">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">🚚 OPPORTUNITY PIPELINE</h6>
-          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-        </div>
-        <div class="card-body p-2">
-          <div class="row g-3 mt-2">
-            <div class="col-md-12">
-              <div class="card shadow-sm h-100">
-                <div class="card shadow-sm h-100">
-                  <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">OPPORTUNITY</h6>
-                    <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-                      <i class="bi bi-printer"></i>
-                    </a>
-                  </div>
-                  <div class="card-body">
-                    <canvas id="opportunityChart" height="200"></canvas>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div> -->
-
     <!-- LEFT: Operation Summary -->
     <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
       <div class="card shadow-sm h-100">
@@ -699,25 +614,27 @@ if ($selectedProject > 0) {
               <?php 
               $deliveryCards = [
                   ['title'=>'In Progress','value'=>$deliveryTotals['pending'] ?? 0,'class'=>'danger','icon'=>'⏳', 'percent'=>$pendingPercent],
-                  ['title'=>'In Logistics','value'=>$deliveryTotals['accepted'] ?? 0,'class'=>'warning','icon'=>'🚚', 'percent'=>$acceptedPercent],
+                  ['title'=>'Accepted','value'=>$deliveryTotals['accepted'] ?? 0,'class'=>'warning','icon'=>'🚚', 'percent'=>$acceptedPercent],
                   ['title'=>'Delivered','value'=>$deliveryTotals['delivered'] ?? 0,'class'=>'success','icon'=>'📦', 'percent'=>$deliveredPercent],
                   ['title'=>'Completion Rate','value'=>$completionRate . '%','class'=>'primary','icon'=>'📊',
                   'percent'=>$completionRate]
               ];
               foreach($deliveryCards as $c): ?>
               <div class="col-md-3 col-6">
-                <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
-                  <div class="card-body p-3 text-center">
-                    <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
-                    <small class="d-block opacity-75"><?= $c['title'] ?></small>
-                    <h3 class="mb-2 fw-bold"><?= $c['value'] ?></h3>
-                    <?php if (isset($c['percent'])): ?>
-                    <div class="progress" style="height: 6px;">
-                      <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
+                <a href="dashboard_operation.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>" class="text-decoration-none">
+                  <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
+                    <div class="card-body p-3 text-center">
+                      <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
+                      <small class="d-block opacity-75"><?= $c['title'] ?></small>
+                      <h3 class="mb-2 fw-bold"><?= $c['value'] ?></h3>
+                      <?php if (isset($c['percent'])): ?>
+                      <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
+                      </div>
+                      <?php endif; ?>
                     </div>
-                    <?php endif; ?>
                   </div>
-                </div>
+                </a>
               </div>
               <?php endforeach; ?>
             </div>
@@ -769,8 +686,8 @@ if ($selectedProject > 0) {
       </div>
     </div>
 
-    <!-- LEFT: Charts Section -->
-    <div class="col-md-8 col-12 chart-item" data-chart-id="charts-section">
+    <!-- LEFT: Operation Charts Section -->
+    <div class="col-md-8 col-12 chart-item" data-chart-id="operation-section">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-bold">🚚 OPERATION</h6>
@@ -788,7 +705,7 @@ if ($selectedProject > 0) {
           </div>
           <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
-              <h6 class="mb-0">Inventory History By Incoming and Outgoing</h6>
+              <h6 class="mb-0">Inventory History</h6>
             </div>
             <div class="card-body">
               <canvas id="inventoryHistoryTrendChart" height="300"></canvas>
@@ -838,120 +755,6 @@ if ($selectedProject > 0) {
             </div>
             <?php endforeach; ?>
           </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Additional Charts Section -->
-  <div class="row g-4 mb-4">
-    
-    <!-- Progress by Region Charts -->
-    <div class="col-lg-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">✅ Accepted by Region (%)</h6>
-          <a href="report/print_accepted_region.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-            <i class="bi bi-printer"></i>
-          </a>
-        </div>
-        <div class="card-body">
-          <canvas id="acceptedPerRegionChart" height="250"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">🚚 Delivered by Region (%)</h6>
-          <a href="report/print_delivered_region.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-            <i class="bi bi-printer"></i>
-          </a>
-        </div>
-        <div class="card-body">
-          <canvas id="deliveredPerRegionChart" height="250"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Progress by Lot Charts -->
-    <div class="col-lg-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">✅ Delivered by Lot (%)</h6>
-          <a href="report/print_accepted_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-            <i class="bi bi-printer"></i>
-          </a>
-        </div>
-        <div class="card-body">
-          <canvas id="deliveredPerLotChart" height="250"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">✅ Accepted by Lot (%)</h6>
-          <a href="report/print_accepted_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-            <i class="bi bi-printer"></i>
-          </a>
-        </div>
-        <div class="card-body">
-          <canvas id="acceptedPerLotChart" height="250"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-lg-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light">
-          <h6 class="mb-0">🏭 Changes per Warehouse</h6>
-        </div>
-        <div class="card-body">
-          <canvas id="changesPerWarehouseChart" height="250"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Inventory by Warehouse -->
-    <div class="col-12">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">📦 Inventory by Warehouse <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h6>
-          <a href="report/print_inventory_warehouse.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-            <i class="bi bi-printer"></i>
-          </a>
-        </div>
-        <div class="card-body">
-          <!-- Date Filter Form -->
-          <form method="GET" class="row mb-3" id="dateFilterForm">
-            <?php if($selectedProject > 0): ?>
-              <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
-            <?php endif; ?>
-            
-            <div class="col-md-4">
-              <input type="date" class="form-control form-control-sm" id="dateFilter" name="selectedDate" 
-                    value="<?php echo htmlspecialchars($selectedDate); ?>">
-            </div>
-            <div class="col-md-4 align-self-end">
-              <button type="submit" class="btn btn-primary btn-sm">Apply Date Filter</button>
-              <a href="?#inventory-warehouse" class="btn btn-outline-secondary btn-sm">
-                ❌ Clear Filter
-              </a>
-            </div>
-            <?php if(isset($selectedDate) && $selectedDate !== date('Y-m-d')): ?>
-            <div class="col-md-4 align-self-end text-end">
-              <small class="text-muted">
-                <i class="fas fa-history"></i> Date: <?php echo htmlspecialchars($selectedDate); ?>
-              </small>
-            </div>
-            <?php endif; ?>
-          </form>
-          
-          <div id="warehouseChartsContainer" class="row"></div>
         </div>
       </div>
     </div>
@@ -1032,12 +835,9 @@ if ($selectedProject > 0) {
         deliveryStatusOverview: <?= json_encode($deliveryStatusOverview) ?>,
         monthlyDeliveryTrend: <?= json_encode($monthlyDeliveryTrend) ?>,
         inventoryData: <?= json_encode($inventoryData) ?>,
-        inventoryByWarehouse: <?= json_encode($inventoryByWarehouse) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>,
-        progressPerRegion: <?= json_encode($progressPerRegion) ?>,
         progressPerLot: <?= json_encode($progressPerLot) ?> ,
         inventoryHistoryTrend: <?= json_encode($inventoryHistoryTrend) ?>,
-        changesPerWarehouse: <?= json_encode($changesPerWarehouse) ?>,
         projectStatusOverview: <?= json_encode($projectStatusOverview) ?>,
         opportunity: <?= json_encode($opportunity) ?>,
     };
