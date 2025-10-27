@@ -14,7 +14,7 @@ require "config/db.php";
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Login - PhilGEPS Tracker</title>
+  <title>Login - MMC Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light d-flex align-items-center justify-content-center" style="height:100vh;">
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="col-md-4">
       <div class="card shadow-lg">
         <div class="card-body p-4">
-          <h4 class="text-center mb-3">PhilGEPS Tracker</h4>
+          <h4 class="text-center mb-3">MMC Project Tracker</h4>
           <form method="POST" action="script/authenticate.php" autocomplete="off">
             <div class="mb-3">
               <label for="username" class="form-label">Email</label>
