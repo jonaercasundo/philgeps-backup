@@ -13,7 +13,7 @@ try {
     $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
     $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get cashflow data - combining income and expenses by month
+    // Get cashflow data
     $cashflowQuery = "
         SELECT 
             month,
@@ -21,34 +21,54 @@ try {
             SUM(expense) AS total_expense,
             SUM(income) - SUM(expense) AS net_cashflow
         FROM (
-            -- Income from deliveries
+            -- Income 
             SELECT 
-                DATE_FORMAT(d.delivered_date, '%Y-%m') AS month,
+                CASE 
+                    WHEN g.paid_at IS NOT NULL AND g.paid_at != '' AND DATE(g.paid_at) IS NOT NULL 
+                    THEN DATE_FORMAT(g.paid_at, '%Y-%m')
+                    ELSE NULL
+                END AS month,
                 SUM(i.price * pc.qty) AS income,
                 0 AS expense
-            FROM deliveries d
-            JOIN package_status ps ON d.delivery_id = ps.delivery_id
-            JOIN package_content pc ON ps.package_id = pc.package_id  
+            FROM grouping g
+            JOIN billing_grouped bg ON g.group_id = bg.group_id
+            JOIN deliveries d ON bg.dr_no = d.dr_no
+            JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+            JOIN package_content pc ON p.package_id = pc.package_id
             JOIN item i ON pc.item_id = i.item_id
-            WHERE d.delivered_date IS NOT NULL
+            WHERE g.status = 'paid'
+                AND g.paid_at IS NOT NULL 
+                AND g.paid_at != ''
+                AND DATE(g.paid_at) IS NOT NULL
                 AND d.status NOT IN ('pending', 'cancelled')
                 " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
             GROUP BY month
             
             UNION ALL
             
-            -- Expenses from inventory
+            -- Expenses 
             SELECT 
-                DATE_FORMAT(inv.created_at, '%Y-%m') AS month,
+                CASE 
+                    WHEN g.paid_at IS NOT NULL AND g.paid_at != '' AND DATE(g.paid_at) IS NOT NULL 
+                    THEN DATE_FORMAT(g.paid_at, '%Y-%m')
+                    ELSE NULL
+                END AS month,
                 0 AS income,
-                SUM(i.supplier_price * inv.qty) AS expense
-            FROM inventory inv
-            JOIN item i ON inv.item_id = i.item_id
-            WHERE inv.created_at IS NOT NULL
-                AND inv.inventory_status = 'Approved'
-                " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+                SUM(i.supplier_price * pc.qty) AS expense
+            FROM grouping g
+            JOIN billing_grouped bg ON g.group_id = bg.group_id
+            JOIN deliveries d ON bg.dr_no = d.dr_no
+            JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+            JOIN package_content pc ON p.package_id = pc.package_id
+            JOIN item i ON pc.item_id = i.item_id
+            WHERE g.paid_at IS NOT NULL 
+                AND g.paid_at != ''
+                AND DATE(g.paid_at) IS NOT NULL
+                AND d.status NOT IN ('pending', 'cancelled')
+                " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
             GROUP BY month
         ) combined
+        WHERE month IS NOT NULL
         GROUP BY month
         ORDER BY month;
     ";
@@ -71,7 +91,7 @@ if ($selectedProject > 0) {
 ?>
 <!-- Dashboard Header with Controls -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>Sales Generation Dashboard</h2>
+  <h2>Collection Dashboard</h2>
 </div>
 <div class="container-fluid">
   <!-- Additional Charts Section -->

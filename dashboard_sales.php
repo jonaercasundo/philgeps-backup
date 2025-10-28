@@ -13,18 +13,23 @@ try {
     $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
     $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get income data (from deliveries)
+    // Get income data (from paid deliveries)
     $incomeQuery = "
         SELECT 
-            DATE_FORMAT(d.delivered_date, '%Y-%m') AS month,
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
             SUM(i.price * pc.qty) AS total_income,
             SUM((i.price - i.supplier_price) * pc.qty) AS total_profit,
             COUNT(DISTINCT d.delivery_id) AS total_deliveries
-        FROM deliveries d
-        JOIN package_status ps ON d.delivery_id = ps.delivery_id
-        JOIN package_content pc ON ps.package_id = pc.package_id  
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
         JOIN item i ON pc.item_id = i.item_id
-        WHERE d.delivered_date IS NOT NULL
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
             AND d.status NOT IN ('pending', 'cancelled')
             " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         GROUP BY month
@@ -33,92 +38,110 @@ try {
     $stmt = $pdo->query($incomeQuery);
     $incomeData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get expense data (from inventory)
+    // Get expense data (from paid deliveries - cost of goods sold)
     $expenseQuery = "
         SELECT 
-            DATE_FORMAT(inv.created_at, '%Y-%m') AS month,
-            SUM(i.supplier_price * inv.qty) AS total_expense,
-            COUNT(DISTINCT inv.inventory_id) AS total_transactions
-        FROM inventory inv
-        JOIN item i ON inv.item_id = i.item_id
-        WHERE inv.created_at IS NOT NULL
-            AND inv.inventory_status = 'Approved'
-            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
+            SUM(i.supplier_price * pc.qty) AS total_expense,
+            COUNT(DISTINCT d.delivery_id) AS total_transactions
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         GROUP BY month
         ORDER BY month;
     ";
     $stmt = $pdo->query($expenseQuery);
     $expenseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get income by item (from deliveries)
+    // Get income by item (from paid deliveries)
     $incomeByItemQuery = "
         SELECT 
             i.item_name,
             SUM(i.price * pc.qty) AS total_income,
             SUM(pc.qty) AS total_qty_sold
-        FROM deliveries d
-        JOIN package_status ps ON d.delivery_id = ps.delivery_id
-        JOIN package_content pc ON ps.package_id = pc.package_id  
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
         JOIN item i ON pc.item_id = i.item_id
-        WHERE d.delivered_date IS NOT NULL
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
             AND d.status NOT IN ('pending', 'cancelled')
             " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         GROUP BY i.item_id, i.item_name
-        ORDER BY total_income DESC
+        ORDER BY i.item_name DESC
     ";
     $stmt = $pdo->query($incomeByItemQuery);
     $incomeByItem = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get expense by item (from inventory)
+    // Get expense by item (from paid deliveries - cost of goods sold)
     $expenseByItemQuery = "
         SELECT 
             i.item_name,
-            SUM(i.supplier_price * inv.qty) AS total_expense,
-            SUM(inv.qty) AS total_qty_purchased
-        FROM inventory inv
-        JOIN item i ON inv.item_id = i.item_id
-        WHERE inv.created_at IS NOT NULL
-            AND inv.inventory_status = 'Approved'
-            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+            SUM(i.supplier_price * pc.qty) AS total_expense,
+            SUM(pc.qty) AS total_qty_sold
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         GROUP BY i.item_id, i.item_name
-        ORDER BY total_expense DESC
+        ORDER BY i.item_name DESC
     ";
     $stmt = $pdo->query($expenseByItemQuery);
     $expenseByItem = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get income and expense by item 
+    // Get income and expense by item (from paid deliveries)
     $incomeExpenseByItemQuery = "
         SELECT 
             i.item_name,
             COALESCE(SUM(i.price * pc.qty), 0) AS total_income,
             COALESCE(SUM(pc.qty), 0) AS total_qty_sold,
-            COALESCE(SUM(i.supplier_price * inv.qty), 0) AS total_expense,
-            COALESCE(SUM(inv.qty), 0) AS total_qty_purchased
+            COALESCE(SUM(i.supplier_price * pc.qty), 0) AS total_expense,
+            COALESCE(SUM(pc.qty), 0) AS total_qty_purchased
         FROM item i
         LEFT JOIN (
             SELECT 
                 pc.item_id, 
                 pc.qty
-            FROM package_content pc 
-            JOIN package_status ps ON pc.package_id = ps.package_id
-            JOIN deliveries d ON ps.delivery_id = d.delivery_id
-            WHERE d.delivered_date IS NOT NULL 
-              AND d.status NOT IN ('pending', 'cancelled')
-              " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+            FROM grouping g
+            JOIN billing_grouped bg ON g.group_id = bg.group_id
+            JOIN deliveries d ON bg.dr_no = d.dr_no
+            JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+            JOIN package_content pc ON p.package_id = pc.package_id
+            WHERE g.status = 'paid'
+                AND g.paid_at IS NOT NULL 
+                AND g.paid_at != ''
+                AND DATE(g.paid_at) IS NOT NULL
+                AND d.status NOT IN ('pending', 'cancelled')
+                " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         ) pc ON i.item_id = pc.item_id
-        LEFT JOIN (
-            SELECT item_id, qty 
-            FROM inventory 
-            WHERE created_at IS NOT NULL 
-              AND inventory_status = 'Approved'
-        ) inv ON i.item_id = inv.item_id
         WHERE 1=1
             " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
         GROUP BY i.item_id, i.item_name
         HAVING 
             SUM(i.price * pc.qty) > 0 
-            OR SUM(i.supplier_price * inv.qty) > 0
-        ORDER BY (SUM(i.price * pc.qty) + SUM(i.supplier_price * inv.qty)) DESC
+            OR SUM(i.supplier_price * pc.qty) > 0
+        ORDER BY (SUM(i.price * pc.qty) + SUM(i.supplier_price * pc.qty)) DESC
     ";
 
     $stmt = $pdo->query($incomeExpenseByItemQuery);
