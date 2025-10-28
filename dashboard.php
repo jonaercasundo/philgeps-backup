@@ -364,7 +364,7 @@ if ($selectedProject > 0) {
 ?>
 <!-- Dashboard Header with Controls -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>Dashboard</h2>
+  <h2>Dashboard Overview</h2>
   <div class="btn-group">
     <button class="btn btn-outline-primary btn-sm" id="resetLayout">
       🔄 Reset Layout
@@ -438,9 +438,13 @@ if ($selectedProject > 0) {
     <div class="col-md-8 col-12 chart-item" data-chart-id="sales-generation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <a href="dashboard_sales.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>" style="text-decoration: none; color: inherit;">
+          <div>
               <h6 class="mb-0 fw-bold">🪙 SALES GENERATION SUMMARY</h6>
-          </a>
+              <a href="dashboard_sales.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+                class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1">
+                View Details <i class="bi bi-arrow-right-short fs-5"></i>
+              </a>
+          </div>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
@@ -476,9 +480,9 @@ if ($selectedProject > 0) {
     <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <a href="dashboard_operation.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>" style="text-decoration: none; color: inherit;">
-          <h6 class="mb-0 fw-bold">🚚 OPERATION SUMMARY</h6>
-          </a>
+            <div>
+              <h6 class="mb-0 fw-bold">🚚 PRODUCTION SUMMARY</h6>
+            </div>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
@@ -544,11 +548,15 @@ if ($selectedProject > 0) {
 
           <!-- Delivery Status Chart and Monthly Trend -->
           <div class="row g-3 mt-2">
+            <a href="dashboard_operation.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+                class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1 mx-2">
+                View Details <i class="bi bi-arrow-right-short fs-5"></i>
+            </a>
             <div class="col-md-5">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                   <h6 class="mb-0">Delivery Per Status</h6>
-                   <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                  <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
                     <i class="bi bi-printer"></i>
                   </a>
                 </div>
@@ -560,13 +568,10 @@ if ($selectedProject > 0) {
             <div class="col-md-7">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0"> Monthly Delivery Trend</h6>
-                  <a href="report/print_monthly_trend.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-                    <i class="bi bi-printer"></i>
-                  </a>
+                  <h6 class="mb-0">Deliveries Status by Lot</h6>
                 </div>
                 <div class="card-body">
-                  <canvas id="monthlyDeliveryTrendChart" height="200"></canvas>
+                  <canvas id="deliveryStatusPerLotChart" height="200"></canvas>
                 </div>
               </div>
             </div>
@@ -592,17 +597,22 @@ if ($selectedProject > 0) {
     <div class="col-md-8 col-12 chart-item" data-chart-id="operation-section">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">🚚 OPERATION</h6>
+          <div>
+        <h6 class="mb-0 fw-bold">🚚 TRACK OPERATIONS</h6>
+      </div>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
           <!-- Delivery Status by Lot -->
           <div class="card shadow-sm mb-4">
-            <div class="card-header bg-light">
-              <h6 class="mb-0">Deliveries Status by Lot</h6>
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">Monthly Delivery Trend</h6>
+              <a href="report/print_monthly_trend.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                <i class="bi bi-printer"></i>
+              </a>
             </div>
             <div class="card-body">
-              <canvas id="deliveryStatusPerLotChart" height="200"></canvas>
+              <canvas id="monthlyDeliveryTrendChart" height="250"></canvas>
             </div>
           </div>
           <div class="card shadow-sm mb-4">
@@ -610,7 +620,7 @@ if ($selectedProject > 0) {
               <h6 class="mb-0">Inventory History</h6>
             </div>
             <div class="card-body">
-              <canvas id="inventoryHistoryTrendChart" height="300"></canvas>
+              <canvas id="inventoryHistoryTrendChart" height="250"></canvas>
             </div>
           </div>
         </div>
@@ -621,7 +631,13 @@ if ($selectedProject > 0) {
     <div class="col-md-4 col-12 chart-item" data-chart-id="collection-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">💰 COLLECTION SUMMARY</h6>
+          <div>
+            <h6 class="mb-0 fw-bold">💰 COLLECTION SUMMARY</h6>
+            <a href="dashboard_collection.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+              class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1">
+              View More <i class="bi bi-arrow-right-short fs-5"></i>
+            </a>
+          </div>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
