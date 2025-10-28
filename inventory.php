@@ -371,53 +371,43 @@ function rejectInventory() {
         onScanSuccess(testQRData);
     }
 
-    // Handle USB scanner input
-    document.getElementById('usbScannerInput').addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            let scannedCode = this.value.trim();
-            this.value = ""; // clear input
+    // Handle USB scanner input (package_id only)
+document.getElementById('usbScannerInput').addEventListener("keypress", function (event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        const scannedCode = this.value.trim();
+        this.value = ""; // clear input
 
-            try {
-                // Try JSON format (same as QR codes)
-                let data = JSON.parse(scannedCode);
-                onScanSuccess(scannedCode, null); // reuse your QR function
-            } catch (e) {
-                // If it's just a plain barcode string
-                console.log("USB scanned:", scannedCode);
-                onScanSuccess(JSON.stringify({action: "addPackage", package: scannedCode}), null);
-            }
-        }
-    });
+        if (!scannedCode) return;
 
-    // Global tracking of scanned packages
-    const addedPackages = [];
+        console.log("Scanned Package ID:", scannedCode);
 
-    // Called when QR is scanned
-    function onScanSuccess(decodedText, decodedResult) {
-        console.log("QR scanned:", decodedText);
-        let data;
-        try {
-            data = JSON.parse(decodedText);
-        } catch (e) {
-            console.error("QR data not JSON:", decodedText);
-            return;
-        }
-
-        if (data.action === "addPackage" && data.package) {
-            const packageID = data.package;
-            if (!addedPackages.includes(packageID)) {
-                addedPackages.push(packageID);
-                console.log("Added package:", packageID, "Current list:", addedPackages);
-            } else {
-                console.log("Package duplicate:", packageID);
-            }
-                loadItemsView();
-
-        } else {
-            console.warn("QR action not recognized:", data.action);
-        }
+        // Directly call addPackage without JSON wrapping
+        onScanSuccess({ package: scannedCode });
     }
+});
+
+// Global tracking of scanned packages
+const addedPackages = [];
+
+// Handle package scan success (QR or USB)
+function onScanSuccess(data) {
+    const packageID = data.package;
+
+    if (!packageID) {
+        console.warn("Invalid scan data:", data);
+        return;
+    }
+
+    if (!addedPackages.includes(packageID)) {
+        addedPackages.push(packageID);
+        console.log("Added package:", packageID);
+        loadItemsView();
+    } else {
+        console.log("Package already scanned:", packageID);
+    }
+}
+
 
     function loadItemsView() {
         const tbody = document.getElementById('itemBodytable');
