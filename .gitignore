@@ -2,6 +2,6 @@
 config/db.php
 # Ignore all uploaded files
 uploads/
-
+error/
 # Ignore all .env files
 *.env
