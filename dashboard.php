@@ -251,7 +251,7 @@ try {
         LEFT JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
         LEFT JOIN logistics lg ON ll.logistics_id = lg.logistic_id
         WHERE d.delivered_date IS NOT NULL
-            AND d.status <> 'pending'
+            AND d.status NOT IN ('pending', 'cancelled')
             " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         GROUP BY month, status
         ORDER BY month, status;

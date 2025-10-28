@@ -25,7 +25,7 @@ try {
         JOIN package_content pc ON ps.package_id = pc.package_id  
         JOIN item i ON pc.item_id = i.item_id
         WHERE d.delivered_date IS NOT NULL
-            AND d.status <> 'pending'
+            AND d.status NOT IN ('pending', 'cancelled')
             " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         GROUP BY month
         ORDER BY month;
@@ -42,6 +42,7 @@ try {
         FROM inventory inv
         JOIN item i ON inv.item_id = i.item_id
         WHERE inv.created_at IS NOT NULL
+            AND inv.inventory_status = 'Approved'
             " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
         GROUP BY month
         ORDER BY month;
@@ -60,7 +61,7 @@ try {
         JOIN package_content pc ON ps.package_id = pc.package_id  
         JOIN item i ON pc.item_id = i.item_id
         WHERE d.delivered_date IS NOT NULL
-            AND d.status <> 'pending'
+            AND d.status NOT IN ('pending', 'cancelled')
             " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         GROUP BY i.item_id, i.item_name
         ORDER BY total_income DESC
@@ -102,7 +103,7 @@ try {
             JOIN package_status ps ON pc.package_id = ps.package_id
             JOIN deliveries d ON ps.delivery_id = d.delivery_id
             WHERE d.delivered_date IS NOT NULL 
-              AND d.status <> 'pending'
+              AND d.status NOT IN ('pending', 'cancelled')
               " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
         ) pc ON i.item_id = pc.item_id
         LEFT JOIN (
@@ -118,7 +119,6 @@ try {
             SUM(i.price * pc.qty) > 0 
             OR SUM(i.supplier_price * inv.qty) > 0
         ORDER BY (SUM(i.price * pc.qty) + SUM(i.supplier_price * inv.qty)) DESC
-        LIMIT 10;
     ";
 
     $stmt = $pdo->query($incomeExpenseByItemQuery);
@@ -248,7 +248,7 @@ if ($selectedProject > 0) {
           </a> -->
         </div>
         <div class="card-body">
-          <canvas id="incomeExpenseByItemChart" height="250"></canvas>
+          <canvas id="incomeExpenseByItemChart" height="300"></canvas>
         </div>
       </div>
     </div>
