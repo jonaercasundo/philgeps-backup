@@ -190,7 +190,7 @@ foreach ($ids as $id) {
                 $l = $pkg['dimensions']['length'] ?? 'N/A';
                 $w = $pkg['dimensions']['width'] ?? 'N/A';
                 $h = $pkg['dimensions']['height'] ?? 'N/A';
-                $dimensionText = "{$l} × {$w} × {$h}";
+                $dimensionText = "{$l} cm × {$w} cm × {$h} cm";
             } else {
                 $dimensionText = "Dimensions: N/A";
             }
