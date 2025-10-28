@@ -3,118 +3,251 @@ require "template/header.php";
 require "config/db.php";
 require "script/role_auth.php";
 
-// roles allowed to access this page
 $allowed_roles = ['Super Admin', 'Office Admin'];
-
-// redirect
 redirectIfNotAuthorized($allowed_roles, 'index.php');
 
-// Get selected project from URL parameter
 $selectedProject = isset($_GET['project_id']) ? (int)$_GET['project_id'] : 0;
 
 try {
-    // Get all projects for the dropdown
     $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
     $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // DEBUG: Check if we have projects
-    echo "<!-- DEBUG: Projects count: " . count($allProjects) . " -->";
-    
-    // Build WHERE clause based on selected project
     $projectFilter = $selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "";
     $deliveryProjectFilter = $selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "";
-    $invoiceProjectFilter = $selectedProject > 0 ? "WHERE project_id = $selectedProject" : "";
+    $selectedDate = $_GET['selectedDate'] ?? date('Y-m-d');
 
-    // Check table names first
     $stmt = $pdo->query("SHOW TABLES");
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    echo "<!-- DEBUG: Available tables: " . implode(', ', $tables) . " -->";
-    
-    // Check if 'school' or 'schools' table exists
     $schoolTable = in_array('school', $tables) ? 'school' : 'schools';
-    echo "<!-- DEBUG: Using table: $schoolTable -->";
 
-    // Places Delivered (distinct schools reached per project/region)
-    $placesQuery = "
-        SELECT 
-            s.region,
-            p.project_id,
-            p.project_name,
-            COUNT(DISTINCT s.school_id) AS total_schools,
-            SUM(CASE WHEN d.status = 'Delivered' THEN 1 ELSE 0 END) AS delivered_count
-        FROM deliveries d
-        JOIN $schoolTable s ON d.school_id = s.school_id
-        JOIN projects p ON d.project_id = p.project_id
-        " . ($selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "") . "
-        GROUP BY s.region, p.project_id, p.project_name
-        ORDER BY p.project_name, s.region
-    ";
-    
-    echo "<!-- DEBUG: Places query: $placesQuery -->";
-    
-    $stmt = $pdo->query($placesQuery);
-    $placesDelivered = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo "<!-- DEBUG: Places delivered count: " . count($placesDelivered) . " -->";
-    if (count($placesDelivered) > 0) {
-        echo "<!-- DEBUG: Sample place: " . json_encode($placesDelivered[0]) . " -->";
-    }
-
-    // Aggregate counts and sums (filtered by project if selected)
+    // PROJECT SUMMARY //
     if ($selectedProject > 0) {
         $stmt = $pdo->query("
             SELECT
+                (SELECT COUNT(*) FROM projects WHERE status='Pending Evaluation') AS pendingProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='For Award') AS forAwardProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='For Implementation') AS forImplementationProjects,
                 (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
-                (SELECT COUNT(*) FROM deliveries WHERE status='pending' AND project_id = $selectedProject) AS pending,
-                (SELECT COUNT(*) FROM deliveries WHERE status='accepted' AND project_id = $selectedProject) AS accepted,
-                (SELECT COUNT(*) FROM deliveries WHERE status='delivered' AND project_id = $selectedProject) AS delivered
+                (SELECT COUNT(*) FROM projects WHERE status='Delivered') AS deliveredProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Completed') AS completedProjects
             FROM projects WHERE project_id = $selectedProject
         ");
     } else {
         $stmt = $pdo->query("
             SELECT
-              (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Pending Evaluation') AS pendingProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='For Award') AS forAwardProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='For Implementation') AS forImplementationProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Ongoing') AS activeProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Delivered') AS deliveredProjects,
+                (SELECT COUNT(*) FROM projects WHERE status='Completed') AS completedProjects
+        ");
+    }
+
+    $projectTotals = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $totalProjects = ($projectTotals['pendingProjects'] ?? 0) + 
+                    ($projectTotals['forAwardProjects'] ?? 0) + 
+                    ($projectTotals['forImplementationProjects'] ?? 0) + 
+                    ($projectTotals['activeProjects'] ?? 0) + 
+                    ($projectTotals['deliveredProjects'] ?? 0) + 
+                    ($projectTotals['completedProjects'] ?? 0);
+    $inEvaluationPercent = $totalProjects > 0 ? round(($projectTotals['pendingProjects'] ?? 0) / $totalProjects * 100, 2) : 0;
+    $inEvaluationCount = $projectTotals['pendingProjects'] ?? 0;
+     // PROJECT SUMMARY //
+
+    // BUDGET VARIANCE QUERY
+    if ($selectedProject > 0) {
+        $varianceStmt = $pdo->query("
+            SELECT 
+                project_name,
+                contract_amount,
+                ABC,
+                (ABC - contract_amount) AS variance_amount,
+                CASE 
+                    WHEN contract_amount > 0 THEN ROUND(((ABC - contract_amount) / contract_amount) * 100, 2)
+                    ELSE 0 
+                END AS variance_percent
+            FROM projects 
+            WHERE project_id = $selectedProject
+            AND contract_amount > 0
+        ");
+    } else {
+        $varianceStmt = $pdo->query("
+            SELECT 
+                project_name,
+                contract_amount,
+                ABC,
+                (ABC - contract_amount) AS variance_amount,
+                CASE 
+                    WHEN contract_amount > 0 THEN ROUND(((ABC - contract_amount) / contract_amount) * 100, 2)
+                    ELSE 0 
+                END AS variance_percent
+            FROM projects 
+            WHERE contract_amount > 0
+        ");
+    }
+
+    $varianceData = $varianceStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $overBudgetCount = 0;
+    $underBudgetCount = 0;
+    foreach ($varianceData as $project) {
+        if ($project['variance_percent'] > 0) $overBudgetCount++;
+        if ($project['variance_percent'] < 0) $underBudgetCount++;
+    }
+
+    $overBudgetPercent = count($varianceData) > 0 ? round(($overBudgetCount / count($varianceData)) * 100, 2) : 0;
+    // PROJECT SUMMARY //
+
+    // OPERATION SUMMARY //
+    if ($selectedProject > 0) {
+        $stmt = $pdo->query("
+            SELECT
+                (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='pending' AND project_id = $selectedProject) AS pending,
+                (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='accepted' AND project_id = $selectedProject) AS accepted,
+                (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='delivered' AND project_id = $selectedProject) AS delivered
+            FROM projects WHERE project_id = $selectedProject
+        ");
+    } else {
+        $stmt = $pdo->query("
+            SELECT
               (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='pending') AS pending,
               (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='accepted') AS accepted,
-              (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='delivered') AS delivered;
-
+              (SELECT COUNT(DISTINCT CONCAT_WS('-', school_id, lot_id)) FROM deliveries WHERE status='delivered') AS delivered
         ");
     }
 
     $deliveryTotals = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Calculate progress percentages AFTER getting $deliveryTotals
     $totalDeliveries = ($deliveryTotals['pending'] ?? 0) + ($deliveryTotals['accepted'] ?? 0) + ($deliveryTotals['delivered'] ?? 0);
+    $completionRate = $totalDeliveries > 0 ? round(($deliveryTotals['delivered'] ?? 0) / $totalDeliveries * 100, 2) : 0;
     $pendingPercent = $totalDeliveries > 0 ? round(($deliveryTotals['pending'] / $totalDeliveries) * 100) : 0;
     $acceptedPercent = $totalDeliveries > 0 ? round(($deliveryTotals['accepted'] / $totalDeliveries) * 100) : 0;
     $deliveredPercent = $totalDeliveries > 0 ? round(($deliveryTotals['delivered'] / $totalDeliveries) * 100) : 0;
+    // OPERATION SUMMARY //
 
-    // Billing Summary
+    // BILLING SUMMARY //
     $stmt = $pdo->query("
         SELECT
             (SELECT COUNT(*) FROM grouping) AS total_groups,
             (SELECT COUNT(DISTINCT dr_no) FROM billing_grouped) AS total_drs,
             (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g
-             JOIN billing_grouped bg ON bg.group_id = g.group_id 
-             WHERE status = 'for billing') AS for_billing_count,
+            JOIN billing_grouped bg ON bg.group_id = g.group_id 
+            WHERE status = 'for billing') AS for_billing_count,
             (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
-             JOIN billing_grouped bg ON bg.group_id = g.group_id 
-             WHERE status = 'billed') AS billed_count,
+            JOIN billing_grouped bg ON bg.group_id = g.group_id 
+            WHERE status = 'billed') AS billed_count,
             (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
-             JOIN billing_grouped bg ON bg.group_id = g.group_id 
-             WHERE status = 'paid') AS paid_count
+            JOIN billing_grouped bg ON bg.group_id = g.group_id 
+            WHERE status = 'paid') AS paid_count
     ");
     
     $billingTotals = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    // Calculate percentages based on total groups
     $totalGroups = $billingTotals['total_groups'] ?? 0;
     $totalDr = $billingTotals['total_drs'] ?? 0;
     $forBillingPercent = $totalGroups > 0 ? round(($billingTotals['for_billing_count'] / $totalDr) * 100) : 0;
     $billedPercent = $totalGroups > 0 ? round(($billingTotals['billed_count'] / $totalDr) * 100) : 0;
     $paidPercent = $totalGroups > 0 ? round(($billingTotals['paid_count'] / $totalDr) * 100) : 0;
+    // BILLING SUMMARY //
 
-    // 1. Delivery Status Overview (filtered)
+    // SALES GENERATION CHARTS //
+    $projectStatusQuery = "
+        SELECT 
+            COUNT(*) AS total,
+            CASE p.status
+                WHEN 'Pending Evaluation' THEN 'Pending Evaluation'
+                WHEN 'For Award' THEN 'For Award'
+                WHEN 'For Implementation' THEN 'For Implementation'
+                WHEN 'Ongoing' THEN 'Ongoing'
+                WHEN 'Delivered' THEN 'Delivered'
+                WHEN 'Completed' THEN 'Completed'
+                ELSE p.status
+            END AS status
+        FROM projects p
+        GROUP BY 
+            CASE p.status
+                WHEN 'Pending Evaluation' THEN 'Pending Evaluation'
+                WHEN 'For Award' THEN 'For Award'
+                WHEN 'For Implementation' THEN 'For Implementation'
+                WHEN 'Ongoing' THEN 'Ongoing'
+                WHEN 'Delivered' THEN 'Delivered'
+                WHEN 'Completed' THEN 'Completed'
+                ELSE p.status
+            END
+        ORDER BY total DESC;
+    ";
+
+    $stmt = $pdo->query($projectStatusQuery);
+    $projectStatusOverview = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $opportunityQuery = "
+        SELECT 
+            project_name,
+            contract_amount,
+            ABC,
+            (ABC - contract_amount) AS variance
+        FROM projects
+        WHERE status IN ('Pending Evaluation', 'For Award', 'For Implementation')
+        ORDER BY ABS(ABC - contract_amount) DESC
+    ";
+
+    $stmt = $pdo->query($opportunityQuery);
+    $opportunity = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get income data (from paid deliveries)
+    $incomeQuery = "
+        SELECT 
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
+            SUM(i.price * pc.qty) AS total_income,
+            SUM((i.price - i.supplier_price) * pc.qty) AS total_profit,
+            COUNT(DISTINCT d.delivery_id) AS total_deliveries
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY month
+        ORDER BY month;
+    ";
+    $stmt = $pdo->query($incomeQuery);
+    $incomeData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get expense data (from paid deliveries - cost of goods sold)
+    $expenseQuery = "
+        SELECT 
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
+            SUM(i.supplier_price * pc.qty) AS total_expense,
+            COUNT(DISTINCT d.delivery_id) AS total_transactions
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY month
+        ORDER BY month;
+    ";
+    $stmt = $pdo->query($expenseQuery);
+    $expenseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // SALES GENERATION CHARTS //
+
+    // OPERATION CHARTS //
     $deliveryStatusQuery = "
         SELECT 
             COUNT(*) AS total,
@@ -137,108 +270,56 @@ try {
             END
         ORDER BY total DESC;
     ";
-    
     $stmt = $pdo->query($deliveryStatusQuery);
     $deliveryStatusOverview = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. Monthly Delivery Trend (filtered)
     $monthlyTrendQuery = "
         SELECT 
-          DATE_FORMAT(d.delivered_date, '%Y-%m') AS month,
-          CASE d.status
-              WHEN 'warehouse' THEN 'Warehouse'
-              WHEN 'accepted'  THEN 'Logistics'
-              WHEN 'delivered' THEN 'Schools'
-              ELSE d.status
-          END AS status,
-          COUNT(*) AS total
-      FROM deliveries d
-      WHERE d.delivered_date IS NOT NULL
-        AND d.status <> 'pending'
-        " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-      GROUP BY month, status
-      ORDER BY month, status;
-
+            DATE_FORMAT(d.delivered_date, '%Y-%m') AS month,
+            CASE 
+                WHEN d.status = 'warehouse' THEN 'Warehouse'
+                WHEN d.status = 'delivered' THEN 'Schools'
+                WHEN d.status = 'accepted' THEN COALESCE(lg.logistic_name, 'Logistics')
+                ELSE d.status
+            END AS status,
+            COUNT(*) AS total
+        FROM deliveries d
+        LEFT JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
+        LEFT JOIN logistics lg ON ll.logistics_id = lg.logistic_id
+        WHERE d.delivered_date IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY month, status
+        ORDER BY month, status;
     ";
-    
     $stmt = $pdo->query($monthlyTrendQuery);
     $monthlyDeliveryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 3. Today's User Activity by Warehouse/Office
-    $todayActivityQuery = "
-        SELECT 
-          DATE_FORMAT(al.created_at, '%H:%i') as time_label,
-          HOUR(al.created_at) as hour,
-          MINUTE(al.created_at) as minute,
-          CASE 
-              WHEN u.warehouse_id IS NULL THEN 'Office'
-              ELSE w.warehouse_name
-          END AS activity_type,
-          COUNT(*) as total_activities,
-          CONCAT( al.action ) as activity_list
-      FROM activity_logs al
-      JOIN users u ON al.user_id = u.user_id
-      LEFT JOIN warehouse w ON u.warehouse_id = w.warehouse_id
-      WHERE DATE(al.created_at) = CURDATE()
-      GROUP BY 
-          DATE_FORMAT(al.created_at, '%H:%i'),
-          CASE 
-              WHEN u.warehouse_id IS NULL THEN 'Office'
-              ELSE w.warehouse_name
-          END
-      ORDER BY hour, minute, activity_type
-    ";
-
-    $stmt = $pdo->query($todayActivityQuery);
-    $todayUserActivity = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // 4. Inventory Quantities (sum by warehouse)
     $inventoryQuery = "
         SELECT 
             ii.item_name,
-            SUM(i.qty) as total_qty
-        FROM inventory i
-        JOIN item ii ON i.item_id = ii.item_id
-        JOIN warehouse w ON i.warehouse_id = w.warehouse_id
-        WHERE inventory_status = 'Approved'
-        GROUP BY ii.item_id, ii.item_name
-        HAVING SUM(i.qty) > 0
-    ";
-    $stmt = $pdo->query($inventoryQuery);
-    $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $selectedDate = $_GET['selectedDate'] ?? date('Y-m-d');
-
-    // 5. Inventory Items by Warehouse (Only Approved)
-    $inventoryByWarehouseQuery = "
-        SELECT 
-            w.warehouse_name,
-            i.item_name,
-            i.unit,
             COALESCE(
                 (SELECT ih.new_qty
                 FROM inventory_history ih
-                WHERE ih.item_id = i.item_id 
-                  AND ih.warehouse_id = w.warehouse_id 
+                WHERE ih.item_id = ii.item_id 
                   AND DATE(ih.changed_at) <= :selectedDate
                 ORDER BY ih.changed_at DESC 
                 LIMIT 1),
-                inv.qty
-            ) as qty
-        FROM inventory inv
-        JOIN item i ON inv.item_id = i.item_id
-        JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
-        WHERE inv.inventory_status = 'Approved'
-            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
-        HAVING qty > 0
-        ORDER BY w.warehouse_name, i.item_name
+                SUM(i.qty)
+            ) as total_qty
+        FROM inventory i
+        JOIN item ii ON i.item_id = ii.item_id
+        JOIN warehouse w ON i.warehouse_id = w.warehouse_id
+        WHERE i.inventory_status = 'Approved'
+        " . ($selectedProject > 0 ? "AND ii.project_id = $selectedProject" : "") . "
+        GROUP BY ii.item_id, ii.item_name
+        HAVING total_qty > 0
     ";
 
-    $stmt = $pdo->prepare($inventoryByWarehouseQuery);
+    $stmt = $pdo->prepare($inventoryQuery);
     $stmt->execute(['selectedDate' => $selectedDate]);
-    $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $inventoryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 6. Inventory History Trends
     $inventoryHistoryQuery = "
         SELECT 
             DATE(changed_at) AS change_date,
@@ -251,53 +332,6 @@ try {
     $stmt = $pdo->query($inventoryHistoryQuery);
     $inventoryHistoryTrend = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Top 5 most updated items
-    $topUpdatedItemsQuery = "
-        SELECT 
-            i.item_name,
-            COUNT(*) AS update_count
-        FROM inventory_history ih
-        JOIN item i ON ih.item_id = i.item_id
-        GROUP BY i.item_name
-        ORDER BY update_count DESC
-        LIMIT 5
-    ";
-    $stmt = $pdo->query($topUpdatedItemsQuery);
-    $topUpdatedItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Changes per warehouse
-    $changesPerWarehouseQuery = "
-        SELECT 
-            w.warehouse_name,
-            COUNT(*) AS total_changes
-        FROM inventory_history ih
-        JOIN warehouse w ON ih.warehouse_id = w.warehouse_id
-        GROUP BY w.warehouse_name
-        ORDER BY total_changes DESC
-    ";
-    $stmt = $pdo->query($changesPerWarehouseQuery);
-    $changesPerWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        
-    // Progress per Region
-    $progressPerRegionQuery = "
-        SELECT 
-            s.region,
-            COUNT(*) AS total,
-            SUM(CASE WHEN d.status = 'pending' THEN 1 ELSE 0 END) AS pending,
-            SUM(CASE WHEN d.status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
-            SUM(CASE WHEN d.status = 'accepted' THEN 1 ELSE 0 END) AS accepted
-        FROM deliveries d
-        JOIN school s ON s.school_id = d.school_id
-        " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
-        GROUP BY s.region
-        ORDER BY s.region
-    ";
-
-    $stmt = $pdo->query($progressPerRegionQuery);
-    $progressPerRegion = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Progress per Lot
     $progressPerLotQuery = "
         SELECT 
             l.lot_name,
@@ -315,9 +349,9 @@ try {
 
     $stmt = $pdo->query($progressPerLotQuery);
     $progressPerLot = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // OPERATION CHARTS //
 
-
-    // 🗺️ Deliveries per Division (for Choropleth)
+    // MAP DATA //
     $divisionDeliveriesQuery = "
         SELECT 
             s.division AS province,
@@ -340,7 +374,6 @@ try {
     $stmt = $pdo->query($divisionDeliveriesQuery);
     $divisionDeliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Convert to associative array for JS
     $deliveriesByDivision = [];
     foreach ($divisionDeliveries as $row) {
         $deliveriesByDivision[$row['province']] = [
@@ -348,16 +381,13 @@ try {
             'percentage' => (float)$row['percentage']
         ];
     }
-
-    // Pass to JS
     echo "<script>const deliveriesByDivision = " . json_encode($deliveriesByDivision) . ";</script>";
+    // MAP DATA //
 
 } catch (PDOException $e) {
-    echo "<!-- DEBUG: DB Error: " . $e->getMessage() . " -->";
     die("DB Error: " . $e->getMessage());
 }
 
-// Get selected project name for display
 $selectedProjectName = "All Projects";
 if ($selectedProject > 0) {
     foreach ($allProjects as $project) {
@@ -367,13 +397,10 @@ if ($selectedProject > 0) {
         }
     }
 }
-
 ?>
-
 <!-- Dashboard Header with Controls -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>📊 Dashboard </h2>
-  <!-- <h2>📊 Dashboard - <?= htmlspecialchars($selectedProjectName) ?></h2> -->
+  <h2>Dashboard Overview</h2>
   <div class="btn-group">
     <button class="btn btn-outline-primary btn-sm" id="resetLayout">
       🔄 Reset Layout
@@ -384,365 +411,318 @@ if ($selectedProject > 0) {
   </div>
 </div>
 
-<!-- Project Filter -->
-<div class="row mb-4">
-  <div class="col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h6 class="card-title mb-3">🎯 Filter by Project</h6>
-        <form method="GET" id="projectFilterForm">
-            <div class="input-group">
-                <select class="form-select" name="project_id" id="projectSelect">
-                    <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
-                    <?php foreach($allProjects as $project): ?>
-                        <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
-                           <?php 
-                           $name = htmlspecialchars($project['project_name']);
-                           echo strlen($name) > 30 ? substr($name, 0, 80) . '…' : $name; 
-                           ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <?php if($selectedProject > 0): ?>
-                    <a href="?" class="btn btn-outline-secondary">
-                        ❌ Clear Filter
-                    </a>
-                <?php endif; ?>
+<div class="container-fluid">
+  <div class="row g-4 mb-4" id="draggable-dashboard">
+    
+    <!-- LEFT: Project Summary -->
+    <div class="col-md-4 col-12 chart-item" data-chart-id="project-summary">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold">🚀 PROJECT SUMMARY</h6>
+          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body p-2">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <div id="projectSummaryContainer" class="sortable-container">
+                <div class="card text-bg-primary mb-2 summary-card" data-card-id="projects-stuck-planning">
+                  <div class="card-body p-3 text-center">
+                    <div style="font-size: 2.5rem; margin-bottom: 10px;">⏳</div>
+                    <small class="d-block opacity-75">Projects in Evaluation Phase</small>
+                    <h3 class="mb-2 fw-bold"><?= $inEvaluationPercent ?>%</h3>
+                    <small class="d-block opacity-75"><?= $inEvaluationCount ?> pending evaluation</small>
+                  </div>
+                </div>
+                <?php 
+                $projectCards = [
+                    ['title'=>'Pending Projects','value'=>$projectTotals['pendingProjects'],'class'=>'danger','icon'=>'⏳'],
+                    ['title'=>'Ongoing Projects','value'=>$projectTotals['activeProjects'],'class'=>'warning','icon'=>'🚀'],
+                    ['title'=>'Complete Projects','value'=>$projectTotals['completedProjects'],'class'=>'success','icon'=>'✅']
+                ];
+                foreach($projectCards as $c): ?>
+                <!-- <div class="card text-bg-<?=$c['class']?> mb-2 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
+                  <div class="card-body p-3 d-flex align-items-center">
+                    <div class="me-3" style="font-size: 2rem;"><?=$c['icon']?></div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 small"><?= $c['title'] ?></h6>
+                      <h4 class="mb-0 fw-bold"><?= $c['value'] ?></h4>
+                    </div>
+                  </div>
+                </div> -->
+                <?php endforeach; ?>
+              </div>
             </div>
-        </form>
+            <div class="col-md-12">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0">Projects</h6>
+                  <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                    <i class="bi bi-printer"></i>
+                  </a>
+                </div>
+                <div class="card-body">
+                  <canvas id="projectStatusChart" height="470"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Summary Cards (Non-draggable) -->
-<div class="row mb-4">
-  <div class="col-12 mt-4 mb-2">
-    <h5 class="fw-bold text-dark border-start border-4 border-primary ps-2 mb-3">
-      📦 Projects Summary
-    </h5>
-  </div>                
-  <?php 
-  $cards = [
-      ['title'=>'Active Projects','value'=>$deliveryTotals['activeProjects'],'class'=>'primary','icon'=>'🚀'],
-      ['title'=>'Pending','value'=>$deliveryTotals['pending'] ?? 0,'class'=>'warning','icon'=>'⏳', 'percent'=>$pendingPercent],
-      ['title'=>'Accepted','value'=>$deliveryTotals['accepted'] ?? 0,'class'=>'info','icon'=>'✅', 'percent'=>$acceptedPercent],
-      ['title'=>'Delivered','value'=>$deliveryTotals['delivered'] ?? 0,'class'=>'success','icon'=>'📦', 'percent'=>$deliveredPercent]
-  ];
-  foreach($cards as $c): ?>
-  <div class="col-md-3 mb-3">
-    <div class="card text-bg-<?=$c['class']?> shadow-sm h-100">
-      <div class="card-body text-center">
-        <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
-        <h6 class="card-title"><?= $c['title'] ?></h6>
-        <h4 class="mb-0"><strong><?= $c['value'] ?></strong></h4>
-        
-        <!-- Progress Bar for delivery status cards -->
-        <?php if (isset($c['percent'])): ?>
-        <div class="mt-2">
-          <div class="progress border border-1 border-light" style="height: 8px;">
-            <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
-                 aria-valuenow="<?= $c['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
-          </div>
-          <small class="text-dark opacity-75"><?= $c['percent'] ?>%</small>
-        </div>
-        <?php endif; ?>
-      </div>
-    </div>
-  </div>
-  <?php endforeach; ?>
-
-   <div class="col-12 mt-4 mb-2">
-    <h5 class="fw-bold text-dark border-start border-4 border-success ps-2 mb-3">
-      💰 Billing Summary
-    </h5>
-  </div>       
-  <?php 
-  $cards = [
-      ['title'=>'Total Groups','value'=>$billingTotals['total_groups'],'class'=>'primary','icon'=>'📊','subtext'=>'Total DRs: '.$billingTotals['total_drs']],
-      ['title'=>'For Billing','value'=>$billingTotals['for_billing_count'] ?? 0,'class'=>'warning','icon'=>'⏳', 'percent'=>$forBillingPercent],
-      ['title'=>'Billed','value'=>$billingTotals['billed_count'] ?? 0,'class'=>'info','icon'=>'📄', 'percent'=>$billedPercent],
-      ['title'=>'Paid','value'=>$billingTotals['paid_count'] ?? 0,'class'=>'success','icon'=>'💰', 'percent'=>$paidPercent]
-  ];
-  foreach($cards as $c): ?>
-  <div class="col-md-3 mb-3">
-    <div class="card text-bg-<?=$c['class']?> shadow-sm h-100">
-      <div class="card-body text-center">
-        <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
-        <h6 class="card-title"><?= $c['title'] ?></h6>
-        <h4 class="mb-0"><strong><?= $c['value'] ?></strong></h4>
-        
-        <!-- Subtext for first card -->
-        <?php if (isset($c['subtext'])): ?>
-        <div class="mt-2">
-          <small class="text-light opacity-75"><?= $c['subtext'] ?></small>
-        </div>
-        <?php endif; ?>
-        
-        <!-- Progress Bar for status cards -->
-        <?php if (isset($c['percent'])): ?>
-        <div class="mt-2">
-          <div class="progress border border-1 border-light" style="height: 8px;">
-            <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;" 
-                  aria-valuenow="<?= $c['percent'] ?>" aria-valuemin="0" aria-valuemax="100"></div>
-          </div>
-          <small class="text-dark opacity-75"><?= $c['percent'] ?>%</small>
-        </div>
-        <?php endif; ?>
-      </div>
-    </div>
-  </div>
-  <?php endforeach; ?>
-</div>
-
-
-<!-- Draggable Charts Container -->
-<div id="draggable-dashboard" class="row">
-  
-  <!-- Chart 1: Delivery Status Overview -->
-  <div class="col-lg-4 col-md-6 mb-4 chart-item" data-chart-id="delivery-status">
-      <div class="card shadow-sm h-30">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">📊 Delivery Status Overview</h6>
-          <div class="d-flex align-items-center gap-3">
-            <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-              <i class="bi bi-printer"></i>
-            </a>
-            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-          </div>
-        </div>
-        <div class="card-body">
-          <canvas id="deliveryStatusChart" height="300"></canvas>
-        </div>
-      </div>
-  </div>
-
-  <!-- Chart 4: School Density -->
-  <!-- <div class="col-lg-6 mb-4 chart-item" data-chart-id="places-delivered">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">📍 School Density</h6>
-        <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-      </div>
-      <div class="card-body">
-        <canvas id="placesDeliveredChart" height="300"></canvas>
-      </div>
-    </div>
-  </div> -->
-
-  <!-- Chart 3: Today's User Activity -->
-  <!-- <div class="col-lg-3 col-md-6 mb-4 chart-item" data-chart-id="today-activity">
-      <div class="card shadow-sm h-100">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">🕜 Today's User Activity</h6>
-              <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-          </div>
-          <div class="card-body">
-              <canvas id="todayActivityChart" height="250"></canvas>
-          </div>
-      </div>
-  </div> -->
-
-  <!-- Chart 2: Monthly Delivery Trend -->
-  <div class="col-lg-8 col-md-12 mb-4 chart-item" data-chart-id="monthly-trend">
+    <!-- RIGHT: Sales Generation Summary -->
+    <div class="col-md-8 col-12 chart-item" data-chart-id="sales-generation-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">📈 Monthly Delivery Trend</h6>
-          <div class="d-flex align-items-center gap-3">
-            <a href="report/print_monthly_trend.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-              <i class="bi bi-printer"></i>
+          <div>
+              <h6 class="mb-0 fw-bold">🪙 SALES GENERATION SUMMARY</h6>
+              <a href="dashboard_sales.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+                class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1">
+                View Details <i class="bi bi-arrow-right-short fs-5"></i>
+              </a>
+          </div>
+          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body p-2">
+
+          <!-- Projects and Budget Variance -->
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0"> Income & Profit Overview</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="incomeChart" height="300"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0"> Expense Overview</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="expenseChart" height="300"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0"> Budget Variance</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="opportunityChart" height="300"></canvas>
+                </div>
+              </div>
+        
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEFT: Production Summary -->
+    <div class="col-md-8 col-12 chart-item" data-chart-id="production-summary">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="mb-0 fw-bold">🚚 PRODUCTION SUMMARY</h6>
+            </div>
+          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body p-2">
+          <!-- Project Filter Inside the Card -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body py-2">
+                  <h6 class="card-title mb-2">Filter by Project</h6>
+                  <form method="GET" id="projectFilterForm">
+                      <div class="input-group input-group-sm">
+                          <select class="form-select form-select-sm" name="project_id" id="projectSelect">
+                              <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
+                              <?php foreach($allProjects as $project): ?>
+                                  <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
+                                    <?php 
+                                    $name = htmlspecialchars($project['project_name']);
+                                    echo strlen($name) > 30 ? substr($name, 0, 80) . '…' : $name; 
+                                    ?>
+                                  </option>
+                              <?php endforeach; ?>
+                          </select>
+                          <?php if($selectedProject > 0): ?>
+                              <a href="?" class="btn btn-outline-secondary btn-sm">
+                                  ❌ Clear
+                              </a>
+                          <?php endif; ?>
+                      </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="deliverySummaryContainer" class="sortable-container">
+            <div class="row g-2">
+              <?php 
+              $deliveryCards = [
+                  ['title'=>'In Progress','value'=>$deliveryTotals['pending'] ?? 0,'class'=>'danger','icon'=>'⏳', 'percent'=>$pendingPercent],
+                  ['title'=>'Accepted','value'=>$deliveryTotals['accepted'] ?? 0,'class'=>'warning','icon'=>'🚚', 'percent'=>$acceptedPercent],
+                  ['title'=>'Delivered','value'=>$deliveryTotals['delivered'] ?? 0,'class'=>'success','icon'=>'📦', 'percent'=>$deliveredPercent],
+                  ['title'=>'Completion Rate','value'=>$completionRate . '%','class'=>'primary','icon'=>'📊',
+                  'percent'=>$completionRate]
+              ];
+              foreach($deliveryCards as $c): ?>
+              <div class="col-md-3 col-6">
+                  <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
+                    <div class="card-body p-3 text-center">
+                      <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
+                      <small class="d-block opacity-75"><?= $c['title'] ?></small>
+                      <h3 class="mb-2 fw-bold"><?= $c['value'] ?></h3>
+                      <?php if (isset($c['percent'])): ?>
+                      <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
+                      </div>
+                      <?php endif; ?>
+                    </div>
+                  </div>
+              </div>
+              <?php endforeach; ?>
+            </div>
+          </div>
+
+          <!-- Delivery Status Chart and Monthly Trend -->
+          <div class="row g-3 mt-2">
+            <a href="dashboard_operation.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+                class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1 mx-2">
+                View Details <i class="bi bi-arrow-right-short fs-5"></i>
             </a>
-            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-          </div>
-        </div>
-        <div class="card-body">
-          <canvas id="monthlyDeliveryTrendChart" height="300"></canvas>
-        </div>
-      </div>
-  </div>
-
-  <!-- Inventory by Warehouse -->
-  <div class="col-12 mb-4 chart-item" data-chart-id="inventory-warehouse">
-      <div class="card shadow-sm h-100">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">📦 Inventory by Warehouse <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h6>
-              <div class="d-flex align-items-center gap-3">
-                <a href="report/print_inventory_warehouse.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-                  <i class="bi bi-printer"></i>
-                </a>
-                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+            <div class="col-md-5">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0">Delivery Per Status</h6>
+                  <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                    <i class="bi bi-printer"></i>
+                  </a>
+                </div>
+                <div class="card-body">
+                  <canvas id="deliveryStatusChart" height="200"></canvas>
+                </div>
               </div>
+            </div>
+            <div class="col-md-7">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0">Deliveries Status by Lot</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="deliveryStatusPerLotChart" height="200"></canvas>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="card-body">
-              <!-- Date Filter Form -->
-              <form method="GET" class="row mb-3" id="dateFilterForm">
-                  <!-- Preserve project_id if it exists -->
-                  <?php if($selectedProject > 0): ?>
-                      <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
-                  <?php endif; ?>
-                  
-                  <div class="col-md-4">
-                      <!-- <label for="dateFilter" class="form-label"><small><strong>Filter by Date</strong></small></label> -->
-                      <input type="date" class="form-control form-control-sm" id="dateFilter" name="selectedDate" 
-                            value="<?php echo htmlspecialchars($selectedDate); ?>">
-                  </div>
-                  <div class="col-md-4 align-self-end">
-                      <button type="submit" class="btn btn-primary btn-sm">Apply Date Filter</button>
-                      <a href="?#inventory-warehouse" class="btn btn-outline-secondary btn-sm">
-                          ❌ Clear Filter
-                      </a>
-                  </div>
-                  <?php if(isset($selectedDate) && $selectedDate !== date('Y-m-d')): ?>
-                  <div class="col-md-4 align-self-end text-end">
-                      <small class="text-muted">
-                          <i class="fas fa-history"></i> Date: <?php echo htmlspecialchars($selectedDate); ?>
-                      </small>
-                  </div>
-                  <?php endif; ?>
-              </form>
-              
-              <div id="warehouseChartsContainer" class="row"></div>
-          </div>
-      </div>
-  </div>
-
-  <!-- Chart: Inventory History Over Time -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="inventory-history-trend">
-  <div class="card shadow-sm h-80">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
-      <h6 class="mb-0">📅 Inventory History (Daily Changes)</h6>
-      <div class="d-flex align-items-center gap-3">
-        <a href="report/print_inventory_history.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-          <i class="bi bi-printer"></i>
-        </a>
-        <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
       </div>
     </div>
-    <div class="card-body">
-      <canvas id="inventoryHistoryTrendChart" height="200"></canvas>
-    </div>
-  </div>
-  </div>
 
-  <!-- Chart: Top Updated Items -->
-  <!-- <div class="col-lg-6 mb-4 chart-item" data-chart-id="top-updated-items">
-    <div class="card shadow-sm h-80">
-      <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">🏷️ Top Updated Items</h6>
-        <div class="d-flex align-items-center gap-3">
-          <a href="report/print_top_updated_items.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-            <i class="bi bi-printer"></i>
-          </a>
+    <!-- RIGHT: Map Summary -->
+    <div class="col-md-4 col-12 chart-item" data-chart-id="map-summary">
+      <div class="card shadow-sm h-100 d-flex flex-column">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold">🗺️ MAP OVERVIEW</h6>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
-      </div>
-      <div class="card-body">
-        <canvas id="topUpdatedItemsChart" height="200"></canvas>
-      </div>
-    </div>
-  </div> -->
-
-  <!-- Chart: Inventory Changes per Warehouse -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="changes-per-warehouse">
-    <div class="card shadow-sm h-80">
-      <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">🏭 Changes per Warehouse</h6>
-        <div class="d-flex align-items-center gap-3">
-          <a href="report/print_changes_per_warehouse.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-            <i class="bi bi-printer"></i>
-          </a>
-          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        <div class="card-body shadow-sm p-2 flex-fill">
+          <div id="leafletMap" class="h-100 w-100"></div>
         </div>
       </div>
-      <div class="card-body">
-        <canvas id="changesPerWarehouseChart" height="200"></canvas>
+    </div>
+
+    <!-- LEFT: Operation Charts Section -->
+    <div class="col-md-8 col-12 chart-item" data-chart-id="operation-section">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <div>
+        <h6 class="mb-0 fw-bold">🚚 TRACK OPERATIONS</h6>
+      </div>
+          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body p-2">
+          <!-- Delivery Status by Lot -->
+          <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0">Monthly Delivery Trend</h6>
+              <a href="report/print_monthly_trend.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+                <i class="bi bi-printer"></i>
+              </a>
+            </div>
+            <div class="card-body">
+              <canvas id="monthlyDeliveryTrendChart" height="250"></canvas>
+            </div>
+          </div>
+          <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+              <h6 class="mb-0">Inventory History</h6>
+            </div>
+            <div class="card-body">
+              <canvas id="inventoryHistoryTrendChart" height="250"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Leaflet Map Placeholder -->
-  <div class="col-6 mb-4 chart-item" data-chart-id="map-overview">
-    <div class="card shadow-sm h-100">
-      <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">🗺️ Map Overview</h6>
-        <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-      </div>
-      <div class="card-body p-0">
-        <div id="leafletMap" style="height: 500px; width: 100%;"></div>
+    <!-- RIGHT: Collection Summary -->
+    <div class="col-md-4 col-12 chart-item" data-chart-id="collection-summary">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="mb-0 fw-bold">💰 COLLECTION SUMMARY</h6>
+            <a href="dashboard_collection.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+              class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1">
+              View More <i class="bi bi-arrow-right-short fs-5"></i>
+            </a>
+          </div>
+          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body p-2">
+          <div id="billingSummaryContainer" class="sortable-container">
+            <!-- Total Groups Card -->
+            <div class="card text-bg-primary mb-2 summary-card" data-card-id="total-groups">
+              <div class="card-body p-3 text-center">
+                <div style="font-size: 2.5rem; margin-bottom: 10px;">📊</div>
+                <small class="d-block opacity-75">Total Groups</small>
+                <h2 class="mb-1 fw-bold"><?= $billingTotals['total_groups'] ?></h2>
+                <small class="opacity-75">Total DR no: <?= $billingTotals['total_drs'] ?></small>
+              </div>
+            </div>
+
+            <?php 
+            $billingCards = [
+                ['title'=>'For Billing','value'=>$billingTotals['for_billing_count'] ?? 0,'class'=>'danger','icon'=>'⏳', 'percent'=>$forBillingPercent],
+                ['title'=>'Billed','value'=>$billingTotals['billed_count'] ?? 0,'class'=>'warning','icon'=>'📄', 'percent'=>$billedPercent],
+                ['title'=>'Paid','value'=>$billingTotals['paid_count'] ?? 0,'class'=>'success','icon'=>'💰', 'percent'=>$paidPercent]
+            ];
+            foreach($billingCards as $c): ?>
+            <div class="card text-bg-<?=$c['class']?> mb-2 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
+              <div class="card-body p-3 d-flex align-items-center">
+                <div class="me-3" style="font-size: 2rem;"><?=$c['icon']?></div>
+                <div class="flex-grow-1">
+                  <small class="d-block opacity-75"><?= $c['title'] ?></small>
+                  <h4 class="mb-1 fw-bold"><?= $c['value'] ?></h4>
+                  <div class="progress" style="height: 5px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <?php endforeach; ?>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Progress by Region - Accepted -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="accepted-per-region">
-      <div class="card shadow-sm h-100">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">✅ Accepted by Region (%)</h6>
-              <div class="d-flex align-items-center gap-3">
-                  <a href="report/print_accepted_region.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-                  <i class="bi bi-printer"></i>
-                </a>
-                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-              </div>
-          </div>
-          <div class="card-body">
-              <canvas id="acceptedPerRegionChart" height="300"></canvas>
-          </div>
-      </div>
-  </div>
-
-  <!-- Progress by Region - Delivered -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="delivered-per-region">
-      <div class="card shadow-sm h-100">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">🚚 Delivered by Region (%)</h6>
-              <div class="d-flex align-items-center gap-3">
-                <a href="report/print_delivered_region.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-                  <i class="bi bi-printer"></i>
-                </a>
-                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-              </div>
-          </div>
-          <div class="card-body">
-              <canvas id="deliveredPerRegionChart" height="300"></canvas>
-          </div>
-      </div>
-  </div>
-
-  <!-- Progress by Lot - Accepted -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="accepted-per-lot">
-      <div class="card shadow-sm h-100">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">✅ Accepted by Lot (%)</h6>
-              <div class="d-flex align-items-center gap-3">
-                <a href="report/print_accepted_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-                  <i class="bi bi-printer"></i>
-                </a>
-                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-              </div>
-          </div>
-          <div class="card-body">
-              <canvas id="acceptedPerLotChart" height="300"></canvas>
-          </div>
-      </div>
-  </div>
-
-  <!-- Progress by Lot - Delivered -->
-  <div class="col-lg-6 mb-4 chart-item" data-chart-id="delivered-per-lot">
-      <div class="card shadow-sm h-100">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h6 class="mb-0">🚚 Delivered by Lot (%)</h6>
-              <div class="d-flex align-items-center gap-3">
-                <a href="report/print_delivered_lot.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-                  <i class="bi bi-printer"></i>
-                </a>
-                <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-              </div>
-          </div>
-          <div class="card-body">
-              <canvas id="deliveredPerLotChart" height="300"></canvas>
-          </div>
-      </div>
   </div>
 
 </div>
@@ -819,12 +799,13 @@ if ($selectedProject > 0) {
         deliveryStatusOverview: <?= json_encode($deliveryStatusOverview) ?>,
         monthlyDeliveryTrend: <?= json_encode($monthlyDeliveryTrend) ?>,
         inventoryData: <?= json_encode($inventoryData) ?>,
-        inventoryByWarehouse: <?= json_encode($inventoryByWarehouse) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>,
-        progressPerRegion: <?= json_encode($progressPerRegion) ?>,
         progressPerLot: <?= json_encode($progressPerLot) ?> ,
         inventoryHistoryTrend: <?= json_encode($inventoryHistoryTrend) ?>,
-        changesPerWarehouse: <?= json_encode($changesPerWarehouse) ?>
+        projectStatusOverview: <?= json_encode($projectStatusOverview) ?>,
+        opportunity: <?= json_encode($opportunity) ?>,
+        incomeData: <?= json_encode($incomeData) ?>,
+        expenseData: <?= json_encode($expenseData) ?>,
     };
 </script>
 
@@ -834,119 +815,145 @@ if ($selectedProject > 0) {
 
 <?php require "template/footer.php"; ?>
 
-
+<!-- MAP -->
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const mapContainer = document.getElementById('leafletMap');
-  if (!mapContainer) return;
+  document.addEventListener("DOMContentLoaded", function () {
+    const mapContainer = document.getElementById('leafletMap');
+    if (!mapContainer) return;
 
-  // Initialize the map centered on the Philippines
-  const defaultCenter = [12.8797, 121.7740];
-  const defaultZoom = 6;
-  const map = L.map(mapContainer, {
-    center: defaultCenter,
-    zoom: defaultZoom,
-    zoomControl: true
-  });
+    // Initialize the map centered on the Philippines
+    const defaultCenter = [12.8797, 121.7740];
+    const defaultZoom = 6;
+    const map = L.map(mapContainer, {
+      center: defaultCenter,
+      zoom: defaultZoom,
+      zoomControl: true
+    });
 
-  // --- 🗺️ Base Layers ---
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap contributors'
-  });
+    // --- 🗺️ Base Layers ---
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    });
 
-  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19,
-    attribution: 'Tiles © Esri'
-  });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles © Esri'
+    });
 
-  const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-    maxZoom: 17,
-    attribution: '© OpenTopoMap contributors'
-  });
+    const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      maxZoom: 17,
+      attribution: '© OpenTopoMap contributors'
+    });
 
-  const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap, © CartoDB'
-  });
+    const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap, © CartoDB'
+    });
 
-  osm.addTo(map);
+    osm.addTo(map);
 
-  // --- 🔍 Add Search Bar ---
-  const geocoder = L.Control.geocoder({ defaultMarkGeocode: false })
-    .on('markgeocode', function(e) {
-      const center = e.geocode.center;
-      L.marker(center).addTo(map)
-        .bindPopup(`<b>${e.geocode.name}</b>`).openPopup();
-      map.setView(center, 10);
-    })
-    .addTo(map);
+    // --- 🔍 Add Search Bar ---
+    const geocoder = L.Control.geocoder({ defaultMarkGeocode: false })
+      .on('markgeocode', function(e) {
+        const center = e.geocode.center;
+        L.marker(center).addTo(map)
+          .bindPopup(`<b>${e.geocode.name}</b>`).openPopup();
+        map.setView(center, 10);
+      })
+      .addTo(map);
 
-  // --- 📦 Choropleth Data ---
-  fetch("ph.json")
-    .then(response => response.json())
-    .then(geoData => {
-      const maxPercent = Math.max(...Object.values(deliveriesByDivision).map(v => v.percentage));
+    // --- 📦 Choropleth Data ---
+    fetch("ph.json")
+      .then(response => response.json())
+      .then(geoData => {
+        const maxPercent = Math.max(...Object.values(deliveriesByDivision).map(v => v.percentage));
 
-      function getColor(value) {
-        if (value === 0 || isNaN(value)) return "#f0f0f0";
-        const intensity = value / maxPercent;
-        const r = Math.floor(255 - (intensity * 150));
-        const g = Math.floor(230 - (intensity * 150));
-        const b = 255 - Math.floor(intensity * 50);
-        return `rgb(${r},${g},${b})`;
-      }
-
-      const geoLayer = L.geoJSON(geoData, {
-        style: function (feature) {
-          const name = feature.properties.name;
-          const data = deliveriesByDivision[name];
-          const percent = data ? data.percentage : 0;
-          return {
-            color: "#444",
-            weight: 1,
-            fillColor: getColor(percent),
-            fillOpacity: 0.7
-          };
-        },
-        onEachFeature: function (feature, layer) {
-          const name = feature.properties.name;
-          const data = deliveriesByDivision[name];
-          const count = data ? data.count : 0;
-          const percent = data ? data.percentage : 0;
-          layer.bindPopup(`<b>${name}</b><br>Deliveries: ${count}<br>Share: ${percent}%`);
+        function getColor(value) {
+          if (value === 0 || isNaN(value)) return "#f0f0f0";
+          const percent = (value / maxPercent) * 100;
+          if (percent >= 75) return "#66bb6a";   // Green - Very High
+          if (percent >= 50) return "#fbc02d";   // Yellow - High
+          if (percent >= 25) return "#f57c00";   // Orange - Medium
+          return "#d32f2f";                      // Red - Low
         }
-      }).addTo(map);
 
-      map.fitBounds(geoLayer.getBounds());
+        const geoLayer = L.geoJSON(geoData, {
+          style: function (feature) {
+            const name = feature.properties.name;
+            const data = deliveriesByDivision[name];
+            const percent = data ? data.percentage : 0;
+            return {
+              color: "#444",
+              weight: 1,
+              fillColor: getColor(percent),
+              fillOpacity: 0.7
+            };
+          },
+          onEachFeature: function (feature, layer) {
+            const name = feature.properties.name;
+            const data = deliveriesByDivision[name];
+            const count = data ? data.count : 0;
+            const percent = data ? data.percentage : 0;
+            layer.bindPopup(`<b>${name}</b><br>Deliveries: ${count}<br>Share: ${percent}%`);
+          }
+        }).addTo(map);
 
-      // Layer Controls
-      const baseMaps = {
-        "🗺️ OpenStreetMap": osm,
-        "🛰️ Satellite": satellite,
-        "🏔️ Terrain": terrain,
-        "🌙 Dark Mode": dark
-      };
-      const overlayMaps = { "📦 Deliveries by Province": geoLayer };
-      L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
+        map.fitBounds(geoLayer.getBounds());
 
-      // --- 🧭 Reset Button ---
-      const resetControl = L.control({ position: 'topleft' });
-      resetControl.onAdd = function () {
-        const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
-        div.innerHTML = '<button class="btn btn-sm btn-light fw-bold px-2 py-1">↻ Reset</button>';
-        div.title = "Reset to Default View";
-        div.style.cursor = 'pointer';
-        div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
-        div.onclick = function () {
-          map.setView(defaultCenter, defaultZoom);
+        // Layer Controls
+        const baseMaps = {
+          "🗺️ OpenStreetMap": osm,
+          "🛰️ Satellite": satellite,
+          "🏔️ Terrain": terrain,
+          "🌙 Dark Mode": dark
         };
+        const overlayMaps = { "📦 Deliveries by Province": geoLayer };
+        L.control.layers(baseMaps, overlayMaps, { collapsed: true }).addTo(map);
+
+        // --- 🧭 Reset Button ---
+        const resetControl = L.control({ position: 'topleft' });
+        resetControl.onAdd = function () {
+          const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+          div.innerHTML = '<button class="btn btn-sm btn-light fw-bold px-2 py-1">↻ Reset</button>';
+          div.title = "Reset to Default View";
+          div.style.cursor = 'pointer';
+          div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+          div.onclick = function () {
+            map.setView(defaultCenter, defaultZoom);
+          };
+          return div;
+        };
+        resetControl.addTo(map);
+
+      // --- Legend ---
+      const legend = L.control({ position: 'bottomright' });
+      legend.onAdd = function () {
+        const div = L.DomUtil.create('div', 'info legend');
+        div.style.backgroundColor = 'white';
+        div.style.padding = '10px';
+        div.style.borderRadius = '5px';
+        div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+        
+        // Colors: red → orange → yellow → green
+        const colors = ["#d32f2f", "#f57c00", "#fbc02d", "#66bb6a"];
+        const labels = ['0–25%', '26–50%', '51–75%', '76–100%'];
+        
+        div.innerHTML = '<strong>Delivery Share</strong><br>';
+        
+        for (let i = 0; i < colors.length; i++) {
+          div.innerHTML +=
+            '<i style="background:' + colors[i] + '; width: 18px; height: 18px; display: inline-block; margin-right: 5px; opacity: 0.7;"></i> ' +
+            labels[i] + '<br>';
+        }
+        
         return div;
       };
-      resetControl.addTo(map);
-    })
-    .catch(error => console.error("Error loading GeoJSON:", error));
-});
+      legend.addTo(map);
+
+      })
+      .catch(error => console.error("Error loading GeoJSON:", error));
+  });
 </script>
 
 
