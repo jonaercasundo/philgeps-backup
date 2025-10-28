@@ -9,6 +9,8 @@ const {
     projectStatusOverview,
     opportunity,
     progressPerLot,
+    incomeData,
+    expenseData,
 } = phpData;
 
 // Delivery Status Colors (Green-Yellow-Red)
@@ -358,6 +360,138 @@ document.addEventListener('DOMContentLoaded', function() {
     createEmptyChart(document.getElementById('projectStatusChart'), 'No project data available');
     }
 
+    // Income Chart - Revenue & Profit by Month (Line Chart)
+    if (phpData.incomeData && phpData.incomeData.length > 0) {
+        const months = phpData.incomeData.map(r => r.month);
+        const incomeValues = phpData.incomeData.map(r => parseFloat(r.total_income));
+        const profitValues = phpData.incomeData.map(r => parseFloat(r.total_profit));
+
+        new Chart(document.getElementById('incomeChart'), {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'Total Income',
+                        data: incomeValues,
+                        borderColor: '#28a745', // Green for income
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Total Profit',
+                        data: profitValues,
+                        borderColor: '#ffc107', // Amber/Gold for profit
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Months'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount (₱)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const monthData = phpData.incomeData[context.dataIndex];
+                                if (context.datasetIndex === 0) { // Income
+                                    return `Income: ₱${parseFloat(monthData.total_income).toLocaleString()}`;
+                                } else { // Profit
+                                    const profitMargin = ((parseFloat(monthData.total_profit) / parseFloat(monthData.total_income)) * 100).toFixed(1);
+                                    return `Profit: ₱${parseFloat(monthData.total_profit).toLocaleString()} (${profitMargin}% margin)`;
+                                }
+                            },
+                            afterLabel: function(context) {
+                                const monthData = phpData.incomeData[context.dataIndex];
+                                return `Deliveries: ${monthData.total_deliveries}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    } else {
+        createEmptyChart(document.getElementById('incomeChart'), 'No income data available');
+    }
+    // Expense Chart - Expenses by Month (Line Chart)
+    if (phpData.expenseData && phpData.expenseData.length > 0) {
+        const months = phpData.expenseData.map(r => r.month);
+        const expenseValues = phpData.expenseData.map(r => parseFloat(r.total_expense));
+
+        new Chart(document.getElementById('expenseChart'), {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'Total Expense',
+                        data: expenseValues,
+                        borderColor: '#dc3545', // Red for expenses
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Months'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount (₱)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const monthData = phpData.expenseData[context.dataIndex];
+                                return `Expense: ₱${parseFloat(monthData.total_expense).toLocaleString()} (${monthData.total_transactions} transactions)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        createEmptyChart(document.getElementById('expenseChart'), 'No expense data available');
+    }
+
     // 📊 BUDGET VARIANCE
     if (phpData.opportunity && phpData.opportunity.length > 0) {
         const projects = phpData.opportunity.map(p => p.project_name);
@@ -467,117 +601,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     } else {
         createEmptyChart(document.getElementById('opportunityChart'), 'No project financial data available');
-    }
-
-    // 📊 ITEM PRICE VARIANCE CHART
-    if (phpData.itemVariance && phpData.itemVariance.length > 0) {
-        const items = phpData.itemVariance.map(p => p.item_name);
-        const ourPriceData = phpData.itemVariance.map(p => parseFloat(p.our_price) || 0);
-        const factoryPriceData = phpData.itemVariance.map(p => parseFloat(p.factory_price) || 0);
-
-        new Chart(document.getElementById('itemPriceVarianceChart'), {
-            type: 'bar',
-            data: {
-                labels: items,
-                datasets: [
-                    {
-                        label: 'Price',
-                        data: ourPriceData,
-                        backgroundColor: '#198754', 
-                        borderColor: '#146c43',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Factory Price',
-                        data: factoryPriceData,
-                        backgroundColor: '#fbc02d',
-                        borderColor: '#f9a825',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Items'
-                        }
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Price (₱)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return '₱' + value.toLocaleString();
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.parsed.y;
-                                return `${context.dataset.label}: ₱${value.toLocaleString()}`;
-                            },
-                            afterLabel: function(context) {
-                                const itemData = phpData.itemVariance[context.dataIndex];
-                                const ourPrice = parseFloat(itemData.our_price) || 0;
-                                const factoryPrice = parseFloat(itemData.factory_price) || 0;
-                                const total = ourPrice + factoryPrice;
-                                
-                                if (total > 0) {
-                                    const percentage = context.dataset.label === 'Our Price' 
-                                        ? Math.round((ourPrice / total) * 100)
-                                        : Math.round((factoryPrice / total) * 100);
-                                    return `(${percentage}%)`;
-                                }
-                                return '';
-                            }
-                        }
-                    }
-                }
-            },
-            plugins: [{
-                afterDatasetsDraw: function(chart) {
-                    const ctx = chart.ctx;
-                    chart.data.datasets.forEach((dataset, i) => {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach((bar, index) => {
-                            const data = dataset.data[index];
-                            if (data > 0) {
-                                const itemData = phpData.itemVariance[index];
-                                const ourPrice = parseFloat(itemData.our_price) || 0;
-                                const factoryPrice = parseFloat(itemData.factory_price) || 0;
-                                const total = ourPrice + factoryPrice;
-                                
-                                if (total > 0) {
-                                    const percentage = i === 0 
-                                        ? Math.round((ourPrice / total) * 100)
-                                        : Math.round((factoryPrice / total) * 100);
-                                    
-                                    ctx.fillStyle = '#fff';
-                                    ctx.font = 'bold 12px Arial';
-                                    ctx.textAlign = 'center';
-                                    ctx.textBaseline = 'middle';
-                                    ctx.fillText(percentage + '%', bar.x, bar.y + (bar.height / 2));
-                                }
-                            }
-                        });
-                    });
-                }
-            }]
-        });
-    } else {
-        createEmptyChart(document.getElementById('itemPriceVarianceChart'), 'No item price variance data available');
     }
 
     // 🎯 Inventory History (Daily Changes)

@@ -13,54 +13,23 @@ try {
     $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
     $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get income data (from paid deliveries)
-    $incomeQuery = "
+    $itemVarianceQuery = "
         SELECT 
-            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
-            SUM(i.price * pc.qty) AS total_income,
-            SUM((i.price - i.supplier_price) * pc.qty) AS total_profit,
-            COUNT(DISTINCT d.delivery_id) AS total_deliveries
-        FROM grouping g
-        JOIN billing_grouped bg ON g.group_id = bg.group_id
-        JOIN deliveries d ON bg.dr_no = d.dr_no
-        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
-        JOIN package_content pc ON p.package_id = pc.package_id
-        JOIN item i ON pc.item_id = i.item_id
-        WHERE g.status = 'paid'
-            AND g.paid_at IS NOT NULL 
-            AND g.paid_at != ''
-            AND DATE(g.paid_at) IS NOT NULL
-            AND d.status NOT IN ('pending', 'cancelled')
-            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-        GROUP BY month
-        ORDER BY month;
+            item_name,
+            price AS our_price,
+            supplier_price AS factory_price,
+            (price - supplier_price) AS variance
+        FROM item
+        WHERE price > 0 
+        AND supplier_price > 0
+        " . ($selectedProject > 0 ? "AND project_id = $selectedProject" : "") . "
+        ORDER BY ABS(price - supplier_price) DESC
     ";
-    $stmt = $pdo->query($incomeQuery);
-    $incomeData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get expense data (from paid deliveries - cost of goods sold)
-    $expenseQuery = "
-        SELECT 
-            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
-            SUM(i.supplier_price * pc.qty) AS total_expense,
-            COUNT(DISTINCT d.delivery_id) AS total_transactions
-        FROM grouping g
-        JOIN billing_grouped bg ON g.group_id = bg.group_id
-        JOIN deliveries d ON bg.dr_no = d.dr_no
-        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
-        JOIN package_content pc ON p.package_id = pc.package_id
-        JOIN item i ON pc.item_id = i.item_id
-        WHERE g.status = 'paid'
-            AND g.paid_at IS NOT NULL 
-            AND g.paid_at != ''
-            AND DATE(g.paid_at) IS NOT NULL
-            AND d.status NOT IN ('pending', 'cancelled')
-            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-        GROUP BY month
-        ORDER BY month;
-    ";
-    $stmt = $pdo->query($expenseQuery);
-    $expenseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $pdo->query($itemVarianceQuery);
+    $itemVariance = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
 
     // Get income by item (from paid deliveries)
     $incomeByItemQuery = "
@@ -201,32 +170,17 @@ if ($selectedProject > 0) {
       </div>
     </div>
 
-    <!-- Income & Profit Chart -->
-    <div class="col-lg-6">
+    <!-- Item Price Variance -->
+    <div class="col-lg-12">
       <div class="card shadow-sm">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">💵 Income & Profit Overview</h6>
+          <h6 class="mb-0">💵 Item Price Variance</h6>
           <!-- <a href="report/print_income.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
             <i class="bi bi-printer"></i>
           </a> -->
         </div>
         <div class="card-body">
-          <canvas id="incomeChart" height="250"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <!-- Expense Chart -->
-    <div class="col-lg-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">💸 Expense Overview</h6>
-          <!-- <a href="report/print_expense.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
-            <i class="bi bi-printer"></i>
-          </a> -->
-        </div>
-        <div class="card-body">
-          <canvas id="expenseChart" height="250"></canvas>
+          <canvas id="itemPriceVarianceChart" height="300"></canvas>
         </div>
       </div>
     </div>
@@ -281,8 +235,7 @@ if ($selectedProject > 0) {
 
 <script>
     const phpData = {
-        incomeData: <?= json_encode($incomeData) ?>,
-        expenseData: <?= json_encode($expenseData) ?>,
+        itemVariance: <?= json_encode($itemVariance) ?>,
         incomeByItem: <?= json_encode($incomeByItem) ?>,
         expenseByItem: <?= json_encode($expenseByItem) ?>,
         incomeExpenseByItem: <?= json_encode($incomeExpenseByItem) ?>,

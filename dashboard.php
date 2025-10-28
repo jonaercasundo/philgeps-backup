@@ -196,19 +196,55 @@ try {
     $stmt = $pdo->query($opportunityQuery);
     $opportunity = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $itemVarianceQuery = "
+        // Get income data (from paid deliveries)
+    $incomeQuery = "
         SELECT 
-            item_name,
-            price AS our_price,
-            supplier_price AS factory_price,
-            (price - supplier_price) AS variance
-        FROM item
-        WHERE price > 0 AND supplier_price > 0
-        ORDER BY ABS(price - supplier_price) DESC
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
+            SUM(i.price * pc.qty) AS total_income,
+            SUM((i.price - i.supplier_price) * pc.qty) AS total_profit,
+            COUNT(DISTINCT d.delivery_id) AS total_deliveries
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY month
+        ORDER BY month;
     ";
+    $stmt = $pdo->query($incomeQuery);
+    $incomeData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $stmt = $pdo->query($itemVarianceQuery);
-    $itemVariance = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get expense data (from paid deliveries - cost of goods sold)
+    $expenseQuery = "
+        SELECT 
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
+            SUM(i.supplier_price * pc.qty) AS total_expense,
+            COUNT(DISTINCT d.delivery_id) AS total_transactions
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY month
+        ORDER BY month;
+    ";
+    $stmt = $pdo->query($expenseQuery);
+    $expenseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     // SALES GENERATION CHARTS //
 
     // OPERATION CHARTS //
@@ -449,15 +485,25 @@ if ($selectedProject > 0) {
         </div>
         <div class="card-body p-2">
 
-          <!-- Projects and Cash Flow -->
+          <!-- Projects and Budget Variance -->
           <div class="row g-3">
-            <div class="col-md-12">
+            <div class="col-md-6">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0"> Item Price Variance</h6>
+                  <h6 class="mb-0"> Income & Profit Overview</h6>
                 </div>
                 <div class="card-body">
-                  <canvas id="itemPriceVarianceChart" height="300"></canvas>
+                  <canvas id="incomeChart" height="300"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                  <h6 class="mb-0"> Expense Overview</h6>
+                </div>
+                <div class="card-body">
+                  <canvas id="expenseChart" height="300"></canvas>
                 </div>
               </div>
             </div>
@@ -470,14 +516,14 @@ if ($selectedProject > 0) {
                   <canvas id="opportunityChart" height="300"></canvas>
                 </div>
               </div>
-            </div>
+        
           </div>
         </div>
       </div>
     </div>
 
-    <!-- LEFT: Operation Summary -->
-    <div class="col-md-8 col-12 chart-item" data-chart-id="operation-summary">
+    <!-- LEFT: Production Summary -->
+    <div class="col-md-8 col-12 chart-item" data-chart-id="production-summary">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <div>
@@ -758,7 +804,8 @@ if ($selectedProject > 0) {
         inventoryHistoryTrend: <?= json_encode($inventoryHistoryTrend) ?>,
         projectStatusOverview: <?= json_encode($projectStatusOverview) ?>,
         opportunity: <?= json_encode($opportunity) ?>,
-        itemVariance: <?= json_encode($itemVariance) ?>,
+        incomeData: <?= json_encode($incomeData) ?>,
+        expenseData: <?= json_encode($expenseData) ?>,
     };
 </script>
 
