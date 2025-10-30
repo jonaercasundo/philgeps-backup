@@ -79,9 +79,7 @@
                         <select class="form-select mb-2" id="remarks_dropdown">
                             <option value="">-- Select a remark --</option>
                             <option value="Human error">Human error</option>
-                            <option value="Restocked from supplier">Restocked from supplier</option>
                             <option value="Damaged during handling">Damaged during handling</option>
-                            <option value="Returned by customer">Returned by customer</option>
                             <option value="Quality inspection passed">Quality inspection</option>
                             <option value="custom">Add custom remark...</option>
                         </select>

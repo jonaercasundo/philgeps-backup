@@ -43,17 +43,22 @@ try {
 
     // Check if any rows were affected
     if ($stmt->rowCount() > 0) {
-        // Prepare activity log message
+        // Prepare activity log message (without quantity)
         $action_message = $_SESSION['name'] . " updated inventory: " . 
-                            $inventory_data['item_name'] . " in " . 
-                            $inventory_data['warehouse_name'] . 
-                            " (Quantity: " . $inventory_data['old_quantity'] . " → " . $quantity . ")";
-        
-        // Add remarks to the details field if provided
-        $details = null;
+                            $inventory_data['item_name'] . ", " . 
+                            $inventory_data['warehouse_name'];
+
+        // Build details text
+        $details = "";
+
+        // Add remarks if any
         if (!empty($remarks)) {
-            $details = $remarks;
+            $details .= $remarks . "\n"; // newline after remarks
         }
+
+        // Add formatted quantity change details
+        $details .= "Details:\n- " . $inventory_data['item_name'] . 
+                    " (Quantity: " . $inventory_data['old_quantity'] . " → " . $quantity . ")";
 
         // Insert into activity logs
         $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)");
@@ -67,6 +72,7 @@ try {
     } else {
         echo json_encode(["success" => false, "message" => "No changes made or inventory not found"]);
     }
+
 
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => $e->getMessage()]);
