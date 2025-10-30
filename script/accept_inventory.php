@@ -67,7 +67,7 @@ try {
         // Prepare activity log for merged acceptance
         $action_message = $username . " accepted and merged inventory item";
         
-        $details = $username . " approved " . $item_name . " (+" . $quantity . ") in " . $warehouse_name . " and merged with existing inventory";
+        $details = "Approved (+" . $quantity . ") " . $item_name . " in " . $warehouse_name . " and merged with existing inventory";
         
         // Insert into activity logs
         $log_stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)");
@@ -84,7 +84,7 @@ try {
             // Prepare activity log for new approval
             $action_message = $username . " approved inventory item";
             
-            $details = $username . " approved " . $item_name . " (+" . $quantity . ") in " . $warehouse_name;
+            $details = "Approved (+" . $quantity . ") " . $item_name . " in " . $warehouse_name;
             
             // Insert into activity logs
             $log_stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)");

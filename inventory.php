@@ -185,26 +185,6 @@
         });
     }
 
-    // Handle dropdown change to show/hide custom remarks
-    document.addEventListener('DOMContentLoaded', function() {
-        const remarksDropdown = document.getElementById('remarks_dropdown');
-        
-        if (remarksDropdown) {
-            remarksDropdown.addEventListener('change', function() {
-                const customRemarksCollapse = document.getElementById('customRemarksCollapse');
-                const bsCollapse = new bootstrap.Collapse(customRemarksCollapse, {
-                    toggle: false
-                });
-                
-                if (this.value === 'custom') {
-                    bsCollapse.show();
-                } else {
-                    bsCollapse.hide();
-                    document.getElementById('custom_remarks').value = '';
-                }
-            });
-        }
-    });
 
     // Delete inventory
     function deleteInventory() {
@@ -273,9 +253,38 @@
         });
     }
 
+    // Update Reject Modal  
+    function updateRejectId(inventoryId) {
+        document.getElementById("reject_inventory_id").value = inventoryId;
+        
+        // Reset reject remarks fields when opening modal
+        document.getElementById("reject_remarks_dropdown").value = "";
+        document.getElementById("reject_custom_remarks").value = "";
+        
+        // Ensure reject custom remarks is hidden
+        const rejectCustomRemarksCollapse = new bootstrap.Collapse(document.getElementById('reject_customRemarksCollapse'), {
+            toggle: false
+        });
+        rejectCustomRemarksCollapse.hide();
+    }
+
     // Reject inventory
     function rejectInventory() {
         const formData = new FormData(document.getElementById('rejectForm'));
+        
+        // Get reject remarks value
+        const dropdown = document.getElementById('reject_remarks_dropdown');
+        let remarks = '';
+        
+        if (dropdown && dropdown.value === 'custom') {
+            const customRemarks = document.getElementById('reject_custom_remarks');
+            remarks = customRemarks ? customRemarks.value.trim() : '';
+        } else if (dropdown) {
+            remarks = dropdown.value;
+        }
+        
+        // Add remarks to form data
+        formData.append('remarks', remarks);
         
         fetch('script/reject_inventory.php', {
             method: 'POST',
@@ -286,6 +295,10 @@
             try {
                 const data = JSON.parse(text);
                 if (data.success) {
+                    // Close the reject modal
+                    const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
+                    rejectModal.hide();
+                    
                     window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
                 } else {
                     // Redirect with error toast instead of alert
@@ -301,6 +314,45 @@
             window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
         });
     }
+
+    // Handle dropdown change to show/hide custom remarks for REJECT modal
+    document.addEventListener('DOMContentLoaded', function() {
+        // For Edit Modal
+        const remarksDropdown = document.getElementById('remarks_dropdown');
+        if (remarksDropdown) {
+            remarksDropdown.addEventListener('change', function() {
+                const customRemarksCollapse = document.getElementById('customRemarksCollapse');
+                const bsCollapse = new bootstrap.Collapse(customRemarksCollapse, {
+                    toggle: false
+                });
+                
+                if (this.value === 'custom') {
+                    bsCollapse.show();
+                } else {
+                    bsCollapse.hide();
+                    document.getElementById('custom_remarks').value = '';
+                }
+            });
+        }
+
+        // For Reject Modal
+        const rejectRemarksDropdown = document.getElementById('reject_remarks_dropdown');
+        if (rejectRemarksDropdown) {
+            rejectRemarksDropdown.addEventListener('change', function() {
+                const rejectCustomRemarksCollapse = document.getElementById('reject_customRemarksCollapse');
+                const bsCollapse = new bootstrap.Collapse(rejectCustomRemarksCollapse, {
+                    toggle: false
+                });
+                
+                if (this.value === 'custom') {
+                    bsCollapse.show();
+                } else {
+                    bsCollapse.hide();
+                    document.getElementById('reject_custom_remarks').value = '';
+                }
+            });
+        }
+    });
 
 </script>
 
