@@ -116,6 +116,9 @@
         document.getElementById("edit_warehouse_name").value = warehouseName.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
         document.getElementById("edit_quantity").value = quantity;
 
+        // Store original quantity for change detection
+        document.getElementById("edit_quantity").setAttribute('data-original-value', quantity);
+
         // Reset remarks fields when opening modal
         document.getElementById("remarks_dropdown").value = "";
         document.getElementById("custom_remarks").value = "";
@@ -130,6 +133,8 @@
     // Update inventory
     function updateInventory() {
         const formData = new FormData(document.getElementById('editForm'));
+        const originalQuantity = parseInt(document.getElementById("edit_quantity").getAttribute('data-original-value') || 0);
+        const newQuantity = parseInt(document.getElementById("edit_quantity").value);
 
         // Get remarks value and add to form data
         const dropdown = document.getElementById('remarks_dropdown');
@@ -140,7 +145,19 @@
         } else {
             remarks = dropdown.value;
         }
-        
+
+        // Check if quantity changed and no remarks provided
+        const quantityChanged = (originalQuantity !== newQuantity);
+        if (quantityChanged && !remarks) {
+            const userConfirmed = confirm("You've changed the quantity. Would you like to add remarks about this change?\n\nClick OK to add remarks, or Cancel to continue without remarks.");
+            
+            if (userConfirmed) {
+                // Focus on remarks dropdown and return to let user add remarks
+                dropdown.focus();
+                return;
+            }
+        }
+            
         // Add remarks to form data
         formData.append('remarks', remarks);
         

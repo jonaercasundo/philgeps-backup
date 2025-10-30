@@ -21,7 +21,8 @@ try {
     }
 
     // First, get the current item details for the activity log
-    $stmt = $pdo->prepare("SELECT i.item_id, it.item_name, w.warehouse_name, i.qty as old_quantity 
+    $stmt = $pdo->prepare("SELECT i.item_id, i.warehouse_id, i.qty as old_quantity, 
+                                    it.item_name, w.warehouse_name 
                             FROM inventory i 
                             JOIN item it ON i.item_id = it.item_id 
                             JOIN warehouse w ON i.warehouse_id = w.warehouse_id 
@@ -34,6 +35,9 @@ try {
         exit;
     }
 
+     // Check if quantity actually changed
+    $quantity_changed = ($inventory_data['old_quantity'] != $quantity);
+
     // Prepare and execute update query
     $stmt = $pdo->prepare("UPDATE `inventory` SET `qty` = ? WHERE `inventory_id` = ?");
     $stmt->execute([
@@ -43,30 +47,23 @@ try {
 
     // Check if any rows were affected
     if ($stmt->rowCount() > 0) {
-        // Prepare activity log message (without quantity)
-        $action_message = $_SESSION['name'] . " updated inventory: " . 
-                            $inventory_data['item_name'] . ", " . 
-                            $inventory_data['warehouse_name'];
-
-        // Build details text
-        $details = "";
-
-        // Add remarks if any
-        if (!empty($remarks)) {
-            $details .= $remarks . "\n"; // newline after remarks
+        
+        // Log to inventory_history if quantity changed
+        if ($quantity_changed) {
+            $stmt = $pdo->prepare("INSERT INTO inventory_history 
+                                    (inventory_id, item_id, warehouse_id, old_qty, new_qty, 
+                                    changed_by, change_type, remarks) 
+                                    VALUES (?, ?, ?, ?, ?, ?, 'update', ?)");
+            $stmt->execute([
+                $inventory_id,
+                $inventory_data['item_id'],
+                $inventory_data['warehouse_id'],
+                $inventory_data['old_quantity'],
+                $quantity,
+                $_SESSION['name'],
+                $remarks
+            ]);
         }
-
-        // Add formatted quantity change details
-        $details .= "Details:\n- " . $inventory_data['item_name'] . 
-                    " (Quantity: " . $inventory_data['old_quantity'] . " → " . $quantity . ")";
-
-        // Insert into activity logs
-        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)");
-        $stmt->execute([
-            $_SESSION['user_id'],
-            $action_message,
-            $details
-        ]);
 
         echo json_encode(["success" => true, "message" => "Inventory updated successfully"]);
     } else {
