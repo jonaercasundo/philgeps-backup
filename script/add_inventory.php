@@ -99,9 +99,9 @@ try {
         if (!empty($errors)) {
             $msg .= ". Some errors occurred.";
         }
-        $action_message = $username . " added " . count($processed_items) . " items for approval";
+        $action_message = $username . " added " . count($processed_items) . " for approval items";
 
-        $details = "Item details:\n";
+        $details = "Added Items:\n";
         foreach ($processed_items as $item) {
             $details .= "- " . $item . "\n";
         }
