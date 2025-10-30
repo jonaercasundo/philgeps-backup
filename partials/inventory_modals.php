@@ -156,7 +156,7 @@
                         <div class="collapse" id="reject_customRemarksCollapse">
                             <div class="mt-2">
                                 <label class="form-label">Custom Remark</label>
-                                <textarea class="form-control" id="custom_remarks" rows="2" placeholder="Enter your custom remark..."></textarea>
+                                <textarea class="form-control" id="custom_remarks" rows="2" placeholder="Due too..."></textarea>
                             </div>
                         </div>
                     </div>

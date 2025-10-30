@@ -14,6 +14,7 @@ try {
     $password = $_POST['reject_password'];
     $username = $_SESSION['username'] ?? '';
     $user_id = $_SESSION['user_id'] ??'';
+    $remarks = isset($_POST['remarks']) ? $_POST['remarks'] : '';
 
     // Validate user session
     if (empty($username)) {
@@ -60,8 +61,10 @@ try {
         
         // Build details with remarks included
         $details = "Rejected (-" . $quantity . ") " . $item_name . " in " . $warehouse_name;
+        
+        // Add remarks if provided
         if (!empty($remarks)) {
-            $details .= $remarks;
+            $details .= " due to " . $remarks;
         }
         
         // Insert into activity logs
