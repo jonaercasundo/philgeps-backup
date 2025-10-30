@@ -56,22 +56,20 @@ try {
             w.warehouse_name,
             i.item_name,
             i.unit,
-            COALESCE(
-                (SELECT ih.new_qty
-                FROM inventory_history ih
-                WHERE ih.item_id = i.item_id 
-                  AND ih.warehouse_id = w.warehouse_id 
-                  AND DATE(ih.changed_at) <= :selectedDate
-                ORDER BY ih.changed_at DESC 
-                LIMIT 1),
-                inv.qty
-            ) as qty
-        FROM inventory inv
-        JOIN item i ON inv.item_id = i.item_id
-        JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
-        WHERE inv.inventory_status = 'Approved'
-            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
-        HAVING qty > 0
+            ih.new_qty as qty
+        FROM inventory_history ih
+        JOIN item i ON ih.item_id = i.item_id
+        JOIN warehouse w ON ih.warehouse_id = w.warehouse_id
+        WHERE ih.changed_at = (
+            SELECT MAX(ih2.changed_at)
+            FROM inventory_history ih2
+            WHERE ih2.item_id = ih.item_id 
+              AND ih2.warehouse_id = ih.warehouse_id 
+              AND DATE(ih2.changed_at) <= :selectedDate
+        )
+        AND DATE(ih.changed_at) <= :selectedDate
+        " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+        AND ih.new_qty > 0
         ORDER BY w.warehouse_name, i.item_name
     ";
     $stmt = $pdo->prepare($inventoryByWarehouseQuery);
