@@ -73,6 +73,27 @@
                         <label class="form-label">Quantity *</label>
                         <input type="number" class="form-control" name="edit_quantity" id="edit_quantity" min="0" required>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Remarks</label>
+                        <select class="form-select mb-2" id="remarks_dropdown">
+                            <option value="">-- Select a remark --</option>
+                            <option value="Human error">Human error</option>
+                            <option value="Restocked from supplier">Restocked from supplier</option>
+                            <option value="Damaged during handling">Damaged during handling</option>
+                            <option value="Returned by customer">Returned by customer</option>
+                            <option value="Quality inspection passed">Quality inspection</option>
+                            <option value="custom">Add custom remark...</option>
+                        </select>
+                        
+                        <!-- Custom remarks input -->
+                        <div class="collapse" id="customRemarksCollapse">
+                            <div class="mt-2">
+                                <label class="form-label">Custom Remark</label>
+                                <textarea class="form-control" id="custom_remarks" rows="2" placeholder="Enter your custom remark..."></textarea>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">

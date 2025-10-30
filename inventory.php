@@ -115,11 +115,34 @@
         document.getElementById("edit_item_name").value = itemName.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
         document.getElementById("edit_warehouse_name").value = warehouseName.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
         document.getElementById("edit_quantity").value = quantity;
+
+        // Reset remarks fields when opening modal
+        document.getElementById("remarks_dropdown").value = "";
+        document.getElementById("custom_remarks").value = "";
+        
+        // Ensure custom remarks is hidden
+        const customRemarksCollapse = new bootstrap.Collapse(document.getElementById('customRemarksCollapse'), {
+            toggle: false
+        });
+        customRemarksCollapse.hide();
     }
 
     // Update inventory
     function updateInventory() {
         const formData = new FormData(document.getElementById('editForm'));
+
+        // Get remarks value and add to form data
+        const dropdown = document.getElementById('remarks_dropdown');
+        let remarks = '';
+        
+        if (dropdown.value === 'custom') {
+            remarks = document.getElementById('custom_remarks').value.trim();
+        } else {
+            remarks = dropdown.value;
+        }
+        
+        // Add remarks to form data
+        formData.append('remarks', remarks);
         
         fetch('script/update_inventory.php', {
             method: 'POST',
@@ -144,6 +167,27 @@
             alert('Error: ' + error);
         });
     }
+
+    // Handle dropdown change to show/hide custom remarks
+    document.addEventListener('DOMContentLoaded', function() {
+        const remarksDropdown = document.getElementById('remarks_dropdown');
+        
+        if (remarksDropdown) {
+            remarksDropdown.addEventListener('change', function() {
+                const customRemarksCollapse = document.getElementById('customRemarksCollapse');
+                const bsCollapse = new bootstrap.Collapse(customRemarksCollapse, {
+                    toggle: false
+                });
+                
+                if (this.value === 'custom') {
+                    bsCollapse.show();
+                } else {
+                    bsCollapse.hide();
+                    document.getElementById('custom_remarks').value = '';
+                }
+            });
+        }
+    });
 
     // Delete inventory
     function deleteInventory() {
@@ -173,73 +217,74 @@
         });
     }
 
-// Update Accept Modal
-function updateAcceptId(inventoryId) {
-    document.getElementById("accept_inventory_id").value = inventoryId;
-}
+    // Update Accept Modal
+    function updateAcceptId(inventoryId) {
+        document.getElementById("accept_inventory_id").value = inventoryId;
+    }
 
-// Update Reject Modal  
-function updateRejectId(inventoryId) {
-    document.getElementById("reject_inventory_id").value = inventoryId;
-}
+    // Update Reject Modal  
+    function updateRejectId(inventoryId) {
+        document.getElementById("reject_inventory_id").value = inventoryId;
+    }
 
-// Accept inventory
-function acceptInventory() {
-    const formData = new FormData(document.getElementById('acceptForm'));
-    
-    fetch('script/accept_inventory.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(text => {
-        try {
-            const data = JSON.parse(text);
-            if (data.success) {
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
-            } else {
-                // Redirect with error toast instead of alert
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+    // Accept inventory
+    function acceptInventory() {
+        const formData = new FormData(document.getElementById('acceptForm'));
+        
+        fetch('script/accept_inventory.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
+                } else {
+                    // Redirect with error toast instead of alert
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+                }
+            } catch (e) {
+                console.error('Response:', text);
+                window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
             }
-        } catch (e) {
-            console.error('Response:', text);
-            window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
-    });
-}
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
+        });
+    }
 
-// Reject inventory
-function rejectInventory() {
-    const formData = new FormData(document.getElementById('rejectForm'));
-    
-    fetch('script/reject_inventory.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(text => {
-        try {
-            const data = JSON.parse(text);
-            if (data.success) {
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
-            } else {
-                // Redirect with error toast instead of alert
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+    // Reject inventory
+    function rejectInventory() {
+        const formData = new FormData(document.getElementById('rejectForm'));
+        
+        fetch('script/reject_inventory.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
+                } else {
+                    // Redirect with error toast instead of alert
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+                }
+            } catch (e) {
+                console.error('Response:', text);
+                window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
             }
-        } catch (e) {
-            console.error('Response:', text);
-            window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
-    });
-}
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
+        });
+    }
+
 </script>
 
 
