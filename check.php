@@ -117,22 +117,22 @@ try {
             }
             $total_subtracted += $subtracted_from_this_record;
             
-           $stmt_history = $pdo->prepare("
-            INSERT INTO inventory_history 
-            (inventory_id, item_id, warehouse_id, old_qty, new_qty, changed_by, change_type, remarks) 
-            VALUES 
-            (:inventory_id, :item_id, :warehouse_id, :old_qty, :new_qty, :changed_by, 'update', :remarks)
-        ");
-        $stmt_history->execute([
-            ':inventory_id' => $inventory_id,
-            ':item_id' => $item_id,
-            ':warehouse_id' => $warehouse_id,
-            ':old_qty' => $available_qty,
-            ':new_qty' => $available_qty - $subtracted_from_this_record,
-            ':changed_by' => $username,
-            ':remarks' => "{$subtracted_from_this_record} pulled out"
-        ]);
-    }
+            $stmt_history = $pdo->prepare("
+                INSERT INTO inventory_history 
+                (inventory_id, item_id, warehouse_id, old_qty, new_qty, changed_by, change_type, remarks) 
+                VALUES 
+                (:inventory_id, :item_id, :warehouse_id, :old_qty, :new_qty, :changed_by, 'update', :remarks)
+            ");
+            $stmt_history->execute([
+                ':inventory_id' => $inventory_id,
+                ':item_id' => $item_id,
+                ':warehouse_id' => $warehouse_id,
+                ':old_qty' => $available_qty,
+                ':new_qty' => $available_qty - $subtracted_from_this_record,
+                ':changed_by' => $username,
+                ':remarks' => "{$subtracted_from_this_record} pulled out"
+            ]);
+        }
         // // Optional: Delete inventory records that now have 0 quantity
         // $stmt_cleanup = $pdo->prepare("DELETE FROM inventory WHERE qty = 0 AND inventory_status = 'Approved'");
         // $stmt_cleanup->execute();
