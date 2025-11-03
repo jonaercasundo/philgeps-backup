@@ -149,13 +149,11 @@
         // Check if quantity changed and no remarks provided
         const quantityChanged = (originalQuantity !== newQuantity);
         if (quantityChanged && !remarks) {
-            const userConfirmed = confirm("You've changed the quantity. Would you like to add remarks about this change?\n\nClick OK to add remarks, or Cancel to continue without remarks.");
+            alert("You've changed the quantity. Please add remarks about this change before proceeding.");
             
-            if (userConfirmed) {
-                // Focus on remarks dropdown and return to let user add remarks
-                dropdown.focus();
-                return;
-            }
+            // Focus on remarks dropdown and return to let user add remarks
+            dropdown.focus();
+            return;
         }
             
         // Add remarks to form data

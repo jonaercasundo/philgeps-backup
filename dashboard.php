@@ -429,8 +429,8 @@ if ($selectedProject > 0) {
                   <div class="card-body p-3 text-center">
                     <div style="font-size: 2.5rem; margin-bottom: 10px;">⏳</div>
                     <small class="d-block opacity-75">Projects in Evaluation Phase</small>
-                    <h3 class="mb-2 fw-bold"><?= $inEvaluationPercent ?>%</h3>
-                    <small class="d-block opacity-75"><?= $inEvaluationCount ?> pending evaluation</small>
+                    <h3 class="mb-2 fw-bold"><?= $inEvaluationCount ?> Projects</h3>
+                    <small class="d-block opacity-75"><?= $inEvaluationPercent ?>% of projects are for evaluation</small>
                   </div>
                 </div>
                 <?php 
@@ -810,7 +810,7 @@ if ($selectedProject > 0) {
 </script>
 
 
-<script src="assets/js/charts.js?=v115"></script>
+<script src="assets/js/charts.js?=v116"></script>
 
 
 <?php require "template/footer.php"; ?>
