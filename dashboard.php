@@ -245,6 +245,30 @@ try {
     $stmt = $pdo->query($expenseQuery);
     $expenseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Get expected vs actual orders by warehouse
+    $ordersByWarehouseQuery = "
+        SELECT 
+            w.warehouse_id,
+            w.warehouse_name,
+            
+            -- Expected: Deliveries assigned to warehouse
+            COUNT(DISTINCT CONCAT_WS('-', d.school_id, d.lot_id)) AS expected_orders,
+            
+            -- Actual: Deliveries that have package_status indicating completion
+            COUNT(DISTINCT CASE WHEN ps.status IN ('delivered', 'accepted') 
+                  THEN CONCAT_WS('-', d.school_id, d.lot_id) END) AS actual_orders
+
+        FROM warehouse w
+        LEFT JOIN logistics_location ll ON w.warehouse_id = ll.warehouse_id
+        LEFT JOIN deliveries d ON ll.logistics_location_id = d.logistics_location_id
+        LEFT JOIN package_status ps ON d.delivery_id = ps.delivery_id
+        " . ($selectedProject > 0 ? " WHERE d.project_id = $selectedProject" : "") . "
+        GROUP BY w.warehouse_id, w.warehouse_name;
+    ";
+
+    $stmt = $pdo->query($ordersByWarehouseQuery);
+    $ordersByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     // SALES GENERATION CHARTS //
 
     // OPERATION CHARTS //
@@ -424,35 +448,6 @@ if ($selectedProject > 0) {
         <div class="card-body p-2">
           <div class="row g-3">
             <div class="col-md-12">
-              <div id="projectSummaryContainer" class="sortable-container">
-                <div class="card text-bg-primary mb-2 summary-card" data-card-id="projects-stuck-planning">
-                  <div class="card-body p-3 text-center">
-                    <div style="font-size: 2.5rem; margin-bottom: 10px;">⏳</div>
-                    <small class="d-block opacity-75">Projects in Evaluation Phase</small>
-                    <h3 class="mb-2 fw-bold"><?= $inEvaluationPercent ?>%</h3>
-                    <small class="d-block opacity-75"><?= $inEvaluationCount ?> pending evaluation</small>
-                  </div>
-                </div>
-                <?php 
-                $projectCards = [
-                    ['title'=>'Pending Projects','value'=>$projectTotals['pendingProjects'],'class'=>'danger','icon'=>'⏳'],
-                    ['title'=>'Ongoing Projects','value'=>$projectTotals['activeProjects'],'class'=>'warning','icon'=>'🚀'],
-                    ['title'=>'Complete Projects','value'=>$projectTotals['completedProjects'],'class'=>'success','icon'=>'✅']
-                ];
-                foreach($projectCards as $c): ?>
-                <!-- <div class="card text-bg-<?=$c['class']?> mb-2 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
-                  <div class="card-body p-3 d-flex align-items-center">
-                    <div class="me-3" style="font-size: 2rem;"><?=$c['icon']?></div>
-                    <div class="flex-grow-1">
-                      <h6 class="mb-1 small"><?= $c['title'] ?></h6>
-                      <h4 class="mb-0 fw-bold"><?= $c['value'] ?></h4>
-                    </div>
-                  </div>
-                </div> -->
-                <?php endforeach; ?>
-              </div>
-            </div>
-            <div class="col-md-12">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                   <h6 class="mb-0">Projects</h6>
@@ -461,7 +456,17 @@ if ($selectedProject > 0) {
                   </a>
                 </div>
                 <div class="card-body">
-                  <canvas id="projectStatusChart" height="470"></canvas>
+                  <canvas id="projectStatusChart" height="350"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="card shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Budget Variance</h6>
+                </div>
+                <div class="card-body" style="height: 400px; overflow-y: auto;">
+                    <canvas id="opportunityChart" width="600" height="350"></canvas>
                 </div>
               </div>
             </div>
@@ -483,9 +488,39 @@ if ($selectedProject > 0) {
           </div>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
-        <div class="card-body p-2">
 
-          <!-- Projects and Budget Variance -->
+        <!-- Project Filter Inside the Card -->
+        <div class="row mb-2">
+          <div class="col-12">
+            <div class="card shadow-sm border-0 bg-light">
+              <div class="card-body py-2">
+                <h6 class="card-title mb-2">Filter by Project</h6>
+                <form method="GET" id="projectFilterForm">
+                    <div class="input-group input-group-sm">
+                        <select class="form-select form-select-sm" name="project_id" id="projectSelect">
+                            <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
+                            <?php foreach($allProjects as $project): ?>
+                                <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
+                                  <?php 
+                                  $name = htmlspecialchars($project['project_name']);
+                                  echo strlen($name) > 30 ? substr($name, 0, 80) . '…' : $name; 
+                                  ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if($selectedProject > 0): ?>
+                            <a href="?" class="btn btn-outline-secondary btn-sm">
+                                ❌ Clear
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body p-2">
           <div class="row g-3">
             <div class="col-md-6">
               <div class="card shadow-sm h-100">
@@ -510,13 +545,13 @@ if ($selectedProject > 0) {
             <div class="col-md-12">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0"> Budget Variance</h6>
+                  <h6 class="mb-0"> Expected vs Actual Orders by Warehouse</h6>
                 </div>
                 <div class="card-body">
-                  <canvas id="opportunityChart" height="300"></canvas>
+                  <canvas id="ordersByWarehouseChart" height="300"></canvas>
                 </div>
               </div>
-        
+            </div>
           </div>
         </div>
       </div>
@@ -532,36 +567,7 @@ if ($selectedProject > 0) {
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body p-2">
-          <!-- Project Filter Inside the Card -->
-          <div class="row mb-3">
-            <div class="col-12">
-              <div class="card shadow-sm border-0 bg-light">
-                <div class="card-body py-2">
-                  <h6 class="card-title mb-2">Filter by Project</h6>
-                  <form method="GET" id="projectFilterForm">
-                      <div class="input-group input-group-sm">
-                          <select class="form-select form-select-sm" name="project_id" id="projectSelect">
-                              <option value="0" <?= $selectedProject == 0 ? 'selected' : '' ?>>All Projects</option>
-                              <?php foreach($allProjects as $project): ?>
-                                  <option value="<?= $project['project_id'] ?>" <?= $selectedProject == $project['project_id'] ? 'selected' : '' ?>>
-                                    <?php 
-                                    $name = htmlspecialchars($project['project_name']);
-                                    echo strlen($name) > 30 ? substr($name, 0, 80) . '…' : $name; 
-                                    ?>
-                                  </option>
-                              <?php endforeach; ?>
-                          </select>
-                          <?php if($selectedProject > 0): ?>
-                              <a href="?" class="btn btn-outline-secondary btn-sm">
-                                  ❌ Clear
-                              </a>
-                          <?php endif; ?>
-                      </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
+
 
           <div id="deliverySummaryContainer" class="sortable-container">
             <div class="row g-2">
@@ -653,9 +659,9 @@ if ($selectedProject > 0) {
           <div class="card shadow-sm mb-4">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <h6 class="mb-0">Monthly Delivery Trend</h6>
-              <a href="report/print_monthly_trend.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
+              <!-- <a href="report/print_monthly_trend.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
                 <i class="bi bi-printer"></i>
-              </a>
+              </a> -->
             </div>
             <div class="card-body">
               <canvas id="monthlyDeliveryTrendChart" height="250"></canvas>
@@ -724,7 +730,6 @@ if ($selectedProject > 0) {
     </div>
 
   </div>
-
 </div>
 
 <!-- Chart.js -->
@@ -806,11 +811,12 @@ if ($selectedProject > 0) {
         opportunity: <?= json_encode($opportunity) ?>,
         incomeData: <?= json_encode($incomeData) ?>,
         expenseData: <?= json_encode($expenseData) ?>,
+        ordersByWarehouse: <?= json_encode($ordersByWarehouse) ?>,
     };
 </script>
 
 
-<script src="assets/js/charts.js?=v115"></script>
+<script src="assets/js/charts.js?=v116"></script>
 
 
 <?php require "template/footer.php"; ?>

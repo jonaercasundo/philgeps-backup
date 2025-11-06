@@ -11,6 +11,7 @@ const {
     progressPerLot,
     incomeData,
     expenseData,
+    ordersByWarehouse
 } = phpData;
 
 // Delivery Status Colors (Green-Yellow-Red)
@@ -756,5 +757,95 @@ document.addEventListener('DOMContentLoaded', function() {
         createEmptyChart(document.getElementById('deliveryStatusPerLotChart'), 'No lot data available');
     }
 
+    // Expected vs Actual Orders by Warehouse
+    if (ordersByWarehouse && ordersByWarehouse.length > 0) {
+        const warehouses = ordersByWarehouse.map(w => w.warehouse_name);
+        const expectedData = ordersByWarehouse.map(w => parseInt(w.expected_orders));
+        const actualData = ordersByWarehouse.map(w => parseInt(w.actual_orders));
+
+        new Chart(document.getElementById('ordersByWarehouseChart'), {
+            type: 'bar',
+            data: {
+                labels: warehouses,
+                datasets: [
+                    {
+                        label: 'Expected Orders',
+                        data: expectedData,
+                        backgroundColor: deliveryStatusColors.Pending, // #dc3545 - Red
+                        borderColor: colorVariants.border.Pending,     // #dc3545
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Actual Orders',
+                        data: actualData,
+                        backgroundColor: deliveryStatusColors.Delivered, // #198754 - Green
+                        borderColor: colorVariants.border.Delivered,     // #198754
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Warehouses'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Orders'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const warehouseData = ordersByWarehouse[context.dataIndex];
+                                if (context.dataset.label === 'Expected Orders') {
+                                    return `Expected: ${context.parsed.y} orders`;
+                                } else {
+                                    const variance = warehouseData.expected_orders - warehouseData.actual_orders;
+                                    const status = variance <= 0 ? 'Met Target' : 'Behind Target';
+                                    const completionRate = warehouseData.expected_orders > 0 
+                                        ? Math.round((warehouseData.actual_orders / warehouseData.expected_orders) * 100) 
+                                        : 0;
+                                    return `Actual: ${context.parsed.y} orders | ${completionRate}% Complete | ${status}`;
+                                }
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const data = dataset.data[index];
+                            if (data > 0) {
+                                ctx.fillStyle = '#fff';
+                                ctx.font = 'bold 10px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(data, bar.x, bar.y - 10);
+                            }
+                        });
+                    });
+                }
+            }]
+        });
+    } else {
+        createEmptyChart(document.getElementById('ordersByWarehouseChart'), 'No orders data available for selected project');
+    }
 
 });
