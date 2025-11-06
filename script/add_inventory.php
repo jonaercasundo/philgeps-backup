@@ -67,7 +67,7 @@ try {
             $update = $pdo->prepare("UPDATE inventory SET qty = ? WHERE inventory_id = ?");
             if ($update->execute([$new_qty, $existing['inventory_id']])) {
                 $merged_count++;
-                $processed_items[] = "$item_name (Merged: +$quantity)";
+                $processed_items[] = "$item_name (+$quantity)";
             } else {
                 $errors[] = "Update failed for pending item $item_id";
             }
@@ -78,7 +78,7 @@ try {
             $insert = $pdo->prepare("INSERT INTO inventory (inventory_id, warehouse_id, item_id, qty, inventory_status) VALUES (?, ?, ?, ?, 'For Approval')");
             if ($insert->execute([$max_id, $warehouse_id, $item_id, $quantity])) {
                 $new_count++;
-                $processed_items[] = "$item_name (New: $quantity)";
+                $processed_items[] = "$item_name ($quantity)";
             } else {
                 $errors[] = "Insert failed for item $item_id";
             }
