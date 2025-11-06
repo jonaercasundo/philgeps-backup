@@ -255,13 +255,12 @@ try {
             COUNT(DISTINCT CONCAT_WS('-', d.school_id, d.lot_id)) AS expected_deliveries,
             
             -- Actual: Deliveries with status delivered and accepted
-            COUNT(DISTINCT CASE WHEN ps.status IN ('delivered', 'accepted') 
+            COUNT(DISTINCT CASE WHEN d.status IN ('delivered', 'accepted') 
                   THEN CONCAT_WS('-', d.school_id, d.lot_id) END) AS actual_deliveries
 
         FROM warehouse w
         LEFT JOIN logistics_location ll ON w.warehouse_id = ll.warehouse_id
         LEFT JOIN deliveries d ON ll.logistics_location_id = d.logistics_location_id
-        LEFT JOIN package_status ps ON d.delivery_id = ps.delivery_id
         " . ($selectedProject > 0 ? " WHERE d.project_id = $selectedProject" : "") . "
         GROUP BY w.warehouse_id, w.warehouse_name;
     ";
