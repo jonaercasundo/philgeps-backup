@@ -13,6 +13,9 @@ try {
     $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
     $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Get warehouse list for dropdown
+    $warehouses = $pdo->query("SELECT warehouse_id, warehouse_name FROM warehouse ORDER BY warehouse_name")->fetchAll();
+    $warehouseId = $_GET['warehouse_id'] ?? ($warehouses[0]['warehouse_id'] ?? 0);
 
     $projectFilter = $selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "";
     // Get progress by region data
@@ -75,6 +78,8 @@ try {
     $stmt = $pdo->prepare($inventoryByWarehouseQuery);
     $stmt->execute(['selectedDate' => $selectedDate]);
     $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    
 
     /** // NOT USED //
     

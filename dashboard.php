@@ -245,18 +245,18 @@ try {
     $stmt = $pdo->query($expenseQuery);
     $expenseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get expected vs actual orders by warehouse
-    $ordersByWarehouseQuery = "
+    // Get expected vs actual deliveries by warehouse
+    $deliveriesByWarehouseQuery = "
         SELECT 
             w.warehouse_id,
             w.warehouse_name,
             
-            -- Expected: Deliveries assigned to warehouse
-            COUNT(DISTINCT CONCAT_WS('-', d.school_id, d.lot_id)) AS expected_orders,
+            -- Expected: Deliveries all status
+            COUNT(DISTINCT CONCAT_WS('-', d.school_id, d.lot_id)) AS expected_deliveries,
             
-            -- Actual: Deliveries that have package_status indicating completion
+            -- Actual: Deliveries with status delivered and accepted
             COUNT(DISTINCT CASE WHEN ps.status IN ('delivered', 'accepted') 
-                  THEN CONCAT_WS('-', d.school_id, d.lot_id) END) AS actual_orders
+                  THEN CONCAT_WS('-', d.school_id, d.lot_id) END) AS actual_deliveries
 
         FROM warehouse w
         LEFT JOIN logistics_location ll ON w.warehouse_id = ll.warehouse_id
@@ -266,8 +266,8 @@ try {
         GROUP BY w.warehouse_id, w.warehouse_name;
     ";
 
-    $stmt = $pdo->query($ordersByWarehouseQuery);
-    $ordersByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $pdo->query($deliveriesByWarehouseQuery);
+    $deliveriesByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // SALES GENERATION CHARTS //
 
@@ -456,7 +456,7 @@ if ($selectedProject > 0) {
                   </a>
                 </div>
                 <div class="card-body">
-                  <canvas id="projectStatusChart" height="350"></canvas>
+                  <canvas id="projectStatusChart" height="340"></canvas>
                 </div>
               </div>
             </div>
@@ -466,7 +466,7 @@ if ($selectedProject > 0) {
                     <h6 class="mb-0">Budget Variance</h6>
                 </div>
                 <div class="card-body" style="height: 400px; overflow-y: auto;">
-                    <canvas id="opportunityChart" width="600" height="350"></canvas>
+                    <canvas id="opportunityChart" width="600" height="340"></canvas>
                 </div>
               </div>
             </div>
@@ -545,10 +545,10 @@ if ($selectedProject > 0) {
             <div class="col-md-12">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0"> Expected vs Actual Orders by Warehouse</h6>
+                  <h6 class="mb-0"> Expected vs Actual deliveries by Warehouse</h6>
                 </div>
                 <div class="card-body">
-                  <canvas id="ordersByWarehouseChart" height="300"></canvas>
+                  <canvas id="deliveriesByWarehouseChart" height="300"></canvas>
                 </div>
               </div>
             </div>
@@ -811,12 +811,12 @@ if ($selectedProject > 0) {
         opportunity: <?= json_encode($opportunity) ?>,
         incomeData: <?= json_encode($incomeData) ?>,
         expenseData: <?= json_encode($expenseData) ?>,
-        ordersByWarehouse: <?= json_encode($ordersByWarehouse) ?>,
+        deliveriesByWarehouse: <?= json_encode($deliveriesByWarehouse) ?>,
     };
 </script>
 
 
-<script src="assets/js/charts.js?=v116"></script>
+<script src="assets/js/charts.js?=v113"></script>
 
 
 <?php require "template/footer.php"; ?>

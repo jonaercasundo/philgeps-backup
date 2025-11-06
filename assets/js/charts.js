@@ -11,7 +11,7 @@ const {
     progressPerLot,
     incomeData,
     expenseData,
-    ordersByWarehouse
+    deliveriesByWarehouse
 } = phpData;
 
 // Delivery Status Colors (Green-Yellow-Red)
@@ -757,26 +757,26 @@ document.addEventListener('DOMContentLoaded', function() {
         createEmptyChart(document.getElementById('deliveryStatusPerLotChart'), 'No lot data available');
     }
 
-    // Expected vs Actual Orders by Warehouse
-    if (ordersByWarehouse && ordersByWarehouse.length > 0) {
-        const warehouses = ordersByWarehouse.map(w => w.warehouse_name);
-        const expectedData = ordersByWarehouse.map(w => parseInt(w.expected_orders));
-        const actualData = ordersByWarehouse.map(w => parseInt(w.actual_orders));
+    // Expected vs Actual Deliveries by Warehouse
+    if (deliveriesByWarehouse && deliveriesByWarehouse.length > 0) {
+        const warehouses = deliveriesByWarehouse.map(w => w.warehouse_name);
+        const expectedData = deliveriesByWarehouse.map(w => parseInt(w.expected_deliveries));
+        const actualData = deliveriesByWarehouse.map(w => parseInt(w.actual_deliveries));
 
-        new Chart(document.getElementById('ordersByWarehouseChart'), {
+        new Chart(document.getElementById('deliveriesByWarehouseChart'), {
             type: 'bar',
             data: {
                 labels: warehouses,
                 datasets: [
                     {
-                        label: 'Expected Orders',
+                        label: 'Expected Deliveries',
                         data: expectedData,
                         backgroundColor: deliveryStatusColors.Pending, // #dc3545 - Red
                         borderColor: colorVariants.border.Pending,     // #dc3545
                         borderWidth: 1
                     },
                     {
-                        label: 'Actual Orders',
+                        label: 'Actual Deliveries',
                         data: actualData,
                         backgroundColor: deliveryStatusColors.Delivered, // #198754 - Green
                         borderColor: colorVariants.border.Delivered,     // #198754
@@ -798,7 +798,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Number of Orders'
+                            text: 'Number of Deliveries'
                         }
                     }
                 },
@@ -806,16 +806,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const warehouseData = ordersByWarehouse[context.dataIndex];
-                                if (context.dataset.label === 'Expected Orders') {
-                                    return `Expected: ${context.parsed.y} orders`;
+                                const warehouseData = deliveriesByWarehouse[context.dataIndex];
+                                if (context.dataset.label === 'Expected Deliveries') {
+                                    return `Expected: ${context.parsed.y} deliveries`;
                                 } else {
-                                    const variance = warehouseData.expected_orders - warehouseData.actual_orders;
+                                    const variance = warehouseData.expected_deliveries - warehouseData.actual_deliveries;
                                     const status = variance <= 0 ? 'Met Target' : 'Behind Target';
-                                    const completionRate = warehouseData.expected_orders > 0 
-                                        ? Math.round((warehouseData.actual_orders / warehouseData.expected_orders) * 100) 
+                                    const completionRate = warehouseData.expected_deliveries > 0 
+                                        ? Math.round((warehouseData.actual_deliveries / warehouseData.expected_deliveries) * 100) 
                                         : 0;
-                                    return `Actual: ${context.parsed.y} orders | ${completionRate}% Complete | ${status}`;
+                                    return `Actual: ${context.parsed.y} deliveries | ${completionRate}% Complete | ${status}`;
                                 }
                             }
                         }
@@ -845,7 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }]
         });
     } else {
-        createEmptyChart(document.getElementById('ordersByWarehouseChart'), 'No orders data available for selected project');
+        createEmptyChart(document.getElementById('deliveriesByWarehouseChart'), 'No deliveries data available for selected project');
     }
 
 });
