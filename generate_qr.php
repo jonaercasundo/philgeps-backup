@@ -273,6 +273,6 @@ $html .= "
 
 $dompdf = new Dompdf();
 $dompdf->loadHtml($html);
-$dompdf->setPaper('A4', 'Portrait');
+$dompdf->setPaper('Legal', 'Portrait');
 $dompdf->render();
 $dompdf->stream("deliveries_batch.pdf", ["Attachment" => false]);
