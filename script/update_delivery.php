@@ -7,6 +7,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $delivery_date = $_POST['delivery_date'];
     $status = $_POST['status'];
 
+     // ✅ If delivery_date is null or empty, set it to "0000-00-00"
+    if (empty($delivery_date)) {
+        $delivery_date = "0000-00-00";
+    }
+    
     try {
         $stmt = $pdo->prepare("UPDATE deliveries 
             SET dr_no=?, delivery_date=?, status=?
