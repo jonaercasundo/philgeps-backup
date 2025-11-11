@@ -24,11 +24,6 @@
             <input type="text" class="form-control" name="address" id="editAddress" disabled required>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Content / Remarks</label>
-            <input class="form-control" name="remarks" id="editRemarks" disabled></input>
-          </div>
-
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">DR No.</label>
@@ -129,7 +124,6 @@
     document.getElementById('editProject').value = button.getAttribute('data-project');
     document.getElementById('editSchool').value = button.getAttribute('data-school');
     document.getElementById('editAddress').value = button.getAttribute('data-address');
-    document.getElementById('editRemarks').value = button.getAttribute('data-remarks');
     document.getElementById('editDrNo').value = button.getAttribute('data-drno');
     document.getElementById('editDate').value = button.getAttribute('data-date');
     document.getElementById('editStatus').value = button.getAttribute('data-status');
