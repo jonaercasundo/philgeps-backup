@@ -1,3 +1,4 @@
+<!-- edit_delivery_modal -->
 <div class="modal fade" id="editDeliveryModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -185,8 +186,27 @@
           ).join(', ');
           
           let statusBadge = '';
-          if (isAccepted) statusBadge = '<span class="badge bg-success ms-2">Already Accepted</span>';
-          if (isDelivered) statusBadge = '<span class="badge bg-info ms-2">Already Delivered</span>';
+          let statusChangeOptions = '';
+          
+          if (isAccepted) {
+            statusBadge = '<span class="badge bg-success ms-2">Accepted</span>';
+            statusChangeOptions = `
+              <select class="form-select form-select-sm" name="package_status_change[${pkg.package_status_id}]">
+                <option value="">Keep as Accepted</option>
+                <option value="delivered">Change to Delivered</option>
+                <option value="pending">Revert to Pending (returns inventory)</option>
+              </select>
+            `;
+          } else if (isDelivered) {
+            statusBadge = '<span class="badge bg-info ms-2">Delivered</span>';
+            statusChangeOptions = `
+              <select class="form-select form-select-sm" name="package_status_change[${pkg.package_status_id}]">
+                <option value="">Keep as Delivered</option>
+                <option value="accepted">Change to Accepted</option>
+                <option value="pending">Revert to Pending (returns inventory)</option>
+              </select>
+            `;
+          }
           
           packageList.innerHTML += `
             <div class="card mb-3">
@@ -199,12 +219,13 @@
                     <small class="text-muted">${itemsList}</small>
                   </div>
                   <div class="col-md-6">
-                    <label class="form-label mb-1">Number of Packages</label>
-                    <input type="number" class="form-control" 
-                           name="package_qty[${pkg.package_status_id}]"
-                           min="0" value="0"
-                           ${!isPending ? 'disabled' : ''}>
-                    <small class="text-muted">${isPending ? 'Enter quantity to subtract from inventory' : 'Only pending packages can be processed'}</small>
+                    ${isPending ? `
+                      <label class="form-label mb-1">Number of Packages</label>
+                      <input type="number" class="form-control" 
+                             name="package_qty[${pkg.package_status_id}]"
+                             min="0" value="0">
+                      <small class="text-muted">Enter quantity to subtract from inventory</small>
+                    ` : statusChangeOptions}
                   </div>
                 </div>
               </div>
