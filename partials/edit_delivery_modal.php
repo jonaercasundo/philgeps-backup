@@ -8,6 +8,7 @@
       <form method="POST" action="script/update_delivery.php" id="editDeliveryForm">
         <div class="modal-body">
           <input type="hidden" name="delivery_id" id="editDeliveryId">
+          <input type="hidden" name="warehouse_id" id="editWarehouseId">
 
           <div class="mb-3">
             <label class="form-label">Project</label>
@@ -48,6 +49,30 @@
               <option value="accepted">Accepted</option>
               <option value="cancelled">Cancelled</option>
             </select>
+          </div>
+          
+          <!-- Show when Accepted is selected -->
+          <div id="qtySection" style="display: none;">
+
+            <!-- Add Warehouse Selection -->
+            <div class="mb-3">
+              <label class="form-label">Warehouse</label>
+              <select class="form-select" name="warehouse" id="editWarehouse" required>
+                <option value="">Select Warehouse</option>
+                <?php
+                // Fetch warehouses from database
+                $warehouse_stmt = $pdo->query("SELECT warehouse_id, warehouse_name FROM warehouse");
+                $warehouses = $warehouse_stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($warehouses as $warehouse) {
+                  echo "<option value='{$warehouse['warehouse_id']}'>{$warehouse['warehouse_name']}</option>";
+                }
+                ?>
+              </select>
+            </div>
+            <hr>
+            <h6>Package Quantities to Accept</h6>
+            <p class="text-muted small">Enter how many packages to accept. Inventory will be multiplied accordingly.</p>
+            <div id="packageList"></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -124,8 +149,9 @@
   const editModal = document.getElementById('editDeliveryModal');
   editModal.addEventListener('show.bs.modal', function (event) {
     let button = event.relatedTarget;
+    const deliveryId = button.getAttribute('data-id');
 
-    document.getElementById('editDeliveryId').value = button.getAttribute('data-id');
+    document.getElementById('editDeliveryId').value = deliveryId;
     document.getElementById('editProject').value = button.getAttribute('data-project');
     document.getElementById('editSchool').value = button.getAttribute('data-school');
     document.getElementById('editAddress').value = button.getAttribute('data-address');
@@ -133,6 +159,66 @@
     document.getElementById('editDrNo').value = button.getAttribute('data-drno');
     document.getElementById('editDate').value = button.getAttribute('data-date');
     document.getElementById('editStatus').value = button.getAttribute('data-status');
+
+    // Set warehouse data if available
+    const warehouseId = button.getAttribute('data-warehouse-id');
+    const warehouseName = button.getAttribute('data-warehouse-name');
+    
+    if (warehouseId) {
+      document.getElementById('editWarehouseId').value = warehouseId;
+      document.getElementById('editWarehouse').value = warehouseId;
+    }
+
+    // Load packages for this delivery
+    fetch(`script/get_delivery_packages.php?delivery_id=${deliveryId}`)
+      .then(res => res.json())
+      .then(packages => {
+        const packageList = document.getElementById('packageList');
+        packageList.innerHTML = '';
+        packages.forEach(pkg => {
+          const isPending = pkg.status === 'pending';
+          const isAccepted = pkg.status === 'accepted';
+          const isDelivered = pkg.status === 'delivered';
+          
+          const itemsList = pkg.items_detail.map(item => 
+            `${item.item_name} (${item.qty})`
+          ).join(', ');
+          
+          let statusBadge = '';
+          if (isAccepted) statusBadge = '<span class="badge bg-success ms-2">Already Accepted</span>';
+          if (isDelivered) statusBadge = '<span class="badge bg-info ms-2">Already Delivered</span>';
+          
+          packageList.innerHTML += `
+            <div class="card mb-3">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-md-6">
+                    <strong>Package #${pkg.package_num}</strong>
+                    ${statusBadge}
+                    <br>
+                    <small class="text-muted">${itemsList}</small>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label mb-1">Number of Packages</label>
+                    <input type="number" class="form-control" 
+                           name="package_qty[${pkg.package_status_id}]"
+                           min="0" value="0"
+                           ${!isPending ? 'disabled' : ''}>
+                    <small class="text-muted">${isPending ? 'Enter quantity to subtract from inventory' : 'Only pending packages can be processed'}</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      });
+  });
+
+  // Show/hide package section when status changes
+  document.getElementById('editStatus').addEventListener('change', function() {
+    const qtySection = document.getElementById('qtySection');
+    const selectedStatus = this.value;
+    qtySection.style.display = (selectedStatus === 'accepted' || selectedStatus === 'delivered') ? 'block' : 'none';
   });
 
 // --- Load statuses dynamically based on selected project ---

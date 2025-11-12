@@ -33,12 +33,16 @@ SELECT
     k.keystage_num,
     k.description,
     l.lot_name,
+    w.warehouse_id,
+    w.warehouse_name,
     COALESCE(pkg_items.items_contents, '') AS items_contents
         FROM deliveries d
         LEFT JOIN keystage k ON k.keystage_id = d.keystage_id
         JOIN lot l ON l.lot_id = d.lot_id
         JOIN projects p ON d.project_id = p.project_id
         JOIN school s   ON d.school_id = s.school_id
+        LEFT JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
+        LEFT JOIN warehouse w ON ll.warehouse_id = w.warehouse_id
 
 LEFT JOIN (
     SELECT 
@@ -220,7 +224,9 @@ LIMIT :limit OFFSET :offset;
                         data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
-                ><i class="bi bi-pencil-square fs-4"></i></button>
+                        data-warehouse-id="' . ($delivery['warehouse_id'] ?? '') . '"
+                        data-warehouse-name="' . htmlspecialchars($delivery['warehouse_name'] ?? '') . '">
+                <i class="bi bi-pencil-square fs-4"></i></button>
                 <?php endif;?>
                 <?php if ($has_photos): ?>
                     <a class="btn btn-info mb-1" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
