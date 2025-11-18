@@ -1,0 +1,59 @@
+
+  .drag-handle {
+    cursor: grab;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+    font-size: 1.2em;
+    font-weight: bold;
+    padding: 5px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.05);
+  }
+
+  .drag-handle:hover {
+    opacity: 1;
+    background: rgba(0,0,0,0.1);
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .chart-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .chart-item:hover {
+    transform: translateY(-2px);
+  }
+
+  .sortable-ghost {
+    opacity: 0.4;
+  }
+
+  .sortable-chosen {
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    transform: rotate(2deg);
+  }
+
+  .sortable-drag {
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+    transform: rotate(5deg);
+  }
+
+  .card-header {
+    border-bottom: 1px solid #e9ecef;
+  }
+
+  .drag-disabled .drag-handle {
+    cursor: not-allowed;
+    opacity: 0.3;
+  }
+
+  #projectSelect {
+    max-width: none;
+  }
+
+  .input-group .btn {
+    z-index: 1;
+  }
