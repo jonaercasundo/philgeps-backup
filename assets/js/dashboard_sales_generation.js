@@ -240,3 +240,5 @@ document.addEventListener('DOMContentLoaded', function() {
         createEmptyChart(document.getElementById('opportunityChart'), 'No project financial data available');
     }
 });
+
+setInterval(() => location.reload(), 30000);
