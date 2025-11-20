@@ -55,7 +55,7 @@ const colorVariants = {
 };
 
 // Access data from global phpData object
-const { deliveriesByWarehouse, cashflowData, selectedProject } = phpData;
+const { cashflowData, selectedProject } = phpData;
 
 // Function to handle empty data and create a placeholder chart
 function createEmptyChart(ctx, message) {
@@ -238,113 +238,6 @@ document.addEventListener("DOMContentLoaded", function () {
     createEmptyChart(
       document.getElementById("cashflowChart"),
       "No cashflow data available"
-    );
-  }
-
-  // Expected vs Actual Deliveries by Warehouse
-  if (deliveriesByWarehouse && deliveriesByWarehouse.length > 0) {
-    const warehouses = deliveriesByWarehouse.map((w) => w.warehouse_name);
-    const expectedData = deliveriesByWarehouse.map((w) =>
-      parseInt(w.expected_deliveries)
-    );
-    const actualData = deliveriesByWarehouse.map((w) =>
-      parseInt(w.actual_deliveries)
-    );
-
-    new Chart(document.getElementById("deliveriesByWarehouseChart"), {
-      type: "bar",
-      data: {
-        labels: warehouses,
-        datasets: [
-          {
-            label: "Expected Deliveries",
-            data: expectedData,
-            backgroundColor: deliveryStatusColors.Pending, // #dc3545 - Red
-            borderColor: colorVariants.border.Pending, // #dc3545
-            borderWidth: 1,
-          },
-          {
-            label: "Actual Deliveries",
-            data: actualData,
-            backgroundColor: deliveryStatusColors.Delivered, // #198754 - Green
-            borderColor: colorVariants.border.Delivered, // #198754
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: "Warehouses",
-            },
-          },
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: "Number of Deliveries",
-            },
-          },
-        },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: function (context) {
-                const warehouseData = deliveriesByWarehouse[context.dataIndex];
-                if (context.dataset.label === "Expected Deliveries") {
-                  return `Expected: ${context.parsed.y} deliveries`;
-                } else {
-                  const variance =
-                    warehouseData.expected_deliveries -
-                    warehouseData.actual_deliveries;
-                  const status = variance <= 0 ? "Met Target" : "Behind Target";
-                  const completionRate =
-                    warehouseData.expected_deliveries > 0
-                      ? Math.round(
-                          (warehouseData.actual_deliveries /
-                            warehouseData.expected_deliveries) *
-                            100
-                        )
-                      : 0;
-                  return `Actual: ${context.parsed.y} deliveries | ${completionRate}% Complete | ${status}`;
-                }
-              },
-            },
-          },
-          legend: {
-            position: "top",
-          },
-        },
-      },
-      plugins: [
-        {
-          afterDatasetsDraw: function (chart) {
-            const ctx = chart.ctx;
-            chart.data.datasets.forEach((dataset, i) => {
-              const meta = chart.getDatasetMeta(i);
-              meta.data.forEach((bar, index) => {
-                const data = dataset.data[index];
-                if (data > 0) {
-                  ctx.fillStyle = "#fff";
-                  ctx.font = "bold 10px Arial";
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.fillText(data, bar.x, bar.y - 10);
-                }
-              });
-            });
-          },
-        },
-      ],
-    });
-  } else {
-    createEmptyChart(
-      document.getElementById("deliveriesByWarehouseChart"),
-      "No deliveries data available for selected project"
     );
   }
 });

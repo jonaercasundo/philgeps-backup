@@ -45,28 +45,7 @@ try {
     $stmt = $pdo->query($cashflowQuery);
     $cashflowData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get expected vs actual deliveries by warehouse
-    $deliveriesByWarehouseQuery = "
-        SELECT 
-            w.warehouse_id,
-            w.warehouse_name,
-            
-            -- Expected: Deliveries all status
-            COUNT(DISTINCT CONCAT_WS('-', d.school_id, d.lot_id)) AS expected_deliveries,
-            
-            -- Actual: Deliveries with status delivered and accepted
-            COUNT(DISTINCT CASE WHEN d.status IN ('delivered', 'accepted') 
-                  THEN CONCAT_WS('-', d.school_id, d.lot_id) END) AS actual_deliveries
 
-        FROM warehouse w
-        LEFT JOIN logistics_location ll ON w.warehouse_id = ll.warehouse_id
-        LEFT JOIN deliveries d ON ll.logistics_location_id = d.logistics_location_id
-        " . ($selectedProject > 0 ? " WHERE d.project_id = $selectedProject" : "") . "
-        GROUP BY w.warehouse_id, w.warehouse_name;
-    ";
-
-    $stmt = $pdo->query($deliveriesByWarehouseQuery);
-    $deliveriesByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // SALES GENERATION CHARTS //
 
@@ -159,20 +138,7 @@ if ($selectedProject > 0) {
           </div>
         </div>
       </div>
-      <!-- Deliveries by Warehouse Chart -->
-      <div class="col-md-12 chart-item" data-chart-id="deliveries-by-warehouse">
-        <div class="card shadow-sm h-100">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <div>
-                <h6 class="mb-0 fw-bold">Expected vs Actual deliveries by Warehouse</h6>
-              </div>
-            <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-          </div>
-          <div class="card-body">
-            <canvas id="deliveriesByWarehouseChart" height="300"></canvas>
-          </div>
-        </div>
-      </div>
+      
     </div>
   </div>
 
@@ -189,7 +155,6 @@ if ($selectedProject > 0) {
   const phpData = {      
         selectedProject: <?= json_encode($selectedProject) ?>,
         cashflowData: <?= json_encode($cashflowData) ?>,
-        deliveriesByWarehouse: <?= json_encode($deliveriesByWarehouse) ?>,
     };
 </script>
 
