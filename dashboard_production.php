@@ -229,15 +229,15 @@ if ($selectedProject > 0) {
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2>Production Dashboard</h2>
   <div class="btn-group">
-    <a href="dashboard.php" class="btn btn-outline-primary btn-sm" role="button">
-      Back
-    </a>
     <button class="btn btn-outline-primary btn-sm" id="resetLayout">
       Reset Layout
     </button>
     <button class="btn btn-outline-primary btn-sm" id="toggleDrag">
       Toggle Drag
     </button>
+    <a href="dashboard.php" class="btn btn-outline-primary btn-sm" role="button">
+      Back
+    </a>
   </div>
 </div>
 
