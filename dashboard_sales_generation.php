@@ -101,6 +101,10 @@ if ($selectedProject > 0) {
 </div>
 
 <div class="container-fluid">
+  <!-- <a href="dashboard_.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+      class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1 mx-2">
+      View Project Performance <i class="bi bi-arrow-right-short fs-5"></i>
+  </a> -->
   <div class="row g-4 mb-4" id="draggable-dashboard">
     <div class="col-lg-6 col-md-12 chart-item" data-chart-id="project-status">
       <div class="card shadow-sm h-100">

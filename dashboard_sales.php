@@ -133,7 +133,12 @@ if ($selectedProject > 0) {
 ?>
 <!-- Dashboard Header with Controls -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>Sales Generation Dashboard</h2>
+  <h2>Sales Performance</h2>
+  <div class="btn-group">
+    <a href="dashboard_finance.php" class="btn btn-outline-primary btn-sm" role="button">
+      Back
+    </a>
+  </div>
 </div>
 <div class="container-fluid">
   <!-- Additional Charts Section -->

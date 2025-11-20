@@ -139,6 +139,10 @@ if ($selectedProject > 0) {
   </div>
 
   <div class="card-body p-2">
+    <a href="dashboard_sales.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+        class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1 mx-2">
+        View Sales Performance <i class="bi bi-arrow-right-short fs-5"></i>
+    </a>
     <div class="row g-3" id="draggable-dashboard">
       <!-- Cashflow Chart - Actual Expense vs Income -->
       <div class="col-lg-12 chart-item" data-chart-id="cashflow-chart">
@@ -147,6 +151,7 @@ if ($selectedProject > 0) {
               <div>
                 <h6 class="mb-0 fw-bold">Expense vs Income</h6>
               </div>
+              
             <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
           </div>
           <div class="card-body">

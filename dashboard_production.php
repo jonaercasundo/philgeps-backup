@@ -319,7 +319,7 @@ if ($selectedProject > 0) {
           <div class="row g-3 mt-2">
             <a href="dashboard_operation.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
                 class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1 mx-2">
-                View Details <i class="bi bi-arrow-right-short fs-5"></i>
+                View Production Performance <i class="bi bi-arrow-right-short fs-5"></i>
             </a>
             <div class="col-md-5">
               <div class="card shadow-sm h-100">
