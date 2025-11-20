@@ -137,6 +137,42 @@ if ($selectedProject > 0) {
         </div>
       </div>
     </div>
+
+    <!-- Budget Variance Table -->
+    <div class="col-12 chart-item" data-chart-id="budget-variance-table">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold">Budget Variance Table</h6>
+          <span class="drag-handle text-muted" style="cursor: grab;" title="Drag to reorder">⋮⋮</span>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table id="budgetVarianceTable" class="table table-striped table-hover" style="width:100%">
+              <thead>
+                <tr>
+                  <th>Project Name</th>
+                  <th>Budget Alloc (ABC)</th>
+                  <th>Contract Amount</th>
+                  <th>Difference</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($opportunity as $item): ?>
+                <tr>
+                  <td><?= htmlspecialchars($item['project_name']) ?></td>
+                  <td>₱<?= number_format($item['ABC'], 2) ?></td>
+                  <td>₱<?= number_format($item['contract_amount'], 2) ?></td>
+                  <td class="<?= $item['variance'] >= 0 ? 'text-success' : 'text-danger' ?>">
+                    ₱<?= number_format($item['variance'], 2) ?>
+                  </td>
+                </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -158,3 +194,26 @@ if ($selectedProject > 0) {
 <script src="assets/js/dashboard_sales_generation.js"></script>
 
 <?php require "template/footer.php"; ?>
+
+<script>
+  // Initialize DataTable
+  $(document).ready(function() {
+    $('#budgetVarianceTable').DataTable({
+      processing: true,
+      scrollY: "53vh",
+      scrollCollapse: true,
+      paging: true,
+      responsive: true,
+      order: [[3, 'desc']],
+      language: {
+        search: "Search projects:",
+        lengthMenu: "Show _MENU_ projects per page",
+        info: "Showing _START_ to _END_ of _TOTAL_ projects",
+        infoEmpty: "No projects available",
+        infoFiltered: "(filtered from _MAX_ total projects)",
+        emptyTable: "No budget variance records found",
+        zeroRecords: "No matching projects found"
+      }
+    });
+  });
+</script>
