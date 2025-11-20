@@ -91,9 +91,9 @@ if ($selectedProject > 0) {
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2>Finance Dashboard</h2>
   <div class="btn-group">
-    <button class="btn btn-outline-primary btn-sm" onclick="history.back()">
+    <a href="dashboard.php" class="btn btn-outline-primary btn-sm" role="button">
       Back
-    </button>
+    </a>
     <button class="btn btn-outline-primary btn-sm" id="resetLayout">
       Reset Layout
     </button>

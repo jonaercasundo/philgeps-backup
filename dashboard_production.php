@@ -229,9 +229,9 @@ if ($selectedProject > 0) {
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2>Production Dashboard</h2>
   <div class="btn-group">
-    <button class="btn btn-outline-primary btn-sm" onclick="history.back()">
+    <a href="dashboard.php" class="btn btn-outline-primary btn-sm" role="button">
       Back
-    </button>
+    </a>
     <button class="btn btn-outline-primary btn-sm" id="resetLayout">
       Reset Layout
     </button>
@@ -355,10 +355,10 @@ if ($selectedProject > 0) {
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <div>
             <h6 class="mb-0 fw-bold">COLLECTION SUMMARY</h6>
-            <a href="dashboard_collection.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
+            <!-- <a href="dashboard_collection.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
               class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1">
               View More <i class="bi bi-arrow-right-short fs-5"></i>
-            </a>
+            </a> -->
           </div>
           <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
         </div>
