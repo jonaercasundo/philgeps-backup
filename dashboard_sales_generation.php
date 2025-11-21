@@ -158,14 +158,16 @@ if ($selectedProject > 0) {
               </thead>
               <tbody>
                 <?php foreach ($opportunity as $item): ?>
-                <tr>
-                  <td><?= htmlspecialchars($item['project_name']) ?></td>
-                  <td>₱<?= number_format($item['ABC'], 2) ?></td>
-                  <td>₱<?= number_format($item['contract_amount'], 2) ?></td>
-                  <td class="<?= $item['variance'] >= 0 ? 'text-success' : 'text-danger' ?>">
-                    ₱<?= number_format($item['variance'], 2) ?>
-                  </td>
-                </tr>
+                  <?php if ($item['contract_amount'] != 0 && $item['ABC'] != 0): ?>
+                  <tr>
+                    <td><?= htmlspecialchars($item['project_name']) ?></td>
+                    <td>₱<?= number_format($item['ABC'], 2) ?></td>
+                    <td>₱<?= number_format($item['contract_amount'], 2) ?></td>
+                    <td class="<?= $item['variance'] >= 0 ? 'text-success' : 'text-danger' ?>">
+                      ₱<?= number_format($item['variance'], 2) ?>
+                    </td>
+                  </tr>
+                  <?php endif; ?>
                 <?php endforeach; ?>
               </tbody>
             </table>
