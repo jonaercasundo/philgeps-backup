@@ -60,7 +60,6 @@ try {
             (ABC - contract_amount) AS variance
         FROM projects
         WHERE status IN ('Pending Evaluation', 'For Award', 'For Implementation')
-        AND contract_amount != 0
         ORDER BY ABS(ABC - contract_amount) DESC
     ";
 
