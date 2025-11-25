@@ -269,6 +269,46 @@ if ($selectedProject > 0) {
                 </tr>
                 <?php endforeach; ?>
               </tbody>
+              <tfoot>
+                <tr>
+                  <th>TOTAL</th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -297,32 +337,70 @@ if ($selectedProject > 0) {
 <?php require "template/footer.php"; ?>
 
 <script>
-  // Initialize DataTable with horizontal scrolling
-  $(document).ready(function() {
-    $('#budgetVarianceTable').DataTable({
-      processing: true,
-      scrollX: true,
-      scrollY: "53vh",
-      scrollCollapse: true,
-      paging: true,
-      responsive: false,
-      fixedColumns: {
-        leftColumns: 1
-      },
-      order: [[4, 'desc']], // Order by ABC
-      language: {
-        search: "Search projects:",
-        lengthMenu: "Show _MENU_ projects per page",
-        info: "Showing _START_ to _END_ of _TOTAL_ projects",
-        infoEmpty: "No projects available",
-        infoFiltered: "(filtered from _MAX_ total projects)",
-        emptyTable: "No budget variance records found",
-        zeroRecords: "No matching projects found"
-      },
-      columnDefs: [
-        { targets: [4,6,7,8,9,10,12,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,31,32,33,34], className: 'text-end' },
-        { targets: [5,11,13,30,35], className: 'text-end' }
-      ]
-    });
+$(document).ready(function() {
+  var table = $('#budgetVarianceTable').DataTable({
+    processing: true,
+    scrollX: true,
+    scrollY: "53vh",
+    scrollCollapse: true,
+    paging: true,
+    responsive: false,
+    fixedColumns: {
+      leftColumns: 1
+    },
+    order: [[4, 'desc']], // Order by ABC
+    language: {
+      search: "Search projects:",
+      lengthMenu: "Show _MENU_ projects per page",
+      info: "Showing _START_ to _END_ of _TOTAL_ projects",
+      infoEmpty: "No projects available",
+      infoFiltered: "(filtered from _MAX_ total projects)",
+      emptyTable: "No budget variance records found",
+      zeroRecords: "No matching projects found"
+    },
+    columnDefs: [
+      { targets: [4,6,7,8,9,10,12,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,31,32,33,34], className: 'text-end' },
+      { targets: [5,11,13,30,35], className: 'text-end' }
+    ],
+    footerCallback: function(row, data, start, end, display) {
+      var api = this.api();
+      
+      // Helper function to parse currency and calculate total
+      var intVal = function(i) {
+        return typeof i === 'string' ?
+          parseFloat(i.replace(/[₱,]/g, '')) || 0 :
+          typeof i === 'number' ? i : 0;
+      };
+
+      // Columns to total (indices of monetary columns)
+      var columnsToTotal = [4, 7, 8, 9, 10, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 34];
+      
+      columnsToTotal.forEach(function(colIdx) {
+        var total = api
+          .column(colIdx, {page: 'current'})
+          .data()
+          .reduce(function(a, b) {
+            return intVal(a) + intVal(b);
+          }, 0);
+        
+        $(api.column(colIdx).footer()).html('₱' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+      });
+      
+      // For percentage columns, you might want to calculate average instead
+      var percentColumns = [5, 6, 11, 13, 30, 35];
+      percentColumns.forEach(function(colIdx) {
+        var values = api
+          .column(colIdx, {page: 'current'})
+          .data()
+          .toArray()
+          .map(function(val) {
+            return parseFloat(String(val).replace('%', '')) || 0;
+          });
+        
+        var avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+        $(api.column(colIdx).footer()).html(avg.toFixed(2) + '%');
+      });
+    }
   });
+});
 </script>
