@@ -53,56 +53,43 @@ try {
 
     // BUDGET VARIANCE QUERY START
     $opportunityQuery = "
-                SELECT 
-            p.project_name,
-            '' AS end_user,
-            p.agency AS procuring_entity,
-            '' AS bid_opening,
-            p.ABC,
-            (COALESCE(p.contract_amount, 0) / NULLIF(p.ABC, 0)) * 100 AS percent_to_win,
-            (COALESCE(p.ABC - p.contract_amount) / NULLIF(p.ABC, 0)) * 100 AS lcb,
-            p.contract_amount,
-            0 AS net_sales,
-            COALESCE((
-                SELECT SUM(i.supplier_price * COALESCE(pc.qty, 0))
-                FROM item i
-                LEFT JOIN package_content pc ON i.item_id = pc.item_id
-                WHERE i.project_id = p.project_id
-            ), 0) AS cogs,
-            0 AS pf1,
-            0 AS pf1_percent,
-            0 AS pf2,
-            0 AS pf2_percent,
-            0 AS ll_com,
-            0 AS shipping_brokerage,
-            0 AS logistics_door_to_door,
-            0 AS warehouse_rental,
-            0 AS other_expenses,
-            0 AS tax_lawyer_allowance,
-            0 AS rd_cost,
-            0 AS manpower_others,
-            0 AS facilitation,
-            0 AS assembly_service_center,
-            0 AS interest_dst,
-            0 AS business_permit_tax,
-            0 AS performance_bond,
-            0 AS goods_insurance,
-            0 AS total_cost_of_sales,
-            0 AS pgp,
-            0 AS gpm,
-            0 AS opex,
-            0 AS income_tax_provision,
-            0 AS incentive,
-            0 AS ppl,
-            0 AS npm,
-            (p.ABC - p.contract_amount) AS variance
-        FROM projects p
-        ORDER BY ABS(p.ABC - p.contract_amount) DESC
+        SELECT 
+            project_name,
+            contract_amount,
+            ABC,
+            (ABC - contract_amount) AS variance
+        FROM projects
+        ORDER BY ABS(ABC - contract_amount) DESC
     ";
 
     $stmt = $pdo->query($opportunityQuery);
     $opportunity = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // BUDGET VARIANCE QUERY END
+
+    // PROJECT SALES QUERY //
+    $projectSalesQuery = "
+        SELECT 
+            sg.sales_gen_id,
+            p.project_id,
+            p.project_name,
+            p.ABC as abc,
+            p.contract_amount,
+            sg.net_sales,
+            sg.cogs,
+            sg.total_cost_of_sales,
+            sg.pgp,
+            sg.gpm,
+            sg.opex,
+            sg.ppl,
+            sg.npm
+        FROM sales_generation sg
+        INNER JOIN projects p ON sg.project_id = p.project_id
+        $projectFilter
+        ORDER BY p.ABC DESC
+    ";
+
+    $stmt = $pdo->query($projectSalesQuery);
+    $projectSales = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
@@ -184,118 +171,48 @@ if ($selectedProject > 0) {
         </div>
         <div class="card-body">
           <div class="table-wrapper">
-            <table id="budgetVarianceTable" class="table table-striped table-hover table-bordered" style="width:100%">
+            <table id="projectSalesTable" class="table table-striped table-hover table-bordered" style="width:100%">
               <thead>
                 <tr>
-                  <th>Project Name</th>
-                  <th>End User</th>
-                  <th>Procuring Entity</th>
-                  <th>Bid Opening</th>
+                  <th>Project Title</th>
                   <th>ABC</th>
-                  <th>% to Win</th>
-                  <th>LCB</th>
                   <th>Contract Amount</th>
                   <th>Net Sales</th>
                   <th>COGS</th>
-                  <th>PF1</th>
-                  <th>PF1 %</th>
-                  <th>PF2</th>
-                  <th>PF2 %</th>
-                  <th>LL COM</th>
-                  <th>Shipping/Brokerage</th>
-                  <th>Logistics (D2D)</th>
-                  <th>Warehouse Rental</th>
-                  <th>Other Expenses</th>
-                  <th>Allowance for Tax Lawyer</th>
-                  <th>R&D</th>
-                  <th>Manpower/Others</th>
-                  <th>Facilitation</th>
-                  <th>Assembly/Service Center</th>
-                  <th>Interest & DST for working capital</th>
-                  <th>Business Permit / Municipal Tax</th>
-                  <th>Performance Bond</th>
-                  <th>Goods Insurance</th>
                   <th>Total Cost of Sales</th>
                   <th>PGP</th>
                   <th>GPM</th>
                   <th>OPEX</th>
-                  <th>Income Tax Provision</th>
-                  <th>Incentive</th>
                   <th>PPL</th>
                   <th>NPM</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                <?php foreach ($opportunity as $item): ?>
-                <tr>
-                  <td class="text-truncate" style="max-width: 200px;" data-bs-toggle="tooltip" title="<?= htmlspecialchars($item['project_name']) ?>">
-                      <?= htmlspecialchars($item['project_name']) ?>
+                <?php foreach ($projectSales as $item): ?>
+                <tr data-sales-gen-id="<?= $item['sales_gen_id'] ?>">
+                  <td contenteditable="true" class="text-truncate" style="max-width: 250px;">
+                    <?= htmlspecialchars($item['project_name']) ?>
                   </td>
-                  <td><?= htmlspecialchars($item['end_user']) ?></td>
-                  <td><?= htmlspecialchars($item['procuring_entity']) ?></td>
-                  <td><?= $item['bid_opening'] ? date('Y-m-d', strtotime($item['bid_opening'])) : 'N/A' ?></td>
-                  <td>₱<?= number_format($item['ABC'], 2) ?></td>
-                  <td><?= number_format($item['percent_to_win'], 2) ?>%</td>
-                  <td><?= number_format($item['lcb'], 2) ?>%</td>
-                  <td>₱<?= number_format($item['contract_amount'], 2) ?></td>
-                  <td>₱<?= number_format($item['net_sales'], 2) ?></td>
-                  <td>₱<?= number_format($item['cogs'], 2) ?></td>
-                  <td>₱<?= number_format($item['pf1'], 2) ?></td>
-                  <td><?= number_format($item['pf1_percent'], 2) ?>%</td>
-                  <td>₱<?= number_format($item['pf2'], 2) ?></td>
-                  <td><?= number_format($item['pf2_percent'], 2) ?>%</td>
-                  <td>₱<?= number_format($item['ll_com'], 2) ?></td>
-                  <td>₱<?= number_format($item['shipping_brokerage'], 2) ?></td>
-                  <td>₱<?= number_format($item['logistics_door_to_door'], 2) ?></td>
-                  <td>₱<?= number_format($item['warehouse_rental'], 2) ?></td>
-                  <td>₱<?= number_format($item['other_expenses'], 2) ?></td>
-                  <td>₱<?= number_format($item['tax_lawyer_allowance'], 2) ?></td>
-                  <td>₱<?= number_format($item['rd_cost'], 2) ?></td>
-                  <td>₱<?= number_format($item['manpower_others'], 2) ?></td>
-                  <td>₱<?= number_format($item['facilitation'], 2) ?></td>
-                  <td>₱<?= number_format($item['assembly_service_center'], 2) ?></td>
-                  <td>₱<?= number_format($item['interest_dst'], 2) ?></td>
-                  <td>₱<?= number_format($item['business_permit_tax'], 2) ?></td>
-                  <td>₱<?= number_format($item['performance_bond'], 2) ?></td>
-                  <td>₱<?= number_format($item['goods_insurance'], 2) ?></td>
-                  <td>₱<?= number_format($item['total_cost_of_sales'], 2) ?></td>
-                  <td>₱<?= number_format($item['pgp'], 2) ?></td>
-                  <td><?= number_format($item['gpm'], 2) ?>%</td>
-                  <td>₱<?= number_format($item['opex'], 2) ?></td>
-                  <td>₱<?= number_format($item['income_tax_provision'], 2) ?></td>
-                  <td>₱<?= number_format($item['incentive'], 2) ?></td>
-                  <td>₱<?= number_format($item['ppl'], 2) ?></td>
-                  <td><?= number_format($item['npm'], 2) ?>%</td>
+                  <td contenteditable="true">₱<?= number_format($item['abc'], 2) ?></td>
+                  <td contenteditable="true">₱<?= number_format($item['contract_amount'], 2) ?></td>
+                  <td contenteditable="true" data-field="net_sales"><?= number_format($item['net_sales'], 2) ?>%</td>
+                  <td contenteditable="true" data-field="cogs">₱<?= number_format($item['cogs'], 2) ?></td>
+                  <td contenteditable="true" data-field="total_cost_of_sales">₱<?= number_format($item['total_cost_of_sales'], 2) ?></td>
+                  <td contenteditable="true" data-field="pgp">₱<?= number_format($item['pgp'], 2) ?></td>
+                  <td contenteditable="true" data-field="gpm"><?= number_format($item['gpm'], 2) ?>%</td>
+                  <td contenteditable="true" data-field="opex">₱<?= number_format($item['opex'], 2) ?></td>
+                  <td contenteditable="true" data-field="ppl">₱<?= number_format($item['ppl'], 2) ?></td>
+                  <td contenteditable="true" data-field="npm"><?= number_format($item['npm'], 2) ?>%</td>
+                  <td>
+                    <button class="btn btn-sm btn-primary save-btn">Save</button>
+                  </td>
                 </tr>
                 <?php endforeach; ?>
               </tbody>
               <tfoot>
                 <tr>
                   <th>TOTAL</th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
-                  <th></th>
                   <th></th>
                   <th></th>
                   <th></th>
@@ -338,42 +255,38 @@ if ($selectedProject > 0) {
 
 <script>
 $(document).ready(function() {
-  var table = $('#budgetVarianceTable').DataTable({
+  var table = $('#projectSalesTable').DataTable({
     processing: true,
     scrollX: true,
-    scrollY: "53vh",
+    scrollY: "60vh",
     scrollCollapse: true,
     paging: true,
     responsive: false,
     fixedColumns: {
       leftColumns: 1
     },
-    order: [[4, 'desc']], // Order by ABC
+    order: [[1, 'desc']],
+    pageLength: 25,
     language: {
       search: "Search projects:",
       lengthMenu: "Show _MENU_ projects per page",
       info: "Showing _START_ to _END_ of _TOTAL_ projects",
       infoEmpty: "No projects available",
       infoFiltered: "(filtered from _MAX_ total projects)",
-      emptyTable: "No budget variance records found",
+      emptyTable: "No project sales records found",
       zeroRecords: "No matching projects found"
     },
-    columnDefs: [
-      { targets: [4,6,7,8,9,10,12,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,31,32,33,34], className: 'text-end' },
-      { targets: [5,11,13,30,35], className: 'text-end' }
-    ],
+    
     footerCallback: function(row, data, start, end, display) {
       var api = this.api();
       
-      // Helper function to parse currency and calculate total
       var intVal = function(i) {
         return typeof i === 'string' ?
-          parseFloat(i.replace(/[₱,]/g, '')) || 0 :
+          parseFloat(i.replace(/[₱,%]/g, '')) || 0 :
           typeof i === 'number' ? i : 0;
       };
 
-      // Columns to total (indices of monetary columns)
-      var columnsToTotal = [4, 7, 8, 9, 10, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 34];
+      var columnsToTotal = [1, 2, 4, 5, 6, 8, 9];
       
       columnsToTotal.forEach(function(colIdx) {
         var total = api
@@ -386,8 +299,7 @@ $(document).ready(function() {
         $(api.column(colIdx).footer()).html('₱' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
       });
       
-      // For percentage columns, you might want to calculate average instead
-      var percentColumns = [5, 6, 11, 13, 30, 35];
+      var percentColumns = [3, 7, 10];
       percentColumns.forEach(function(colIdx) {
         var values = api
           .column(colIdx, {page: 'current'})
@@ -401,6 +313,62 @@ $(document).ready(function() {
         $(api.column(colIdx).footer()).html(avg.toFixed(2) + '%');
       });
     }
+  });
+
+  // Save button click handler
+  $('#projectSalesTable').on('click', '.save-btn', function() {
+    var $btn = $(this);
+    var $row = $btn.closest('tr');
+    var salesGenId = $row.data('sales-gen-id');
+    
+    console.log('Sales Gen ID:', salesGenId);
+    
+    if (!salesGenId) {
+      alert('Error: Missing sales generation ID');
+      return;
+    }
+    
+    // Collect all editable fields with data-field attribute
+    var updateData = {
+      sales_gen_id: salesGenId
+    };
+    
+    $row.find('td[data-field]').each(function() {
+      var $td = $(this);
+      var field = $td.data('field');
+      var value = $td.text().trim().replace(/[₱,%]/g, '');
+      updateData[field] = parseFloat(value) || 0;
+    });
+    
+    console.log('Update Data:', updateData);
+    
+    // Disable button and show loading
+    $btn.prop('disabled', true).text('Saving...');
+    
+    // Send AJAX request
+    $.ajax({
+      url: 'script/update_sales_generation.php',
+      method: 'POST',
+      data: updateData,
+      dataType: 'json',
+      success: function(response) {
+        if (response.success) {
+          $btn.removeClass('btn-primary').addClass('btn-success').text('Saved!');
+          setTimeout(function() {
+            $btn.removeClass('btn-success').addClass('btn-primary').text('Save').prop('disabled', false);
+          }, 2000);
+          table.draw(false);
+        } else {
+          alert('Error: ' + response.message);
+          $btn.prop('disabled', false).text('Save');
+        }
+      },
+      error: function(xhr, status, error) {
+        console.log('AJAX Error:', xhr.responseText);
+        alert('Error saving data: ' + error);
+        $btn.prop('disabled', false).text('Save');
+      }
+    });
   });
 });
 </script>
