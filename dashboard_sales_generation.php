@@ -60,7 +60,7 @@ try {
             '' AS bid_opening,
             p.ABC,
             (COALESCE(p.contract_amount, 0) / NULLIF(p.ABC, 0)) * 100 AS percent_to_win,
-            ((p.ABC - p.contract_amount) / NULLIF(p.ABC, 0)) * 100 AS lcb,
+            (COALESCE(p.ABC - p.contract_amount) / NULLIF(p.ABC, 0)) * 100 AS lcb,
             p.contract_amount,
             0 AS net_sales,
             COALESCE((
