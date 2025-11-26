@@ -49,13 +49,12 @@ $html = "<!DOCTYPE html>
 <head>
     <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
     <style>
-    @page { margin: 20mm; }
+    @page { margin: 10mm; }
     body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
-    .header-table { padding-bottom: 8px; }
-    .packing-list { padding-top: 6px; font-size: 11px; }
-    table.packing-list { border-collapse: collapse; width: 100%; font-size: 12px; }
+    .header-table { padding-bottom: 0px; }
+    .packing-list { padding-top: 6px; font-size: 8px; }
+    table.packing-list { border-collapse: collapse; width: 100%; font-size: 8px; }
     table.packing-list th, table.packing-list td { border: 1px solid #000; padding: 6px 8px; }
-    .logoimg { max-width: 250px; height: 80px; }
     </style>
 </head>
 <body>";
@@ -78,6 +77,7 @@ foreach ($ids as $school_id) {
             s.division,
             s.region,
             l.lot_name,
+            l.lot_id,
             p.package_num,
             i.item_name,
             i.unit,
@@ -90,7 +90,7 @@ foreach ($ids as $school_id) {
         INNER JOIN package_content pc ON p.package_id = pc.package_id
         INNER JOIN item i ON pc.item_id = i.item_id
         WHERE s.school_id = :school_id
-        ORDER BY l.lot_name, p.package_num, i.item_name
+        ORDER BY l.lot_id
     ");
     $stmt->execute([':school_id' => $school_id]);
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -157,10 +157,11 @@ foreach ($ids as $school_id) {
         </tr>
     </table>";
     // Build content
-    foreach ($grouped as $lot_key => $lot_data) {
-        $html .= "
+    $html .= "
     <div>
         <table class='packing-list' width='100%'>";
+
+    foreach ($grouped as $lot_key => $lot_data) {
         
         $package_count = $package_counts[$lot_key];
         $package_index = 1;
@@ -193,13 +194,10 @@ foreach ($ids as $school_id) {
             $package_index++;
         }
         
-        $html .= "
-        </table>
-    </div>
-  ";
     }
     if ($index < $total) {
-        $html .= "<div style='page-break-after: always;'></div>";
+        
+        $html .= "</table><div style='page-break-after: always;'></div>";
     }
 }
 
@@ -208,6 +206,6 @@ $html .= "
 
 $dompdf = new Dompdf($options);
 $dompdf->loadHtml($html);
-$dompdf->setPaper('Legal', 'Portrait');
+$dompdf->setPaper('A4', 'Portrait');
 $dompdf->render();
 $dompdf->stream("labels_batch.pdf", ["Attachment" => false]);
