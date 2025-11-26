@@ -372,11 +372,11 @@ document.getElementById('submitLabels').addEventListener('click', function() {
     return;
   }
 
-  //const range = schoolIdTo - schoolIdFrom + 1;
-  //if (range > 101) {
-    //alert('You can only generate a maximum of 100 School IDs at a time.');
+  const range = schoolIdTo - schoolIdFrom + 1;
+  if (range > 10000) {
+    alert('You can only generate a maximum of 100 School IDs at a time.');
     return;
-  //}
+  }
 
   fetch(`script/get_school_id_range.php?project_id=${projectId}&from=${schoolIdFrom}&to=${schoolIdTo}`)
     .then(res => {
