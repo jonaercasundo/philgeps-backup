@@ -333,7 +333,7 @@ document.getElementById('submitQR').addEventListener('click', function() {
   }
 
   const range = drTo - drFrom + 1;
-  if (range > 101) {
+  if (range > 100000000000000) {
     alert('You can only generate a maximum of 100 DR numbers at a time.');
     return;
   }
