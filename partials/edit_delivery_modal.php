@@ -332,11 +332,11 @@ document.getElementById('submitQR').addEventListener('click', function() {
     return;
   }
 
-  const range = drTo - drFrom + 1;
-  if (range > 100000000000000) {
-    alert('You can only generate a maximum of 100 DR numbers at a time.');
-    return;
-  }
+  //const range = drTo - drFrom + 1;
+  //if (range > 100) {
+    //alert('You can only generate a maximum of 100 DR numbers at a time.');
+    //return;
+  //}
 
   fetch(`script/get_dr_range.php?project_id=${projectId}&status=${status}&from=${drFrom}&to=${drTo}`)
     .then(res => res.json())
