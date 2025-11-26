@@ -61,9 +61,12 @@ $html = "<!DOCTYPE html>
 <body>";
 
 $today = date("Y-m-d");
+$index = 0;
+$total = count($ids);
 
 foreach ($ids as $school_id) {
     $school_id = intval(trim($school_id));
+    $index++;
     if (!$school_id) continue;
 
     // Fetch data for this school
@@ -130,33 +133,34 @@ foreach ($ids as $school_id) {
             'unit' => $row['unit']
         ];
     }
-
+    $html .= "
+    <table class='packing-list' width='100%'>
+        <tr>
+            <td colspan='2' style='font-weight:bold; width:20%;'>School</td>
+            <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['school_name'], ENT_QUOTES, 'UTF-8') . "</td>
+        </tr>
+        <tr>
+            <td colspan='2' style='font-weight:bold;'>School Id</td>
+            <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['school_id'], ENT_QUOTES, 'UTF-8') . "</td>
+        </tr>
+        <tr>
+            <td colspan='2' style='font-weight:bold;'>Municipality</td>
+            <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['municipality'], ENT_QUOTES, 'UTF-8') . "</td>
+        </tr>
+        <tr>
+            <td colspan='2' style='font-weight:bold;'>Division</td>
+            <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['division'], ENT_QUOTES, 'UTF-8') . "</td>
+        </tr>
+        <tr>
+            <td colspan='2' style='font-weight:bold;'>Region</td>
+            <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['region'], ENT_QUOTES, 'UTF-8') . "</td>
+        </tr>
+    </table>";
     // Build content
     foreach ($grouped as $lot_key => $lot_data) {
         $html .= "
     <div>
-        <table class='packing-list' width='100%'>
-            <tr>
-                <td colspan='2' style='font-weight:bold; width:20%;'>School</td>
-                <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['school_name'], ENT_QUOTES, 'UTF-8') . "</td>
-            </tr>
-            <tr>
-                <td colspan='2' style='font-weight:bold;'>School Id</td>
-                <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['school_id'], ENT_QUOTES, 'UTF-8') . "</td>
-            </tr>
-            <tr>
-                <td colspan='2' style='font-weight:bold;'>Municipality</td>
-                <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['municipality'], ENT_QUOTES, 'UTF-8') . "</td>
-            </tr>
-            <tr>
-                <td colspan='2' style='font-weight:bold;'>Division</td>
-                <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['division'], ENT_QUOTES, 'UTF-8') . "</td>
-            </tr>
-            <tr>
-                <td colspan='2' style='font-weight:bold;'>Region</td>
-                <td colspan='4' style='text-align:center;'>" . htmlspecialchars($first['region'], ENT_QUOTES, 'UTF-8') . "</td>
-            </tr>
-           ";
+        <table class='packing-list' width='100%'>";
         
         $package_count = $package_counts[$lot_key];
         $package_index = 1;
@@ -180,7 +184,7 @@ foreach ($ids as $school_id) {
                 }
                 
                 $html .= "
-                <td colspan='3'>" . htmlspecialchars($item['item_name'], ENT_QUOTES, 'UTF-8') . "</td>
+                <td>" . htmlspecialchars($item['item_name'], ENT_QUOTES, 'UTF-8') . "</td>
                 <td style='text-align:center;'>" . $item['qty'] . "</td>
                 <td style='text-align:center;'>" . htmlspecialchars($item['unit'], ENT_QUOTES, 'UTF-8') . "</td>
             </tr>";
@@ -192,11 +196,15 @@ foreach ($ids as $school_id) {
         $html .= "
         </table>
     </div>
-    <div '></div>";
+  ";
+    }
+    if ($index < $total) {
+        $html .= "<div style='page-break-after: always;'></div>";
     }
 }
 
-$html .= "</body></html>";
+$html .= "
+</body></html>";
 
 $dompdf = new Dompdf($options);
 $dompdf->loadHtml($html);
