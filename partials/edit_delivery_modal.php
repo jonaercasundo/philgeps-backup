@@ -141,9 +141,61 @@
   </div>
 </div>
 
+<div class="modal fade" id="generateLabelsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Generate Labels</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="generateLabelsForm">
+
+          <!-- Project -->
+          <div class="mb-3">
+            <label class="form-label">Project Name</label>
+            <select class="form-select" id="labelProjectSelect" name="project_id" required>
+              <option value="">Select Project</option>
+              <?php
+                $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                  echo "<option value='{$row['project_id']}' title='" . htmlspecialchars($row['project_name']) . "'>" . htmlspecialchars(strlen($row['project_name']) > 20 ? substr($row['project_name'], 0, 100) . '...' : $row['project_name']) . "</option>";
+                }
+              ?>
+            </select>
+          </div>
+
+          <!-- School ID Range -->
+          <div class="row mb-3">
+            <div class="col">
+              <label class="form-label">School ID (From)</label>
+              <input type="number" class="form-control" id="schoolIdFrom" required>
+            </div>
+            <div class="col">
+              <label class="form-label">School ID (To)</label>
+              <input type="number" class="form-control" id="schoolIdTo" required>
+            </div>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="submitLabels">Generate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Hidden Form for Generation of QR -->
  <form id="qrForm" method="POST" action="generate_qr.php" target="_blank">
   <input type="hidden" name="ids" id="idsInput">
+</form>
+
+<form id="labelForm" action="generate_labels.php" method="POST" target="_blank">
+  <input type="hidden" id="labelIdsInput" name="ids">
 </form>
 
 <script>
@@ -303,4 +355,50 @@ document.getElementById('submitQR').addEventListener('click', function() {
       alert('Error fetching DR range.');
     });
 });
+
+// --- On submit ---
+document.getElementById('submitLabels').addEventListener('click', function() {
+  const projectId = document.getElementById('labelProjectSelect').value;
+  const schoolIdFrom = parseInt(document.getElementById('schoolIdFrom').value);
+  const schoolIdTo = parseInt(document.getElementById('schoolIdTo').value);
+
+  if (!projectId || !schoolIdFrom || !schoolIdTo) {
+    alert('Please fill all fields.');
+    return;
+  }
+
+  if (schoolIdTo < schoolIdFrom) {
+    alert('The "To" School ID must be greater than or equal to "From".');
+    return;
+  }
+
+  const range = schoolIdTo - schoolIdFrom + 1;
+  if (range > 101) {
+    alert('You can only generate a maximum of 100 School IDs at a time.');
+    return;
+  }
+
+  fetch(`script/get_school_id_range.php?project_id=${projectId}&from=${schoolIdFrom}&to=${schoolIdTo}`)
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (!data.length) {
+        alert('No School IDs found for this range.');
+        return;
+      }
+
+      // Open generate_labels.php with school_ids parameter
+      const schoolIds = data.join(',');
+      window.open(`generate_labels.php?school_ids=${encodeURIComponent(schoolIds)}`, '_blank');
+    })
+    .catch(err => {
+      console.error('Full error:', err);
+      alert('Error fetching School ID range: ' + err.message);
+    });
+});
+
 </script>
