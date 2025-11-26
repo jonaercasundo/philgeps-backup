@@ -183,8 +183,12 @@ LIMIT :limit OFFSET :offset;
         <tbody>
 <?php foreach ($grouped_deliveries as $dr_group): ?>
     <tr class="table-secondary fw-bold">
-         <td class="text-center align-middle"colspan ="1">
-           <input type="checkbox" class="form-check-input dr-checkbox" value="<?= htmlspecialchars($dr_group['dr_no']) ?>">
+        <td class="text-center align-middle"colspan ="1">
+        <input type="checkbox" 
+        class="form-check-input dr-checkbox" 
+        value="<?= htmlspecialchars($dr_group['dr_no']) ?>"
+        data-school-id="<?= htmlspecialchars($dr_group['school_id']) ?>"
+        >
         </td>
         <td class="align-middle"colspan="3">
             DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> — 
@@ -193,6 +197,7 @@ LIMIT :limit OFFSET :offset;
         </td>
         <td colspan ="1">
             <button class="btn btn-secondary mb-1" onclick="generateARs()"><i class="bi bi-qr-code fs-4"></i></button>
+            <button class="btn btn-secondary mb-1" onclick="generateLabels()"><i class="bi bi-tags fs-4"></i></button>
         </td>
     </tr>
 
@@ -296,5 +301,20 @@ function generateARs() {
     params.append('ids', selectedDrs.join(','));
 
     window.open('generate_qr.php?' + params.toString(), '_blank');
+};
+
+function generateLabels() {
+    const checkboxes = document.querySelectorAll('.dr-checkbox:checked');
+    const selectedSchoolIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-school-id'));
+
+    if (selectedSchoolIds.length === 0) {
+        alert('Please select at least one School.');
+        return;
+    }
+
+    const params = new URLSearchParams();
+    params.append('school_ids', selectedSchoolIds.join(','));
+
+    window.open('generate_labels.php?' + params.toString(), '_blank');
 };
 </script>
