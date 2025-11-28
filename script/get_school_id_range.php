@@ -63,7 +63,7 @@ try {
             SELECT school_id
             FROM deliveries
             WHERE project_id = ?
-            ORDER BY delivery_id
+            ORDER BY school_id
             LIMIT ? OFFSET ?
         ) AS delivery_range
         ORDER BY school_id
