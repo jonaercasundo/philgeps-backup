@@ -166,15 +166,15 @@
             </select>
           </div>
 
-          <!-- School ID Range -->
+          <!-- Delivery Record Range -->
           <div class="row mb-3">
             <div class="col">
-              <label class="form-label">School ID (From)</label>
-              <input type="number" class="form-control" id="schoolIdFrom" required>
+              <label class="form-label">Record (From)</label>
+              <input type="number" class="form-control" id="schoolIdFrom" min="1" value="1" required>
             </div>
             <div class="col">
-              <label class="form-label">School ID (To)</label>
-              <input type="number" class="form-control" id="schoolIdTo" required>
+              <label class="form-label">Record (To)</label>
+              <input type="number" class="form-control" id="schoolIdTo" min="1" value="100" required>
             </div>
           </div>
 
@@ -359,45 +359,81 @@ document.getElementById('submitQR').addEventListener('click', function() {
 // --- On submit ---
 document.getElementById('submitLabels').addEventListener('click', function() {
   const projectId = document.getElementById('labelProjectSelect').value;
-  const schoolIdFrom = parseInt(document.getElementById('schoolIdFrom').value);
-  const schoolIdTo = parseInt(document.getElementById('schoolIdTo').value);
+  const deliveryFrom = parseInt(document.getElementById('schoolIdFrom').value);
+  const deliveryTo = parseInt(document.getElementById('schoolIdTo').value);
 
-  if (!projectId || !schoolIdFrom || !schoolIdTo) {
+  // Validation
+  if (!projectId || !deliveryFrom || !deliveryTo) {
     alert('Please fill all fields.');
     return;
   }
 
-  if (schoolIdTo < schoolIdFrom) {
-    alert('The "To" School ID must be greater than or equal to "From".');
+  if (deliveryTo < deliveryFrom) {
+    alert('The "To" record must be greater than or equal to "From".');
     return;
   }
 
-  const range = schoolIdTo - schoolIdFrom + 1;
-  if (range > 10000) {
-    alert('You can only generate a maximum of 100 School IDs at a time.');
+  if (deliveryFrom < 1 || deliveryTo < 1) {
+    alert('Record numbers must be 1 or greater.');
     return;
   }
 
-  fetch(`script/get_school_id_range.php?project_id=${projectId}&from=${schoolIdFrom}&to=${schoolIdTo}`)
+ const range = deliveryTo - deliveryFrom + 1;
+  if (range > 100) {
+    alert('You can only generate a maximum of 100 delivery records at a time.');
+    return;
+  }
+
+  // Show loading state
+  const submitBtn = document.getElementById('submitLabels');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Loading...';
+
+  fetch(`script/get_school_id_range.php?project_id=${projectId}&from=${deliveryFrom}&to=${deliveryTo}`)
     .then(res => {
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return res.text().then(text => {
+          console.error('Non-JSON response:', text);
+          throw new Error('Server returned non-JSON response');
+        });
       }
-      return res.json();
+      return res.json().then(data => {
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP error! status: ${res.status}`);
+        }
+        return data;
+      });
     })
     .then(data => {
-      if (!data.length) {
-        alert('No School IDs found for this range.');
+      if (data.error) {
+        alert('Error: ' + data.error + (data.details ? '\n\nDetails: ' + JSON.stringify(data.details) : ''));
+        return;
+      }
+      
+      if (!Array.isArray(data) || data.length === 0) {
+        alert('No schools found in this delivery record range.');
         return;
       }
 
       // Open generate_labels.php with school_ids parameter
       const schoolIds = data.join(',');
       window.open(`generate_labels.php?school_ids=${encodeURIComponent(schoolIds)}`, '_blank');
+      
+      // Close modal after successful generation
+      const modal = bootstrap.Modal.getInstance(document.getElementById('generateLabelsModal'));
+      if (modal) modal.hide();
+      
     })
     .catch(err => {
       console.error('Full error:', err);
-      alert('Error fetching School ID range: ' + err.message);
+      alert('Error: ' + err.message);
+    })
+    .finally(() => {
+      // Restore button state
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
     });
 });
 
