@@ -169,13 +169,23 @@
           <!-- School ID Range -->
           <div class="row mb-3">
             <div class="col">
-              <label class="form-label">School ID (From)</label>
-              <input type="number" class="form-control" id="schoolIdFrom" required>
+              <label class="form-label">
+                Schools From 
+                <small class="text-muted">(1 = first school in project)</small>
+              </label>
+              <input type="number" class="form-control" id="pageFrom" min="1" value="1" required>
             </div>
             <div class="col">
-              <label class="form-label">School ID (To)</label>
-              <input type="number" class="form-control" id="schoolIdTo" required>
+              <label class="form-label">
+                To 
+                <small class="text-muted">(e.g. 100 = first 100 schools)</small>
+              </label>
+              <input type="number" class="form-control" id="pageTo" min="1" value="100" required>
             </div>
+          </div>
+
+          <div class="alert alert-info small p-2">
+            <strong>Tip:</strong> Use 1–100 for first 100 schools, 101–200 for next 100, etc.
           </div>
 
         </form>
@@ -190,7 +200,7 @@
 </div>
 
 <!-- Hidden Form for Generation of QR -->
- <form id="qrForm" method="POST" action="generate_qr.php" target="_blank">
+<form id="qrForm" method="POST" action="generate_qr.php" target="_blank">
   <input type="hidden" name="ids" id="idsInput">
 </form>
 
@@ -357,48 +367,55 @@ document.getElementById('submitQR').addEventListener('click', function() {
 });
 
 // --- On submit ---
-document.getElementById('submitLabels').addEventListener('click', function() {
-  const projectId = document.getElementById('labelProjectSelect').value;
-  const schoolIdFrom = parseInt(document.getElementById('schoolIdFrom').value);
-  const schoolIdTo = parseInt(document.getElementById('schoolIdTo').value);
+document.getElementById('submitLabels').addEventListener('click', async function() {
+  const projectId = document.getElementById('labelProjectSelect').value.trim();
+  const pageFrom = parseInt(document.getElementById('pageFrom').value);
+  const pageTo = parseInt(document.getElementById('pageTo').value);
 
-  if (!projectId || !schoolIdFrom || !schoolIdTo) {
-    alert('Please fill all fields.');
+  // Validation
+  if (!projectId) {
+    alert('Please select a Project.');
+    return;
+  }
+  if (isNaN(pageFrom) || isNaN(pageTo) || pageFrom < 1 || pageTo < pageFrom) {
+    alert('Please enter a valid page range (From ≤ To, and ≥ 1).');
+    return;
+  }
+  if (pageTo - pageFrom + 1 > 10000) {
+    alert('Maximum 10,000 schools allowed per batch.');
     return;
   }
 
-  if (schoolIdTo < schoolIdFrom) {
-    alert('The "To" School ID must be greater than or equal to "From".');
-    return;
+  // Show loading
+  const btn = this;
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+
+  try {
+    const res = await fetch(`script/get_school_id_range.php?project_id=${projectId}&from=${pageFrom}&to=${pageTo}`);
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    
+    const schoolIds = await res.json();
+    
+    if (schoolIds.error) throw new Error(schoolIds.message || schoolIds.error);
+    if (!schoolIds || schoolIds.length === 0) {
+      alert('No schools found in this page range.');
+      return;
+    }
+
+    window.open(
+      `generate_labels.php?school_ids=${encodeURIComponent(schoolIds.join(','))}&project_id=${projectId}`,
+      '_blank'
+    );
+  } catch (err) {
+    console.error(err);
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
-
-  const range = schoolIdTo - schoolIdFrom + 1;
-  if (range > 10000) {
-    alert('You can only generate a maximum of 100 School IDs at a time.');
-    return;
-  }
-
-  fetch(`script/get_school_id_range.php?project_id=${projectId}&from=${schoolIdFrom}&to=${schoolIdTo}`)
-    .then(res => {
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      return res.json();
-    })
-    .then(data => {
-      if (!data.length) {
-        alert('No School IDs found for this range.');
-        return;
-      }
-
-      // Open generate_labels.php with school_ids parameter
-      const schoolIds = data.join(',');
-      window.open(`generate_labels.php?school_ids=${encodeURIComponent(schoolIds)}`, '_blank');
-    })
-    .catch(err => {
-      console.error('Full error:', err);
-      alert('Error fetching School ID range: ' + err.message);
-    });
 });
+
 
 </script>

@@ -1,24 +1,56 @@
 <?php
+// script/get_school_id_range.php
+
+header('Content-Type: application/json; charset=utf-8');
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't output errors directly
+
 require "../config/db.php";
 
 $project_id = $_GET['project_id'] ?? '';
-$from = (int)($_GET['from'] ?? 0);
-$to   = (int)($_GET['to'] ?? 0);
+$from       = (int)($_GET['from'] ?? 1);
+$to         = (int)($_GET['to'] ?? 1);
 
-if (!$project_id || !$from || !$to) {
-  echo json_encode([]);
-  exit;
+// Validation
+if (empty($project_id) || $from < 1 || $to < $from) {
+    echo json_encode(['error' => 'Invalid parameters']);
+    exit;
 }
 
-$stmt = $pdo->prepare("
-  SELECT DISTINCT(school_id)
-  FROM deliveries
-  WHERE project_id = ?
-    AND CAST(school_id AS UNSIGNED) BETWEEN ? AND ?
-  ORDER BY CAST(school_id AS UNSIGNED)
-");
-$stmt->execute([$project_id, $from, $to]);
-$school_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+// Calculate limit and offset from page numbers
+$limit  = $to - $from + 1;
+$offset = $from - 1;
 
-echo json_encode($school_ids);
-?>
+// Maximum 10,000 schools
+if ($limit > 10000) {
+    echo json_encode(['error' => 'Maximum 10,000 schools allowed']);
+    exit;
+}
+
+try {
+    $stmt = $pdo->prepare("
+        SELECT sp.school_id
+        FROM schools_project sp
+        INNER JOIN school s ON s.school_id = sp.school_id
+        WHERE sp.project_id = :project_id
+        ORDER BY sp.id ASC
+        LIMIT :limit OFFSET :offset
+    ");
+
+    // Bind parameters with proper types
+    $stmt->bindValue(':project_id', $project_id, PDO::PARAM_STR);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    
+    $stmt->execute();
+    $school_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    echo json_encode($school_ids);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    error_log("get_school_id_range error: " . $e->getMessage());
+    echo json_encode(['error' => 'Database error', 'message' => $e->getMessage()]);
+}
+
+exit;
