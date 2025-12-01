@@ -9,6 +9,7 @@ try {
         exit;
     }
 
+    $user_id = $_SESSION['user_id'];
     $username = $_SESSION['username'];
     $password = $_POST['password'];
     $items = json_decode($_POST['items_json'], true);
@@ -32,6 +33,7 @@ try {
     $merged_count = 0;
     $new_count = 0;
     $errors = [];
+    $processed_items = [];
 
     foreach ($items as $item) {
         if (empty($item['item_id']) || empty($item['quantity'])) {
@@ -48,6 +50,12 @@ try {
             continue;
         }
 
+        // Get item name for activity log
+        $item_stmt = $pdo->prepare("SELECT item_name FROM item WHERE item_id = ?");
+        $item_stmt->execute([$item_id]);
+        $item_data = $item_stmt->fetch(PDO::FETCH_ASSOC);
+        $item_name = $item_data ? $item_data['item_name'] : "Item ID: $item_id";
+
         // Check if there's an existing "For Approval" record
         $check = $pdo->prepare("SELECT inventory_id, qty FROM inventory WHERE item_id = ? AND warehouse_id = ? AND inventory_status = 'For Approval'");
         $check->execute([$item_id, $warehouse_id]);
@@ -59,6 +67,7 @@ try {
             $update = $pdo->prepare("UPDATE inventory SET qty = ? WHERE inventory_id = ?");
             if ($update->execute([$new_qty, $existing['inventory_id']])) {
                 $merged_count++;
+                $processed_items[] = "$item_name (+$quantity)";
             } else {
                 $errors[] = "Update failed for pending item $item_id";
             }
@@ -69,6 +78,7 @@ try {
             $insert = $pdo->prepare("INSERT INTO inventory (inventory_id, warehouse_id, item_id, qty, inventory_status) VALUES (?, ?, ?, ?, 'For Approval')");
             if ($insert->execute([$max_id, $warehouse_id, $item_id, $quantity])) {
                 $new_count++;
+                $processed_items[] = "$item_name ($quantity)";
             } else {
                 $errors[] = "Insert failed for item $item_id";
             }
@@ -89,6 +99,22 @@ try {
         if (!empty($errors)) {
             $msg .= ". Some errors occurred.";
         }
+        $action_message = $username . " added " . count($processed_items) . " for approval items";
+
+        $details = "Added Items:\n";
+        foreach ($processed_items as $item) {
+            $details .= "- " . $item . "\n";
+        }
+        
+        // Add errors to details if any
+        if (!empty($errors)) {
+            $details .= "\nErrors:\n• " . implode("\n• ", array_slice($errors, 0, 3));
+        }
+
+        // Insert into activity logs
+        $log_stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)");
+        $log_stmt->execute([$user_id, $action_message, $details]);
+
         echo json_encode(["success" => true, "message" => $msg, "toast" => $msg, "type" => "success"]);
     } else {
         echo json_encode(["success" => false, "message" => "Failed to add items: " . implode(', ', $errors), "toast" => "Failed to add items", "type" => "danger"]);
@@ -101,5 +127,11 @@ try {
     "toast" => $e->getMessage(),
     "type" => "danger"
 ]);
-
+} catch (Exception $e) {
+    echo json_encode([
+        "success" => false,
+        "message" => "Error: " . $e->getMessage(),
+        "toast" => "An error occurred",
+        "type" => "danger"
+    ]);
 }

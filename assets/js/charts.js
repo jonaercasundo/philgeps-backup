@@ -9,8 +9,8 @@ const {
     projectStatusOverview,
     opportunity,
     progressPerLot,
-    incomeData,
-    expenseData,
+    cashflowData,
+    deliveriesByWarehouse
 } = phpData;
 
 // Delivery Status Colors (Green-Yellow-Red)
@@ -360,128 +360,147 @@ document.addEventListener('DOMContentLoaded', function() {
     createEmptyChart(document.getElementById('projectStatusChart'), 'No project data available');
     }
 
-    // Income Chart - Revenue & Profit by Month (Line Chart)
-    if (phpData.incomeData && phpData.incomeData.length > 0) {
-        const months = phpData.incomeData.map(r => r.month);
-        const incomeValues = phpData.incomeData.map(r => parseFloat(r.total_income));
-        const profitValues = phpData.incomeData.map(r => parseFloat(r.total_profit));
+    // Cashflow Chart - Actual Expense vs Income (Timeline)
+    if (cashflowData && cashflowData.length > 0) {
+        const months = cashflowData.map(r => r.month);
+        const incomeValues = cashflowData.map(r => parseFloat(r.total_income) || 0);
+        const expenseValues = cashflowData.map(r => parseFloat(r.total_expense) || 0);
+        const netCashflowValues = cashflowData.map(r => parseFloat(r.net_cashflow) || 0);
 
-        new Chart(document.getElementById('incomeChart'), {
+        new Chart(document.getElementById('cashflowChart'), {
             type: 'line',
             data: {
                 labels: months,
                 datasets: [
                     {
-                        label: 'Total Income',
+                        label: 'Income',
                         data: incomeValues,
-                        borderColor: '#28a745', // Green for income
+                        borderColor: '#28a745',
                         backgroundColor: 'rgba(40, 167, 69, 0.1)',
                         borderWidth: 3,
                         tension: 0.3,
-                        fill: true
+                        fill: true,
+                        order: 2
                     },
                     {
-                        label: 'Total Profit',
-                        data: profitValues,
-                        borderColor: '#ffc107', // Amber/Gold for profit
-                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        label: 'Expense',
+                        data: expenseValues,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
                         borderWidth: 3,
                         tension: 0.3,
-                        fill: true
+                        fill: true,
+                        order: 2
+                    },
+                    {
+                        label: 'Profit',
+                        data: netCashflowValues,
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255, 193, 7, 0.15)',
+                        borderWidth: 4,
+                        tension: 0.3,
+                        fill: true,
+                        order: 1,
+                        borderDash: [5, 5]
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 scales: {
                     x: {
                         title: {
                             display: true,
-                            text: 'Months'
+                            text: 'Timeline (Month)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        grid: {
+                            display: false
                         }
                     },
                     y: {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Amount (₱)'
+                            text: 'Amount (₱)',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₱' + value.toLocaleString();
+                            }
                         }
                     }
                 },
                 plugins: {
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
-                                const monthData = phpData.incomeData[context.dataIndex];
-                                if (context.datasetIndex === 0) { // Income
-                                    return `Income: ₱${parseFloat(monthData.total_income).toLocaleString()}`;
-                                } else { // Profit
-                                    const profitMargin = ((parseFloat(monthData.total_profit) / parseFloat(monthData.total_income)) * 100).toFixed(1);
-                                    return `Profit: ₱${parseFloat(monthData.total_profit).toLocaleString()} (${profitMargin}% margin)`;
-                                }
+                            title: function(context) {
+                                return 'Month: ' + context[0].label;
                             },
-                            afterLabel: function(context) {
-                                const monthData = phpData.incomeData[context.dataIndex];
-                                return `Deliveries: ${monthData.total_deliveries}`;
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = parseFloat(context.parsed.y);
+                                return label + ': ₱' + value.toLocaleString(undefined, {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                });
+                            },
+                            footer: function(context) {
+                                const monthData = cashflowData[context[0].dataIndex];
+                                const income = parseFloat(monthData.total_income);
+                                const expense = parseFloat(monthData.total_expense);
+                                const net = parseFloat(monthData.net_cashflow);
+                                
+                                let status = '';
+                                if (net > 0) {
+                                    status = '✓ Positive Cashflow';
+                                } else if (net < 0) {
+                                    status = '✗ Negative Cashflow';
+                                } else {
+                                    status = '◎ Break Even';
+                                }
+                                
+                                return [
+                                    '',
+                                    status,
+                                    'Margin: ' + (income > 0 ? ((net / income) * 100).toFixed(1) + '%' : 'N/A')
+                                ];
                             }
+                        },
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        footerFont: {
+                            size: 12,
+                            weight: 'normal'
                         }
                     },
                     legend: {
                         display: true,
                         position: 'top',
-                    }
-                }
-            }
-        });
-    } else {
-        createEmptyChart(document.getElementById('incomeChart'), 'No income data available');
-    }
-    // Expense Chart - Expenses by Month (Line Chart)
-    if (phpData.expenseData && phpData.expenseData.length > 0) {
-        const months = phpData.expenseData.map(r => r.month);
-        const expenseValues = phpData.expenseData.map(r => parseFloat(r.total_expense));
-
-        new Chart(document.getElementById('expenseChart'), {
-            type: 'line',
-            data: {
-                labels: months,
-                datasets: [
-                    {
-                        label: 'Total Expense',
-                        data: expenseValues,
-                        borderColor: '#dc3545', // Red for expenses
-                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                        borderWidth: 3,
-                        tension: 0.3,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Months'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Amount (₱)'
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const monthData = phpData.expenseData[context.dataIndex];
-                                return `Expense: ₱${parseFloat(monthData.total_expense).toLocaleString()} (${monthData.total_transactions} transactions)`;
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 12
                             }
                         }
                     }
@@ -489,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     } else {
-        createEmptyChart(document.getElementById('expenseChart'), 'No expense data available');
+        createEmptyChart(document.getElementById('cashflowChart'), 'No cashflow data available');
     }
 
     // 📊 BUDGET VARIANCE
@@ -756,5 +775,95 @@ document.addEventListener('DOMContentLoaded', function() {
         createEmptyChart(document.getElementById('deliveryStatusPerLotChart'), 'No lot data available');
     }
 
+    // Expected vs Actual Deliveries by Warehouse
+    if (deliveriesByWarehouse && deliveriesByWarehouse.length > 0) {
+        const warehouses = deliveriesByWarehouse.map(w => w.warehouse_name);
+        const expectedData = deliveriesByWarehouse.map(w => parseInt(w.expected_deliveries));
+        const actualData = deliveriesByWarehouse.map(w => parseInt(w.actual_deliveries));
+
+        new Chart(document.getElementById('deliveriesByWarehouseChart'), {
+            type: 'bar',
+            data: {
+                labels: warehouses,
+                datasets: [
+                    {
+                        label: 'Expected Deliveries',
+                        data: expectedData,
+                        backgroundColor: deliveryStatusColors.Pending, // #dc3545 - Red
+                        borderColor: colorVariants.border.Pending,     // #dc3545
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Actual Deliveries',
+                        data: actualData,
+                        backgroundColor: deliveryStatusColors.Delivered, // #198754 - Green
+                        borderColor: colorVariants.border.Delivered,     // #198754
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Warehouses'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Deliveries'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const warehouseData = deliveriesByWarehouse[context.dataIndex];
+                                if (context.dataset.label === 'Expected Deliveries') {
+                                    return `Expected: ${context.parsed.y} deliveries`;
+                                } else {
+                                    const variance = warehouseData.expected_deliveries - warehouseData.actual_deliveries;
+                                    const status = variance <= 0 ? 'Met Target' : 'Behind Target';
+                                    const completionRate = warehouseData.expected_deliveries > 0 
+                                        ? Math.round((warehouseData.actual_deliveries / warehouseData.expected_deliveries) * 100) 
+                                        : 0;
+                                    return `Actual: ${context.parsed.y} deliveries | ${completionRate}% Complete | ${status}`;
+                                }
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            },
+            plugins: [{
+                afterDatasetsDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        meta.data.forEach((bar, index) => {
+                            const data = dataset.data[index];
+                            if (data > 0) {
+                                ctx.fillStyle = '#fff';
+                                ctx.font = 'bold 10px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(data, bar.x, bar.y - 10);
+                            }
+                        });
+                    });
+                }
+            }]
+        });
+    } else {
+        createEmptyChart(document.getElementById('deliveriesByWarehouseChart'), 'No deliveries data available for selected project');
+    }
 
 });

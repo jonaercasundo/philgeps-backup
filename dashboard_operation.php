@@ -13,6 +13,9 @@ try {
     $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
     $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Get warehouse list for dropdown
+    $warehouses = $pdo->query("SELECT warehouse_id, warehouse_name FROM warehouse ORDER BY warehouse_name")->fetchAll();
+    $warehouseId = $_GET['warehouse_id'] ?? ($warehouses[0]['warehouse_id'] ?? 0);
 
     $projectFilter = $selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "";
     // Get progress by region data
@@ -56,27 +59,49 @@ try {
             w.warehouse_name,
             i.item_name,
             i.unit,
-            COALESCE(
-                (SELECT ih.new_qty
-                FROM inventory_history ih
-                WHERE ih.item_id = i.item_id 
-                  AND ih.warehouse_id = w.warehouse_id 
-                  AND DATE(ih.changed_at) <= :selectedDate
-                ORDER BY ih.changed_at DESC 
-                LIMIT 1),
-                inv.qty
-            ) as qty
-        FROM inventory inv
-        JOIN item i ON inv.item_id = i.item_id
-        JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
-        WHERE inv.inventory_status = 'Approved'
-            " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
-        HAVING qty > 0
+            ih.new_qty as qty
+        FROM inventory_history ih
+        JOIN item i ON ih.item_id = i.item_id
+        JOIN warehouse w ON ih.warehouse_id = w.warehouse_id
+        WHERE ih.changed_at = (
+            SELECT MAX(ih2.changed_at)
+            FROM inventory_history ih2
+            WHERE ih2.item_id = ih.item_id 
+              AND ih2.warehouse_id = ih.warehouse_id 
+              AND DATE(ih2.changed_at) <= :selectedDate
+        )
+        AND DATE(ih.changed_at) <= :selectedDate
+        " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+        AND ih.new_qty > 0
         ORDER BY w.warehouse_name, i.item_name
     ";
     $stmt = $pdo->prepare($inventoryByWarehouseQuery);
     $stmt->execute(['selectedDate' => $selectedDate]);
     $inventoryByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get expected vs actual deliveries by warehouse
+    $deliveriesByWarehouseQuery = "
+        SELECT 
+            w.warehouse_id,
+            w.warehouse_name,
+            
+            -- Expected: Deliveries all status
+            COUNT(DISTINCT CONCAT_WS('-', d.school_id, d.lot_id)) AS expected_deliveries,
+            
+            -- Actual: Deliveries with status delivered and accepted
+            COUNT(DISTINCT CASE WHEN d.status IN ('delivered', 'accepted') 
+                  THEN CONCAT_WS('-', d.school_id, d.lot_id) END) AS actual_deliveries
+
+        FROM warehouse w
+        LEFT JOIN logistics_location ll ON w.warehouse_id = ll.warehouse_id
+        LEFT JOIN deliveries d ON ll.logistics_location_id = d.logistics_location_id
+        " . ($selectedProject > 0 ? " WHERE d.project_id = $selectedProject" : "") . "
+        GROUP BY w.warehouse_id, w.warehouse_name;
+    ";
+
+    $stmt = $pdo->query($deliveriesByWarehouseQuery);
+    $deliveriesByWarehouse = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
 
     /** // NOT USED //
     
@@ -168,7 +193,12 @@ if ($selectedProject > 0) {
 ?>
 <!-- Dashboard Header with Controls -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2>Production Dashboard</h2>
+  <h2>Production Performance</h2>
+  <div class="btn-group">
+    <a href="dashboard_production.php" class="btn btn-outline-primary btn-sm" role="button">
+      Back
+    </a>
+  </div>
 </div>
 <div class="container-fluid">
   <!-- Additional Charts Section -->
@@ -200,6 +230,21 @@ if ($selectedProject > 0) {
               </div>
             </form>
           </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- Deliveries by Warehouse Chart -->
+    <div class="col-md-12 chart-item" data-chart-id="deliveries-by-warehouse">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="mb-0 fw-bold">Expected vs Actual deliveries by Warehouse</h6>
+            </div>
+        </div>
+        <div class="card-body">
+          <canvas id="deliveriesByWarehouseChart" height="300"></canvas>
         </div>
       </div>
     </div>
@@ -310,7 +355,7 @@ if ($selectedProject > 0) {
         progressPerRegion: <?= json_encode($progressPerRegion) ?>,
         progressPerLot: <?= json_encode($progressPerLot) ?>,
         inventoryByWarehouse: <?= json_encode($inventoryByWarehouse) ?>,
-   
+        deliveriesByWarehouse: <?= json_encode($deliveriesByWarehouse) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>, 
     };
 </script>

@@ -1,6 +1,8 @@
 // Access the global phpData object created in the main PHP file.
 const {
     cashflowData,
+    incomeData,
+    expenseData,
     selectedProject
 } = phpData;
 
@@ -303,6 +305,138 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     } else {
         createEmptyChart(document.getElementById('cashflowChart'), 'No cashflow data available');
+    }
+
+        // Income Chart - Revenue & Profit by Month (Line Chart)
+    if (phpData.incomeData && phpData.incomeData.length > 0) {
+        const months = phpData.incomeData.map(r => r.month);
+        const incomeValues = phpData.incomeData.map(r => parseFloat(r.total_income));
+        const profitValues = phpData.incomeData.map(r => parseFloat(r.total_profit));
+
+        new Chart(document.getElementById('incomeChart'), {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'Total Income',
+                        data: incomeValues,
+                        borderColor: '#28a745', // Green for income
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Total Profit',
+                        data: profitValues,
+                        borderColor: '#ffc107', // Amber/Gold for profit
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Months'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount (₱)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const monthData = phpData.incomeData[context.dataIndex];
+                                if (context.datasetIndex === 0) { // Income
+                                    return `Income: ₱${parseFloat(monthData.total_income).toLocaleString()}`;
+                                } else { // Profit
+                                    const profitMargin = ((parseFloat(monthData.total_profit) / parseFloat(monthData.total_income)) * 100).toFixed(1);
+                                    return `Profit: ₱${parseFloat(monthData.total_profit).toLocaleString()} (${profitMargin}% margin)`;
+                                }
+                            },
+                            afterLabel: function(context) {
+                                const monthData = phpData.incomeData[context.dataIndex];
+                                return `Deliveries: ${monthData.total_deliveries}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    }
+                }
+            }
+        });
+    } else {
+        createEmptyChart(document.getElementById('incomeChart'), 'No income data available');
+    }
+    // Expense Chart - Expenses by Month (Line Chart)
+    if (phpData.expenseData && phpData.expenseData.length > 0) {
+        const months = phpData.expenseData.map(r => r.month);
+        const expenseValues = phpData.expenseData.map(r => parseFloat(r.total_expense));
+
+        new Chart(document.getElementById('expenseChart'), {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'Total Expense',
+                        data: expenseValues,
+                        borderColor: '#dc3545', // Red for expenses
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Months'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Amount (₱)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const monthData = phpData.expenseData[context.dataIndex];
+                                return `Expense: ₱${parseFloat(monthData.total_expense).toLocaleString()} (${monthData.total_transactions} transactions)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        createEmptyChart(document.getElementById('expenseChart'), 'No expense data available');
     }
 
 

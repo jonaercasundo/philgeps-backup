@@ -13,67 +13,78 @@ try {
     $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
     $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get cashflow data
+        // Get cashflow data
     $cashflowQuery = "
         SELECT 
-            month,
-            SUM(income) AS total_income,
-            SUM(expense) AS total_expense,
-            SUM(income) - SUM(expense) AS net_cashflow
-        FROM (
-            -- Income 
-            SELECT 
-                CASE 
-                    WHEN g.paid_at IS NOT NULL AND g.paid_at != '' AND DATE(g.paid_at) IS NOT NULL 
-                    THEN DATE_FORMAT(g.paid_at, '%Y-%m')
-                    ELSE NULL
-                END AS month,
-                SUM(i.price * pc.qty) AS income,
-                0 AS expense
-            FROM grouping g
-            JOIN billing_grouped bg ON g.group_id = bg.group_id
-            JOIN deliveries d ON bg.dr_no = d.dr_no
-            JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
-            JOIN package_content pc ON p.package_id = pc.package_id
-            JOIN item i ON pc.item_id = i.item_id
-            WHERE g.status = 'paid'
-                AND g.paid_at IS NOT NULL 
-                AND g.paid_at != ''
-                AND DATE(g.paid_at) IS NOT NULL
-                AND d.status NOT IN ('pending', 'cancelled')
-                " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-            GROUP BY month
-            
-            UNION ALL
-            
-            -- Expenses 
-            SELECT 
-                CASE 
-                    WHEN g.paid_at IS NOT NULL AND g.paid_at != '' AND DATE(g.paid_at) IS NOT NULL 
-                    THEN DATE_FORMAT(g.paid_at, '%Y-%m')
-                    ELSE NULL
-                END AS month,
-                0 AS income,
-                SUM(i.supplier_price * pc.qty) AS expense
-            FROM grouping g
-            JOIN billing_grouped bg ON g.group_id = bg.group_id
-            JOIN deliveries d ON bg.dr_no = d.dr_no
-            JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
-            JOIN package_content pc ON p.package_id = pc.package_id
-            JOIN item i ON pc.item_id = i.item_id
-            WHERE g.paid_at IS NOT NULL 
-                AND g.paid_at != ''
-                AND DATE(g.paid_at) IS NOT NULL
-                AND d.status NOT IN ('pending', 'cancelled')
-                " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-            GROUP BY month
-        ) combined
-        WHERE month IS NOT NULL
-        GROUP BY month
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
+            SUM(i.price * pc.qty) AS total_income,
+            SUM(i.supplier_price * pc.qty) AS total_expense,
+            SUM((i.price - i.supplier_price) * pc.qty) AS net_cashflow
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY DATE_FORMAT(g.paid_at, '%Y-%m')
         ORDER BY month;
     ";
     $stmt = $pdo->query($cashflowQuery);
     $cashflowData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Get income data (from paid deliveries)
+    $incomeQuery = "
+        SELECT 
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
+            SUM(i.price * pc.qty) AS total_income,
+            SUM((i.price - i.supplier_price) * pc.qty) AS total_profit,
+            COUNT(DISTINCT d.delivery_id) AS total_deliveries
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY month
+        ORDER BY month;
+    ";
+    $stmt = $pdo->query($incomeQuery);
+    $incomeData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get expense data (from paid deliveries - cost of goods sold)
+    $expenseQuery = "
+        SELECT 
+            DATE_FORMAT(g.paid_at, '%Y-%m') AS month,
+            SUM(i.supplier_price * pc.qty) AS total_expense,
+            COUNT(DISTINCT d.delivery_id) AS total_transactions
+        FROM grouping g
+        JOIN billing_grouped bg ON g.group_id = bg.group_id
+        JOIN deliveries d ON bg.dr_no = d.dr_no
+        JOIN package p ON (d.keystage_id = p.keystage_id AND d.lot_id = p.lot_id)
+        JOIN package_content pc ON p.package_id = pc.package_id
+        JOIN item i ON pc.item_id = i.item_id
+        WHERE g.status = 'paid'
+            AND g.paid_at IS NOT NULL 
+            AND g.paid_at != ''
+            AND DATE(g.paid_at) IS NOT NULL
+            AND d.status NOT IN ('pending', 'cancelled')
+            " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        GROUP BY month
+        ORDER BY month;
+    ";
+    $stmt = $pdo->query($expenseQuery);
+    $expenseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
   } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
@@ -127,7 +138,6 @@ if ($selectedProject > 0) {
         </div>
       </div>
     </div>
-
     <!-- Cashflow Chart - Actual Expense vs Income -->
     <div class="col-lg-12">
       <div class="card shadow-sm">
@@ -140,8 +150,29 @@ if ($selectedProject > 0) {
       </div>
     </div>
 
-  
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"> Income & Profit Overview</h6>
+        </div>
+        <div class="card-body">
+          <canvas id="incomeChart" height="300"></canvas>
+        </div>
+      </div>
     </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"> Expense Overview</h6>
+        </div>
+        <div class="card-body">
+          <canvas id="expenseChart" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
 </div>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -149,6 +180,8 @@ if ($selectedProject > 0) {
 <script>
     const phpData = {
         cashflowData: <?= json_encode($cashflowData) ?>,
+        incomeData: <?= json_encode($incomeData) ?>,
+        expenseData: <?= json_encode($expenseData) ?>,
         selectedProject: <?= json_encode($selectedProject) ?>
     };
 </script>

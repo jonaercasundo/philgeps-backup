@@ -115,11 +115,49 @@
         document.getElementById("edit_item_name").value = itemName.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
         document.getElementById("edit_warehouse_name").value = warehouseName.replace(/&#39;/g, "'").replace(/&quot;/g, '"');
         document.getElementById("edit_quantity").value = quantity;
+
+        // Store original quantity for change detection
+        document.getElementById("edit_quantity").setAttribute('data-original-value', quantity);
+
+        // Reset remarks fields when opening modal
+        document.getElementById("remarks_dropdown").value = "";
+        document.getElementById("custom_remarks").value = "";
+        
+        // Ensure custom remarks is hidden
+        const customRemarksCollapse = new bootstrap.Collapse(document.getElementById('customRemarksCollapse'), {
+            toggle: false
+        });
+        customRemarksCollapse.hide();
     }
 
     // Update inventory
     function updateInventory() {
         const formData = new FormData(document.getElementById('editForm'));
+        const originalQuantity = parseInt(document.getElementById("edit_quantity").getAttribute('data-original-value') || 0);
+        const newQuantity = parseInt(document.getElementById("edit_quantity").value);
+
+        // Get remarks value and add to form data
+        const dropdown = document.getElementById('remarks_dropdown');
+        let remarks = '';
+        
+        if (dropdown.value === 'custom') {
+            remarks = document.getElementById('custom_remarks').value.trim();
+        } else {
+            remarks = dropdown.value;
+        }
+
+        // Check if quantity changed and no remarks provided
+        const quantityChanged = (originalQuantity !== newQuantity);
+        if (quantityChanged && !remarks) {
+            alert("You've changed the quantity. Please add remarks about this change before proceeding.");
+            
+            // Focus on remarks dropdown and return to let user add remarks
+            dropdown.focus();
+            return;
+        }
+            
+        // Add remarks to form data
+        formData.append('remarks', remarks);
         
         fetch('script/update_inventory.php', {
             method: 'POST',
@@ -144,6 +182,7 @@
             alert('Error: ' + error);
         });
     }
+
 
     // Delete inventory
     function deleteInventory() {
@@ -173,73 +212,146 @@
         });
     }
 
-// Update Accept Modal
-function updateAcceptId(inventoryId) {
-    document.getElementById("accept_inventory_id").value = inventoryId;
-}
+    // Update Accept Modal
+    function updateAcceptId(inventoryId) {
+        document.getElementById("accept_inventory_id").value = inventoryId;
+    }
 
-// Update Reject Modal  
-function updateRejectId(inventoryId) {
-    document.getElementById("reject_inventory_id").value = inventoryId;
-}
+    // Update Reject Modal  
+    function updateRejectId(inventoryId) {
+        document.getElementById("reject_inventory_id").value = inventoryId;
+    }
 
-// Accept inventory
-function acceptInventory() {
-    const formData = new FormData(document.getElementById('acceptForm'));
-    
-    fetch('script/accept_inventory.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(text => {
-        try {
-            const data = JSON.parse(text);
-            if (data.success) {
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
-            } else {
-                // Redirect with error toast instead of alert
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+    // Accept inventory
+    function acceptInventory() {
+        const formData = new FormData(document.getElementById('acceptForm'));
+        
+        fetch('script/accept_inventory.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
+                } else {
+                    // Redirect with error toast instead of alert
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+                }
+            } catch (e) {
+                console.error('Response:', text);
+                window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
             }
-        } catch (e) {
-            console.error('Response:', text);
-            window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
-    });
-}
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
+        });
+    }
 
-// Reject inventory
-function rejectInventory() {
-    const formData = new FormData(document.getElementById('rejectForm'));
-    
-    fetch('script/reject_inventory.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(text => {
-        try {
-            const data = JSON.parse(text);
-            if (data.success) {
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
-            } else {
-                // Redirect with error toast instead of alert
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
-            }
-        } catch (e) {
-            console.error('Response:', text);
-            window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
+    // Update Reject Modal  
+    function updateRejectId(inventoryId) {
+        document.getElementById("reject_inventory_id").value = inventoryId;
+        
+        // Reset reject remarks fields when opening modal
+        document.getElementById("reject_remarks_dropdown").value = "";
+        document.getElementById("reject_custom_remarks").value = "";
+        
+        // Ensure reject custom remarks is hidden
+        const rejectCustomRemarksCollapse = new bootstrap.Collapse(document.getElementById('reject_customRemarksCollapse'), {
+            toggle: false
+        });
+        rejectCustomRemarksCollapse.hide();
+    }
+
+    // Reject inventory
+    function rejectInventory() {
+        const formData = new FormData(document.getElementById('rejectForm'));
+        
+        // Get reject remarks value
+        const dropdown = document.getElementById('reject_remarks_dropdown');
+        let remarks = '';
+        
+        if (dropdown && dropdown.value === 'custom') {
+            const customRemarks = document.getElementById('reject_custom_remarks');
+            remarks = customRemarks ? customRemarks.value.trim() : '';
+        } else if (dropdown) {
+            remarks = dropdown.value;
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
+        
+        // Add remarks to form data
+        formData.append('remarks', remarks);
+        
+        fetch('script/reject_inventory.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    // Close the reject modal
+                    const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
+                    rejectModal.hide();
+                    
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
+                } else {
+                    // Redirect with error toast instead of alert
+                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+                }
+            } catch (e) {
+                console.error('Response:', text);
+                window.location.href = 'inventory.php?toast=Invalid response from server&type=danger';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            window.location.href = 'inventory.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
+        });
+    }
+
+    // Handle dropdown change to show/hide custom remarks for REJECT modal
+    document.addEventListener('DOMContentLoaded', function() {
+        // For Edit Modal
+        const remarksDropdown = document.getElementById('remarks_dropdown');
+        if (remarksDropdown) {
+            remarksDropdown.addEventListener('change', function() {
+                const customRemarksCollapse = document.getElementById('customRemarksCollapse');
+                const bsCollapse = new bootstrap.Collapse(customRemarksCollapse, {
+                    toggle: false
+                });
+                
+                if (this.value === 'custom') {
+                    bsCollapse.show();
+                } else {
+                    bsCollapse.hide();
+                    document.getElementById('custom_remarks').value = '';
+                }
+            });
+        }
+
+        // For Reject Modal
+        const rejectRemarksDropdown = document.getElementById('reject_remarks_dropdown');
+        if (rejectRemarksDropdown) {
+            rejectRemarksDropdown.addEventListener('change', function() {
+                const rejectCustomRemarksCollapse = document.getElementById('reject_customRemarksCollapse');
+                const bsCollapse = new bootstrap.Collapse(rejectCustomRemarksCollapse, {
+                    toggle: false
+                });
+                
+                if (this.value === 'custom') {
+                    bsCollapse.show();
+                } else {
+                    bsCollapse.hide();
+                    document.getElementById('reject_custom_remarks').value = '';
+                }
+            });
+        }
     });
-}
+
 </script>
 
 

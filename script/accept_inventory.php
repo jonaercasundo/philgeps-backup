@@ -13,6 +13,7 @@ try {
     $inventory_id = $_POST['accept_inventory_id'];
     $password = $_POST['accept_password'];
     $username = $_SESSION['username'] ?? '';
+    $user_id = $_SESSION['user_id'] ??'';
 
     // Validate user session
     if (empty($username)) {
@@ -31,7 +32,11 @@ try {
     }
 
     // Get the inventory record to be accepted
-    $stmt = $pdo->prepare("SELECT * FROM inventory WHERE inventory_id = ?");
+    $stmt = $pdo->prepare("SELECT i.*, it.item_name, w.warehouse_name 
+                            FROM inventory i 
+                            JOIN item it ON i.item_id = it.item_id 
+                            JOIN warehouse w ON i.warehouse_id = w.warehouse_id 
+                            WHERE i.inventory_id = ?");
     $stmt->execute([$inventory_id]);
     $inventory = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -39,6 +44,10 @@ try {
         echo json_encode(["success" => false, "message" => "Inventory record not found"]);
         exit;
     }
+
+    $item_name = $inventory['item_name'];
+    $warehouse_name = $inventory['warehouse_name'];
+    $quantity = $inventory['qty'];
 
     // Check if there's an existing approved record with same item_id and warehouse_id
     $stmt = $pdo->prepare("SELECT * FROM inventory WHERE item_id = ? AND warehouse_id = ? AND inventory_status = 'Approved' AND inventory_id != ?");
@@ -54,6 +63,15 @@ try {
         // Delete the "For Approval" record since it's been merged
         $stmt = $pdo->prepare("DELETE FROM inventory WHERE inventory_id = ?");
         $stmt->execute([$inventory_id]);
+
+        // Prepare activity log for merged acceptance
+        $action_message = $username . " accepted and merged inventory item";
+        
+        $details = "Approved (+" . $quantity . ") " . $item_name . " in " . $warehouse_name . " and merged with existing inventory";
+        
+        // Insert into activity logs
+        $log_stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)");
+        $log_stmt->execute([$user_id, $action_message, $details]);
         
         echo json_encode(["success" => true, "message" => "Inventory accepted and merged with existing record"]);
     } else {
@@ -63,6 +81,15 @@ try {
         
         // Check if any rows were affected
         if ($stmt->rowCount() > 0) {
+            // Prepare activity log for new approval
+            $action_message = $username . " approved inventory item";
+            
+            $details = "Approved (+" . $quantity . ") " . $item_name . " in " . $warehouse_name;
+            
+            // Insert into activity logs
+            $log_stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)");
+            $log_stmt->execute([$user_id, $action_message, $details]);
+            
             echo json_encode(["success" => true, "message" => "Inventory accepted successfully"]);
         } else {
             echo json_encode(["success" => false, "message" => "No changes made"]);
