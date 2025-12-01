@@ -29,18 +29,18 @@ if ($limit > 10000) {
 
 try {
     $stmt = $pdo->prepare("
-        SELECT sp.school_id
+       SELECT sp.school_id
         FROM schools_project sp
         INNER JOIN school s ON s.school_id = sp.school_id
         WHERE sp.project_id = :project_id
-        ORDER BY sp.id ASC
-        LIMIT :limit OFFSET :offset
+          AND sp.batch_id BETWEEN :batch_from AND :batch_to
+        ORDER BY sp.batch_id ASC, sp.id ASC
     ");
 
     // Bind parameters with proper types
     $stmt->bindValue(':project_id', $project_id, PDO::PARAM_STR);
-    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+   $stmt->bindValue(':batch_from', $from, PDO::PARAM_INT);
+    $stmt->bindValue(':batch_to', $to, PDO::PARAM_INT);
     
     $stmt->execute();
     $school_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);

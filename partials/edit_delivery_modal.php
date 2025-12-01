@@ -166,26 +166,26 @@
             </select>
           </div>
 
-          <!-- School ID Range -->
+          <!-- Batch Range -->
           <div class="row mb-3">
             <div class="col">
               <label class="form-label">
-                Schools From 
-                <small class="text-muted">(1 = first school in project)</small>
+                Batch From 
+                <small class="text-muted">(Starting batch number)</small>
               </label>
               <input type="number" class="form-control" id="pageFrom" min="1" value="1" required>
             </div>
             <div class="col">
               <label class="form-label">
-                To 
-                <small class="text-muted">(e.g. 100 = first 100 schools)</small>
+                Batch To 
+                <small class="text-muted">(Ending batch number)</small>
               </label>
               <input type="number" class="form-control" id="pageTo" min="1" value="100" required>
             </div>
           </div>
 
           <div class="alert alert-info small p-2">
-            <strong>Tip:</strong> Use 1–100 for first 100 schools, 101–200 for next 100, etc.
+            <strong>Tip:</strong> Use batch 1–100 for first 100 batches, 101–200 for next 100 batches, etc.
           </div>
 
         </form>

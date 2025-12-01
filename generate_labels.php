@@ -57,9 +57,9 @@ if ($project_id !== '') {
 
 $sql .= "
     GROUP BY 
-        s.school_id, l.lot_name, i.item_name, i.unit
+        sp.batch_id, l.lot_name, i.item_name, i.unit
     ORDER BY 
-        s.school_id, l.lot_name, i.item_name
+        sp.batch_id, l.lot_name, i.item_name
 ";
 
 $stmt = $pdo->prepare($sql);
