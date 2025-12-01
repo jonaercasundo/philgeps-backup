@@ -26,11 +26,6 @@
             <input type="text" class="form-control" name="address" id="editAddress" disabled required>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Content / Remarks</label>
-            <input class="form-control" name="remarks" id="editRemarks" disabled></input>
-          </div>
-
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">DR No.</label>
@@ -166,16 +161,26 @@
             </select>
           </div>
 
-          <!-- Delivery Record Range -->
+          <!-- Batch Range -->
           <div class="row mb-3">
             <div class="col">
-              <label class="form-label">Record (From)</label>
-              <input type="number" class="form-control" id="schoolIdFrom" min="1" value="1" required>
+              <label class="form-label">
+                Batch From 
+                <small class="text-muted">(Starting batch number)</small>
+              </label>
+              <input type="number" class="form-control" id="pageFrom" min="1" value="1" required>
             </div>
             <div class="col">
-              <label class="form-label">Record (To)</label>
-              <input type="number" class="form-control" id="schoolIdTo" min="1" value="100" required>
+              <label class="form-label">
+                Batch To 
+                <small class="text-muted">(Ending batch number)</small>
+              </label>
+              <input type="number" class="form-control" id="pageTo" min="1" value="100" required>
             </div>
+          </div>
+
+          <div class="alert alert-info small p-2">
+            <strong>Tip:</strong> Use batch 1–100 for first 100 batches, 101–200 for next 100 batches, etc.
           </div>
 
         </form>
@@ -190,7 +195,7 @@
 </div>
 
 <!-- Hidden Form for Generation of QR -->
- <form id="qrForm" method="POST" action="generate_qr.php" target="_blank">
+<form id="qrForm" method="POST" action="generate_qr.php" target="_blank">
   <input type="hidden" name="ids" id="idsInput">
 </form>
 
@@ -208,7 +213,6 @@
     document.getElementById('editProject').value = button.getAttribute('data-project');
     document.getElementById('editSchool').value = button.getAttribute('data-school');
     document.getElementById('editAddress').value = button.getAttribute('data-address');
-    document.getElementById('editRemarks').value = button.getAttribute('data-remarks');
     document.getElementById('editDrNo').value = button.getAttribute('data-drno');
     document.getElementById('editDate').value = button.getAttribute('data-date');
     document.getElementById('editStatus').value = button.getAttribute('data-status');
@@ -357,84 +361,55 @@ document.getElementById('submitQR').addEventListener('click', function() {
 });
 
 // --- On submit ---
-document.getElementById('submitLabels').addEventListener('click', function() {
-  const projectId = document.getElementById('labelProjectSelect').value;
-  const deliveryFrom = parseInt(document.getElementById('schoolIdFrom').value);
-  const deliveryTo = parseInt(document.getElementById('schoolIdTo').value);
+document.getElementById('submitLabels').addEventListener('click', async function() {
+  const projectId = document.getElementById('labelProjectSelect').value.trim();
+  const pageFrom = parseInt(document.getElementById('pageFrom').value);
+  const pageTo = parseInt(document.getElementById('pageTo').value);
 
   // Validation
-  if (!projectId || !deliveryFrom || !deliveryTo) {
-    alert('Please fill all fields.');
+  if (!projectId) {
+    alert('Please select a Project.');
+    return;
+  }
+  if (isNaN(pageFrom) || isNaN(pageTo) || pageFrom < 1 || pageTo < pageFrom) {
+    alert('Please enter a valid page range (From ≤ To, and ≥ 1).');
+    return;
+  }
+  if (pageTo - pageFrom + 1 > 10000) {
+    alert('Maximum 10,000 schools allowed per batch.');
     return;
   }
 
-  if (deliveryTo < deliveryFrom) {
-    alert('The "To" record must be greater than or equal to "From".');
-    return;
+  // Show loading
+  const btn = this;
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+
+  try {
+    const res = await fetch(`script/get_school_id_range.php?project_id=${projectId}&from=${pageFrom}&to=${pageTo}`);
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    
+    const schoolIds = await res.json();
+    
+    if (schoolIds.error) throw new Error(schoolIds.message || schoolIds.error);
+    if (!schoolIds || schoolIds.length === 0) {
+      alert('No schools found in this page range.');
+      return;
+    }
+
+    window.open(
+      `generate_labels.php?school_ids=${encodeURIComponent(schoolIds.join(','))}&project_id=${projectId}`,
+      '_blank'
+    );
+  } catch (err) {
+    console.error(err);
+    alert('Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
-
-  if (deliveryFrom < 1 || deliveryTo < 1) {
-    alert('Record numbers must be 1 or greater.');
-    return;
-  }
-
- const range = deliveryTo - deliveryFrom + 1;
-  if (range > 100) {
-    alert('You can only generate a maximum of 100 delivery records at a time.');
-    return;
-  }
-
-  // Show loading state
-  const submitBtn = document.getElementById('submitLabels');
-  const originalText = submitBtn.textContent;
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Loading...';
-
-  fetch(`script/get_school_id_range.php?project_id=${projectId}&from=${deliveryFrom}&to=${deliveryTo}`)
-    .then(res => {
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        return res.text().then(text => {
-          console.error('Non-JSON response:', text);
-          throw new Error('Server returned non-JSON response');
-        });
-      }
-      return res.json().then(data => {
-        if (!res.ok) {
-          throw new Error(data.error || `HTTP error! status: ${res.status}`);
-        }
-        return data;
-      });
-    })
-    .then(data => {
-      if (data.error) {
-        alert('Error: ' + data.error + (data.details ? '\n\nDetails: ' + JSON.stringify(data.details) : ''));
-        return;
-      }
-      
-      if (!Array.isArray(data) || data.length === 0) {
-        alert('No schools found in this delivery record range.');
-        return;
-      }
-
-      // Open generate_labels.php with school_ids parameter
-      const schoolIds = data.join(',');
-      window.open(`generate_labels.php?school_ids=${encodeURIComponent(schoolIds)}`, '_blank');
-      
-      // Close modal after successful generation
-      const modal = bootstrap.Modal.getInstance(document.getElementById('generateLabelsModal'));
-      if (modal) modal.hide();
-      
-    })
-    .catch(err => {
-      console.error('Full error:', err);
-      alert('Error: ' + err.message);
-    })
-    .finally(() => {
-      // Restore button state
-      submitBtn.disabled = false;
-      submitBtn.textContent = originalText;
-    });
 });
+
 
 </script>

@@ -1,118 +1,56 @@
 <?php
-// Enable error reporting for debugging
+// script/get_school_id_range.php
+
+header('Content-Type: application/json; charset=utf-8');
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors directly, we'll return them as JSON
+ini_set('display_errors', 0); // Don't output errors directly
 
 require "../config/db.php";
 
-// Prevent any output before JSON
-ob_start();
+$project_id = $_GET['project_id'] ?? '';
+$from       = (int)($_GET['from'] ?? 1);
+$to         = (int)($_GET['to'] ?? 1);
+
+// Validation
+if (empty($project_id) || $from < 1 || $to < $from) {
+    echo json_encode(['error' => 'Invalid parameters']);
+    exit;
+}
+
+// Calculate limit and offset from page numbers
+$limit  = $to - $from + 1;
+$offset = $from - 1;
+
+// Maximum 10,000 schools
+if ($limit > 10000) {
+    echo json_encode(['error' => 'Maximum 10,000 schools allowed']);
+    exit;
+}
 
 try {
-    $project_id = $_GET['project_id'] ?? '';
-    $from = (int)($_GET['from'] ?? 0);
-    $to   = (int)($_GET['to'] ?? 0);
-
-    if (!$project_id) {
-        throw new Exception('Project ID is required');
-    }
-
-    if (!$from || !$to) {
-        throw new Exception('From and To values are required');
-    }
-
-    if ($from < 1 || $to < 1) {
-        throw new Exception('Record numbers must be 1 or greater');
-    }
-
-    if ($to < $from) {
-        throw new Exception('To value must be greater than or equal to From value');
-    }
-
-    // Calculate LIMIT and OFFSET from the range
-    $limit = $to - $from + 1;
-    $offset = $from - 1;
-
-    // First check if project exists
-    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM projects WHERE project_id = ?");
-    $checkStmt->execute([$project_id]);
-    if ($checkStmt->fetchColumn() == 0) {
-        throw new Exception('Project not found');
-    }
-
-    // Check if there are any deliveries for this project
-    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM deliveries WHERE project_id = ?");
-    $countStmt->execute([$project_id]);
-    $totalDeliveries = $countStmt->fetchColumn();
-    
-    if ($totalDeliveries == 0) {
-        // Clear buffer and return empty array (not an error)
-        ob_end_clean();
-        header('Content-Type: application/json');
-        echo json_encode([]);
-        exit;
-    }
-
-    if ($offset >= $totalDeliveries) {
-        throw new Exception("From value ($from) exceeds total deliveries ($totalDeliveries) for this project");
-    }
-
     $stmt = $pdo->prepare("
-        SELECT DISTINCT school_id
-        FROM (
-            SELECT school_id
-            FROM deliveries
-            WHERE project_id = ?
-            ORDER BY school_id
-            LIMIT ? OFFSET ?
-        ) AS delivery_range
-        ORDER BY school_id
+       SELECT sp.school_id
+        FROM schools_project sp
+        INNER JOIN school s ON s.school_id = sp.school_id
+        WHERE sp.project_id = :project_id
+          AND sp.batch_id BETWEEN :batch_from AND :batch_to
+        ORDER BY sp.batch_id ASC, sp.id ASC
     ");
+
+    // Bind parameters with proper types
+    $stmt->bindValue(':project_id', $project_id, PDO::PARAM_STR);
+   $stmt->bindValue(':batch_from', $from, PDO::PARAM_INT);
+    $stmt->bindValue(':batch_to', $to, PDO::PARAM_INT);
     
-    // Bind parameters with correct types
-    $stmt->bindValue(1, $project_id, PDO::PARAM_INT);
-    $stmt->bindValue(2, $limit, PDO::PARAM_INT);
-    $stmt->bindValue(3, $offset, PDO::PARAM_INT);
     $stmt->execute();
-    
     $school_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // Clear any buffered output
-    ob_end_clean();
-    
-    // Set proper JSON header
-    header('Content-Type: application/json');
     echo json_encode($school_ids);
 
-} catch (PDOException $e) {
-    // Clear any buffered output
-    ob_end_clean();
-    
-    // Return database error as JSON
-    header('Content-Type: application/json');
-    http_response_code(500);
-    echo json_encode([
-        'error' => 'Database error: ' . $e->getMessage(),
-        'details' => [
-            'project_id' => $project_id ?? null,
-            'from' => $from ?? null,
-            'to' => $to ?? null
-        ]
-    ]);
 } catch (Exception $e) {
-    // Clear any buffered output
-    ob_end_clean();
-    
-    // Return error as JSON
-    header('Content-Type: application/json');
-    http_response_code(400);
-    echo json_encode([
-        'error' => $e->getMessage(),
-        'details' => [
-            'project_id' => $project_id ?? null,
-            'from' => $from ?? null,
-            'to' => $to ?? null
-        ]
-    ]);
+    http_response_code(500);
+    error_log("get_school_id_range error: " . $e->getMessage());
+    echo json_encode(['error' => 'Database error', 'message' => $e->getMessage()]);
 }
-?>
+
+exit;
