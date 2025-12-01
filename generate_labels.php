@@ -20,11 +20,12 @@ $ids = is_string($raw_ids)
 $ids = array_filter($ids, 'is_numeric');
 if (empty($ids)) die("Invalid School IDs.");
 
-$project_id = $_GET['project_id'] ?? $_POST['project_id'] ?? null;
+$project_id = trim($_GET['project_id'] ?? $_POST['project_id'] ?? '');
 
 $placeholders = str_repeat('?,', count($ids) - 1) . '?';
 
-$stmt = $pdo->prepare("
+// Build the base query
+$sql = "
     SELECT DISTINCT
         s.school_id,
         s.school_name,
@@ -44,15 +45,25 @@ $stmt = $pdo->prepare("
     INNER JOIN package p         ON p.package_id = ps.package_id
     INNER JOIN package_content pc ON pc.package_id = p.package_id
     INNER JOIN item i            ON i.item_id = pc.item_id
-    WHERE sp.project_id = ?
-    AND s.school_id IN ($placeholders)
+    WHERE s.school_id IN (" . str_repeat('?,', count($ids) - 1) . "?)
+";
+
+// Add project filter only when project_id is provided and not empty
+$params = $ids; // school IDs are always bound
+if ($project_id !== '') {
+    $sql .= " AND sp.project_id = ?";
+    $params[] = $project_id;
+}
+
+$sql .= "
     GROUP BY 
         s.school_id, l.lot_name, i.item_name, i.unit
     ORDER BY 
         s.school_id, l.lot_name, i.item_name
-");
+";
 
-$stmt->execute(array_merge([$project_id], $ids));
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($rows)) die("No data found.");
