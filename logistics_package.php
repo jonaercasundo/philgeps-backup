@@ -8,104 +8,77 @@ require "script/role_auth.php";
 $allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator', 'Warehouse Admin', 'Warehouse Coordinator'];
 redirectIfNotAuthorized($allowed_roles, 'index.php');
 
-try {
-    $search_dr = trim($_GET['search_dr'] ?? '');
-    $limit = 10;
-    $page = max(1, intval($_GET['page'] ?? 1));
+function fetchAndGroupLogisticsData($pdo, $search_dr, $page, $limit) {
     $offset = ($page - 1) * $limit;
 
-    // Base queries and params
+    // Base query for counting
     $count_query = "SELECT COUNT(DISTINCT dr_no) FROM deliveries";
-    $dr_query = "SELECT DISTINCT dr_no FROM deliveries";
-    $params = [];
     $count_params = [];
-
     if (!empty($search_dr)) {
         $count_query .= " WHERE dr_no LIKE :search_dr";
-        $dr_query .= " WHERE dr_no LIKE :search_dr";
         $count_params[':search_dr'] = "%" . $search_dr . "%";
     }
     
-    // Count total unique deliveries
-    $stmt = $pdo->prepare($count_query);
-    $stmt->execute($count_params);
-    $total_rows = $stmt->fetchColumn();
-    $total_pages = ceil($total_rows / $limit);
-
-    // Add order and pagination to dr_query
+    $stmt_count = $pdo->prepare($count_query);
+    $stmt_count->execute($count_params);
+    $total_rows = $stmt_count->fetchColumn();
+    
+    // Fetch DR numbers for the current page
+    $dr_query = "SELECT DISTINCT dr_no FROM deliveries";
+    if (!empty($search_dr)) {
+        $dr_query .= " WHERE dr_no LIKE :search_dr";
+    }
     $dr_query .= " ORDER BY status, delivery_date LIMIT :limit OFFSET :offset";
     
-    // 1. Fetch the DR numbers for the current page
-    $dr_stmt = $pdo->prepare($dr_query);
+    $stmt_dr = $pdo->prepare($dr_query);
     if (!empty($search_dr)) {
-        $dr_stmt->bindValue(':search_dr', "%" . $search_dr . "%", PDO::PARAM_STR);
+        $stmt_dr->bindValue(':search_dr', "%" . $search_dr . "%", PDO::PARAM_STR);
     }
-    $dr_stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
-    $dr_stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
-    $dr_stmt->execute();
-    $dr_nos_for_page = $dr_stmt->fetchAll(PDO::FETCH_COLUMN);
+    $stmt_dr->bindValue(":limit", $limit, PDO::PARAM_INT);
+    $stmt_dr->bindValue(":offset", $offset, PDO::PARAM_INT);
+    $stmt_dr->execute();
+    $dr_nos_for_page = $stmt_dr->fetchAll(PDO::FETCH_COLUMN);
 
-    $deliveries = [];
-    if (!empty($dr_nos_for_page)) {
-        // 2. Fetch all data for those DR numbers
-        $placeholders = implode(',', array_fill(0, count($dr_nos_for_page), '?'));
-        
-        $stmt = $pdo->prepare("
-            SELECT 
-                d.delivery_id,
-                p_proj.project_name,
-                s.school_id,
-                s.school_name,
-                s.address,
-                d.package_type,
-                d.dr_no,
-                d.delivery_date,
-                d.status,
-                k.keystage_num,
-                k.description,
-                l.lot_name,
-                w.warehouse_id,
-                w.warehouse_name,
-                pkg.package_id,
-                pkg.package_num,
-                GROUP_CONCAT(item.item_name, ' (', pc.qty, ')' SEPARATOR '<br>') AS package_content,
-                ps.status as package_status,
-                ps.package_status_id
-            FROM deliveries d
-            JOIN projects p_proj ON d.project_id = p_proj.project_id
-            JOIN school s ON d.school_id = s.school_id
-            LEFT JOIN keystage k ON d.keystage_id = k.keystage_id
-            LEFT JOIN lot l ON d.lot_id = l.lot_id
-            LEFT JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
-            LEFT JOIN warehouse w ON ll.warehouse_id = w.warehouse_id
-            LEFT JOIN package_status ps ON d.delivery_id = ps.delivery_id
-            LEFT JOIN package pkg ON ps.package_id = pkg.package_id
-            LEFT JOIN package_content pc ON pkg.package_id = pc.package_id
-            LEFT JOIN item ON pc.item_id = item.item_id
-            WHERE d.dr_no IN ($placeholders)
-            GROUP BY d.delivery_id, pkg.package_id
-            ORDER BY d.status, d.delivery_date, d.dr_no, pkg.package_num
-        ");
-        $stmt->execute($dr_nos_for_page);
-        $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($dr_nos_for_page)) {
+        return ['grouped_deliveries' => [], 'total_pages' => 0];
     }
+
+    $placeholders = implode(',', array_fill(0, count($dr_nos_for_page), '?'));
+    $main_query = "
+        SELECT 
+            d.delivery_id, p_proj.project_name, s.school_id, s.school_name, s.address, d.package_type,
+            d.dr_no, d.delivery_date, d.status, k.keystage_num, k.description, l.lot_name, w.warehouse_id,
+            w.warehouse_name, pkg.package_id, pkg.package_num, ps.status as package_status, ps.package_status_id,
+            GROUP_CONCAT(item.item_name, ' (', pc.qty, ')' SEPARATOR '<br>') AS package_content
+        FROM deliveries d
+        JOIN projects p_proj ON d.project_id = p_proj.project_id
+        JOIN school s ON d.school_id = s.school_id
+        LEFT JOIN keystage k ON d.keystage_id = k.keystage_id
+        LEFT JOIN lot l ON d.lot_id = l.lot_id
+        LEFT JOIN logistics_location ll ON d.logistics_location_id = ll.logistics_location_id
+        LEFT JOIN warehouse w ON ll.warehouse_id = w.warehouse_id
+        LEFT JOIN package_status ps ON d.delivery_id = ps.delivery_id
+        LEFT JOIN package pkg ON ps.package_id = pkg.package_id
+        LEFT JOIN package_content pc ON pkg.package_id = pc.package_id
+        LEFT JOIN item ON pc.item_id = item.item_id
+        WHERE d.dr_no IN ($placeholders)
+        GROUP BY d.delivery_id, pkg.package_id
+        ORDER BY d.status, d.delivery_date, d.dr_no, pkg.package_num
+    ";
     
+    $stmt_main = $pdo->prepare($main_query);
+    $stmt_main->execute($dr_nos_for_page);
+    $deliveries = $stmt_main->fetchAll(PDO::FETCH_ASSOC);
+
     $grouped_deliveries = [];
     foreach ($deliveries as $row) {
         $dr = $row['dr_no'];
         if (!isset($grouped_deliveries[$dr])) {
             $grouped_deliveries[$dr] = [
-                'dr_no' => $dr,
-                'keystage_num' => $row['keystage_num'],
-                'description' => $row['description'],
-                'lot_name' => $row['lot_name'],
-                'project_name' => $row['project_name'],
-                'school_id' => $row['school_id'],
-                'school_name' => $row['school_name'],
-                'address' => $row['address'],
-                'delivery_date' => $row['delivery_date'],
-                'status' => $row['status'],
-                'packages' => []
+                'dr_no' => $dr, 'keystage_num' => $row['keystage_num'], 'description' => $row['description'],
+                'lot_name' => $row['lot_name'], 'project_name' => $row['project_name'], 'school_id' => $row['school_id'],
+                'school_name' => $row['school_name'], 'address' => $row['address'], 'delivery_date' => $row['delivery_date'],
+                'status' => $row['status'], 'packages' => []
             ];
         }
         if ($row['package_id']) {
@@ -113,10 +86,24 @@ try {
         }
     }
 
+    return [
+        'grouped_deliveries' => $grouped_deliveries,
+        'total_pages' => ceil($total_rows / $limit),
+    ];
+}
+
+try {
+    $search_dr = trim($_GET['search_dr'] ?? '');
+    $limit = 10;
+    $page = max(1, intval($_GET['page'] ?? 1));
+    
+    $data = fetchAndGroupLogisticsData($pdo, $search_dr, $page, $limit);
+    $grouped_deliveries = $data['grouped_deliveries'];
+    $total_pages = $data['total_pages'];
+
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
-}
-?>
+}?>
 <div class="row g-0 h-100">
     <?php 
     $user_role = $_SESSION['role'];
@@ -187,7 +174,7 @@ try {
                     <tbody>
                         <?php foreach ($grouped_deliveries as $dr_group): ?>
                             <tr class="table-secondary fw-bold">
-                                <td colspan="4">
+                                <td colspan="3">
                                     DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> |
                                     School: <?= htmlspecialchars($dr_group['school_name']) ?> <br>
                                     Lot: <?= htmlspecialchars($dr_group['lot_name']) ?>
@@ -199,28 +186,25 @@ try {
                                 <?php foreach ($dr_group['packages'] as $package_index => $package): 
                                     $status = strtolower(trim($package['package_status'] ?? ''));
                                     $is_inactive = ($status === 'delivered' || $status === 'pending');
-                                    $row_class = $is_inactive ? 'table-secondary' : '';
-                                    $row_style = $is_inactive ? 'opacity: 0.6;' : '';
+                                    $text_class = $is_inactive ? 'text-muted' : '';
                                 ?>
-                                    <tr style="<?= $row_style ?>">
-                                        <td>
-                                        <?php 
-                                            $total_packages_in_delivery = count($dr_group['packages']);
-                                            ?>
-                                            Package #<?= htmlspecialchars($package_index + 1) ?> out of <?= htmlspecialchars($total_packages_in_delivery) ?><br>
-                                            Status: <span class="fw-bold"><?= htmlspecialchars(ucfirst(strtolower($package['package_status'] ?? 'Pending'))) ?></span>
+                                    <tr class="<?= $row_class ?>">
+                                        <td class="<?= $text_class ?>">
+                                            Package #<?= htmlspecialchars($package_index + 1) ?> out of <?= count($dr_group['packages']) ?><br>
+                                            Status: <span class="fw-bold"><?= htmlspecialchars(ucfirst($status ?: 'Pending')) ?></span>
                                         </td>
-                                        <td><?= $package['package_content'] ?? '<em>No items</em>' ?></td>
-                                        <td class="text-center align-middle">
+                                        <td class="<?= $text_class ?>"><?= $package['package_content'] ?? '<em>No items</em>' ?></td>
+                                        <td class="text-center align-middle <?= $text_class ?>">
                                             <?php if (!$is_inactive): ?>
-                                                <a href="scan.php?id=<?= htmlspecialchars($package['package_status_id']) ?>&delivery_id=<?= htmlspecialchars($package['delivery_id']) ?>"target="_blank" class="btn btn-info btn-sm">Add Photos</a>
+                                                <a href="scan.php?id=<?= htmlspecialchars($package['package_status_id']) ?>&delivery_id=<?= htmlspecialchars($package['delivery_id']) ?>" target="_blank" class="btn btn-info btn-sm" title="Add Photos">
+                                                    <i class="bi bi-image fs-4"></i>
+                                                </a>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td></td>
                                     <td colspan="3"><em>No packages for this delivery.</em></td>
                                 </tr>
                             <?php endif; ?>
