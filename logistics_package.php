@@ -71,7 +71,16 @@ function fetchAndGroupLogisticsData($pdo, $search_dr, $page, $limit) {
     $deliveries = $stmt_main->fetchAll(PDO::FETCH_ASSOC);
 
     $grouped_deliveries = [];
+    $package_counts_per_delivery = [];
     foreach ($deliveries as $row) {
+        if ($row['package_id']) {
+            $delivery_id = $row['delivery_id'];
+            if (!isset($package_counts_per_delivery[$delivery_id])) {
+                $package_counts_per_delivery[$delivery_id] = 0;
+            }
+            $package_counts_per_delivery[$delivery_id]++;
+        }
+
         $dr = $row['dr_no'];
         if (!isset($grouped_deliveries[$dr])) {
             $grouped_deliveries[$dr] = [
@@ -89,6 +98,7 @@ function fetchAndGroupLogisticsData($pdo, $search_dr, $page, $limit) {
     return [
         'grouped_deliveries' => $grouped_deliveries,
         'total_pages' => ceil($total_rows / $limit),
+        'package_counts' => $package_counts_per_delivery,
     ];
 }
 
@@ -100,6 +110,7 @@ try {
     $data = fetchAndGroupLogisticsData($pdo, $search_dr, $page, $limit);
     $grouped_deliveries = $data['grouped_deliveries'];
     $total_pages = $data['total_pages'];
+    $package_counts = $data['package_counts'];
 
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
@@ -168,7 +179,7 @@ try {
                                 ?>
                                     <tr class="<?= $row_class ?>">
                                         <td class="<?= $text_class ?>">
-                                            Package #<?= htmlspecialchars($package_index + 1) ?> out of <?= count($dr_group['packages']) ?><br>
+                                            Package <?= htmlspecialchars($package['package_num']) ?> out of <?= $package_counts[$package['delivery_id']] ?? 0 ?><br>
                                             Status: <span class="fw-bold"><?= htmlspecialchars(ucfirst($status ?: 'Pending')) ?></span>
                                         </td>
                                         <td class="<?= $text_class ?>"><?= $package['package_content'] ?? '<em>No items</em>' ?></td>
