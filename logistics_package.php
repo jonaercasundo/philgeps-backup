@@ -245,7 +245,7 @@ try {
         console.log(`Scan result: ${decodedText}`, decodedResult);
 
         // Only navigate if the decoded text is a URL to scan.php
-        if (typeof decodedText === 'string' && decodedText.includes('scan.php')) {
+        if (typeof decodedText === 'string' && decodedText.includes('entry.php')) {
             window.location.href = decodedText;
             return;
         }
