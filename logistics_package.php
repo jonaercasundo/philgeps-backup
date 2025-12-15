@@ -1,5 +1,5 @@
 <?php 
-$is_logistics_package_page = true;
+$is_logistics_page = true;
 require "template/header.php"; 
 require "config/db.php";
 require "script/role_auth.php";
