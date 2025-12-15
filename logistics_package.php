@@ -242,15 +242,12 @@ try {
 <script>
     // Handle successful QR code or USB scan
     function onScanSuccess(decodedText, decodedResult) {
-        console.log(`Scan result: ${decodedText}`, decodedResult);
 
         // Only navigate if the decoded text is a URL to scan.php
         if (typeof decodedText === 'string' && decodedText.includes('entry.php')) {
             window.location.href = decodedText;
             return;
         }
-        // If it's not a URL for scan.php, do nothing, as per the user's request to remove "add items" functionality.
-        console.warn("QR code did not contain a valid scan.php URL or unexpected format:", decodedText);
     }
 
     // Handle USB scanner input
