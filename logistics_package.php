@@ -5,7 +5,7 @@ require "config/db.php";
 require "script/role_auth.php";
 
 // roles allowed to access this page
-$allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator', 'Warehouse Admin', 'Warehouse Coordinator'];
+$allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator', 'Warehouse Coordinator'];
 redirectIfNotAuthorized($allowed_roles, 'index.php');
 
 function fetchAndGroupLogisticsData($pdo, $search_dr, $page, $limit) {

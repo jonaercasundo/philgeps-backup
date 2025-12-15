@@ -181,6 +181,7 @@ if (isset($is_logistics_page) && $is_logistics_page === true):
     $logisticsNav = [
       'logistics.php' => 'Overview',
       'logistics_details.php' => 'Logistics',
+      'logistics_package.php' => 'Packages',
       'logistics_location.php' => 'Location',
       'logistics_reports.php' => 'Reports'
     ];
