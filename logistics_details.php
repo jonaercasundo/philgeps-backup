@@ -5,7 +5,7 @@
     require "config/db.php";
 
     // roles allowed to access this page
-    $allowed_roles = ['Super Admin', 'Admin', 'Coordinator'];
+    $allowed_roles = ['Super Admin', 'Admin', 'Coordinator', 'Logistics'];
 
     // redirect
     redirectIfNotAuthorized($allowed_roles, 'index.php');
