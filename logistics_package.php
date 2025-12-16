@@ -5,7 +5,7 @@ require "config/db.php";
 require "script/role_auth.php";
 
 // roles allowed to access this page
-$allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator', 'Warehouse Coordinator'];
+$allowed_roles = ['Super Admin', 'Office Admin', 'Office Coordinator', 'Logistics'];
 redirectIfNotAuthorized($allowed_roles, 'index.php');
 
 function fetchAndGroupLogisticsData($pdo, $search_dr, $page, $limit) {
@@ -118,7 +118,7 @@ try {
 <div class="row g-0 h-100">
     <?php 
     $user_role = $_SESSION['role'];
-    if ($user_role == "Office Coordinator" || $user_role == "Warehouse Admin" || $user_role == "Warehouse Coordinator" || $user_role == "Super Admin" || $user_role == "Office Admin"): 
+    if ($user_role == "Office Coordinator" || $user_role == "Logistics" || $user_role == "Super Admin" || $user_role == "Office Admin"): 
     ?>
     <!-- 1. LEFT SIDEBAR (3 Columns wide on medium/large screens) -->
     <div class="col-md-3 border-end d-flex flex-column vh-100">

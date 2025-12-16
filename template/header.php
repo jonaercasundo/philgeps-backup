@@ -98,6 +98,12 @@ switch($_SESSION['role']){
     ];
     
   break;
+  case "Logistics":
+    $mainNav = [
+      // "deliveries.php" => "Deliveries",
+      "logistics.php" => "Logistics",
+    ];
+  break;
   case "Viewer":
     $mainNav = [
       "projects.php" => "Projects",
