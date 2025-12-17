@@ -453,7 +453,7 @@
                             <span style="display:none;" id="item${row.inventory_id}">${itemName}</span>
                             <span style="display:none;" id="warehouse${row.inventory_id}">${warehouseName}</span>
                             <span style="display:none;" id="quantity${row.inventory_id}">${row.qty}</span>
-                            <div class="btn-group" role="group">
+                            <div class="text-center align-middle" role="group">
                                 ${actionButtons}
                             </div>
                         `;
