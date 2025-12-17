@@ -279,9 +279,8 @@ try {
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to accept this package?</p>
-                <form id="acceptPackageForm" method="POST" action="script/update_package_approval.php">
+                <form id="acceptPackageForm" onsubmit="event.preventDefault(); submitAcceptPackage();">
                     <input type="hidden" name="package_status_id" id="accept_package_status_id">
-                    <input type="hidden" name="new_status" value="accepted">
                     <div class="mb-3">
                         <label class="form-label">Input password to Continue</label>
                         <input type="password" class="form-control" name="password" required>
@@ -290,7 +289,7 @@ try {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-success" onclick="submitAcceptPackage()">Accept</button>
+                <button type="submit" form="acceptPackageForm" class="btn btn-success">Accept</button>
             </div>
         </div>
     </div>
@@ -304,11 +303,10 @@ try {
                 <h5 class="modal-title">Reject Package</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="rejectPackageForm" method="POST" action="script/update_package_approval.php">
-                <div class="modal-body">
+            <div class="modal-body">
+                 <form id="rejectPackageForm" onsubmit="event.preventDefault(); submitRejectPackage();">
                     <p>Are you sure you want to reject this package?</p>
                     <input type="hidden" name="package_status_id" id="reject_package_status_id">
-                    <input type="hidden" name="new_status" value="rejected">
                     <div class="mb-3">
                         <label class="form-label">Input password to Continue</label>
                         <input type="password" class="form-control" name="password" required>
@@ -331,12 +329,12 @@ try {
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-danger" onclick="submitRejectPackage()">Reject</button>
-                </div>
-            </form>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" form="rejectPackageForm" class="btn btn-danger">Reject</button>
+            </div>
         </div>
     </div>
 </div>
@@ -355,73 +353,107 @@ try {
         document.getElementById('reject_package_status_id').value = packageStatusId;
     }
     
-    function submitAcceptPackage() {
-        const formData = new FormData(document.getElementById('acceptPackageForm'));
-        
-        fetch('script/update_package_approval.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.text())
-        .then(text => {
-            try {
-                const data = JSON.parse(text);
-                if (data.success) {
-                    window.location.href = 'logistics_package.php?toast=' + encodeURIComponent(data.message) + '&type=success';
-                } else {
-                    window.location.href = 'logistics_package.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
-                }
-            } catch (e) {
-                console.error('Response:', text);
-                window.location.href = 'logistics_package.php?toast=Invalid response from server&type=danger';
+function submitAcceptPackage() {
+    const formData = new FormData(document.getElementById('acceptPackageForm'));
+    
+    fetch('script/accept_package.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(text => {
+        try {
+            const data = JSON.parse(text);
+            if (data.success) {
+                window.location.href = 'logistics_package.php?toast=' + encodeURIComponent(data.message) + '&type=success';
+            } else {
+                // Close the modal first
+                const acceptModal = bootstrap.Modal.getInstance(document.getElementById('acceptPackageModal'));
+                if (acceptModal) acceptModal.hide();
+                
+                // Show error as toast instead of alert
+                window.location.href = 'logistics_package.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            window.location.href = 'logistics_package.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
-        });
-    }
-
-    function submitRejectPackage() {
-        const formData = new FormData(document.getElementById('rejectPackageForm'));
-        
-        const dropdown = document.getElementById('reject_package_remarks_dropdown');
-        let remarks = '';
-        
-        if (dropdown && dropdown.value === 'custom') {
-            const customRemarks = document.getElementById('reject_package_custom_remarks');
-            remarks = customRemarks ? customRemarks.value.trim() : '';
-        } else if (dropdown) {
-            remarks = dropdown.value;
+        } catch (e) {
+            console.error('Response:', text);
+            
+            // Close the modal first
+            const acceptModal = bootstrap.Modal.getInstance(document.getElementById('acceptPackageModal'));
+            if (acceptModal) acceptModal.hide();
+            
+            // Show error as toast
+            window.location.href = 'logistics_package.php?toast=Invalid response from server&type=danger';
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
         
-        formData.append('remarks', remarks);
+        // Close the modal first
+        const acceptModal = bootstrap.Modal.getInstance(document.getElementById('acceptPackageModal'));
+        if (acceptModal) acceptModal.hide();
         
-        fetch('script/update_package_approval.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.text())
-        .then(text => {
-            try {
-                const data = JSON.parse(text);
-                if (data.success) {
-                    const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectPackageModal'));
-                    rejectModal.hide();
-                    window.location.href = 'logistics_package.php?toast=' + encodeURIComponent(data.message) + '&type=success';
-                } else {
-                    window.location.href = 'logistics_package.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
-                }
-            } catch (e) {
-                console.error('Response:', text);
-                window.location.href = 'logistics_package.php?toast=Invalid response from server&type=danger';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            window.location.href = 'logistics_package.php?toast=Network error: ' + encodeURIComponent(error.message) + '&type=danger';
-        });
+        // Show error as toast
+        window.location.href = 'logistics_package.php?toast=' + encodeURIComponent('Network error: ' + error.message) + '&type=danger';
+    });
+}
+
+function submitRejectPackage() {
+    const formData = new FormData(document.getElementById('rejectPackageForm'));
+    
+    const dropdown = document.getElementById('reject_package_remarks_dropdown');
+    let remarks = '';
+    
+    if (dropdown && dropdown.value === 'custom') {
+        const customRemarks = document.getElementById('reject_package_custom_remarks');
+        remarks = customRemarks ? customRemarks.value.trim() : '';
+    } else if (dropdown) {
+        remarks = dropdown.value;
     }
+    
+    formData.append('remarks', remarks);
+    
+    fetch('script/reject_package.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(text => {
+        try {
+            const data = JSON.parse(text);
+            if (data.success) {
+                const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectPackageModal'));
+                if (rejectModal) rejectModal.hide();
+                
+                window.location.href = 'logistics_package.php?toast=' + encodeURIComponent(data.message) + '&type=success';
+            } else {
+                // Close the modal first
+                const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectPackageModal'));
+                if (rejectModal) rejectModal.hide();
+                
+                // Show error as toast instead of alert
+                window.location.href = 'logistics_package.php?toast=' + encodeURIComponent(data.message) + '&type=danger';
+            }
+        } catch (e) {
+            console.error('Response:', text);
+            
+            // Close the modal first
+            const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectPackageModal'));
+            if (rejectModal) rejectModal.hide();
+            
+            window.location.href = 'logistics_package.php?toast=Invalid response from server&type=danger';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        
+        // Close the modal first
+        const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectPackageModal'));
+        if (rejectModal) rejectModal.hide();
+        
+        // Show error as toast
+        window.location.href = 'logistics_package.php?toast=' + encodeURIComponent('Network error: ' + error.message) + '&type=danger';
+    });
+}
 
     // Handle dropdown change to show/hide custom remarks for REJECT modal
     document.addEventListener('DOMContentLoaded', function() {
