@@ -55,7 +55,7 @@ const colorVariants = {
 };
 
 // Access data from global phpData object
-const { projectStatusOverview, varianceData } = phpData;
+const { projectStatusOverview, varianceData, allProjectsWithStatus } = phpData;
 
 // Function to handle empty data and create a placeholder chart
 function createEmptyChart(ctx, message) {
@@ -130,6 +130,55 @@ document.addEventListener("DOMContentLoaded", function () {
             },
           },
         },
+        onClick: function(evt, elements) {
+            if (elements && elements.length > 0) {
+                const elementIndex = elements[0].index;
+                const chart = this;
+                const label = chart.data.labels[elementIndex];
+                
+                // Extract status from label like "Upcoming (33.3%)"
+                const displayedStatus = label.split(' (')[0];
+                
+                // Map displayed status back to DB status
+                const statusMap = {
+                    'Upcoming': 'Pending Evaluation',
+                    'For Award': 'For Award',
+                    'For Implementation': 'For Implementation',
+                    'Ongoing': 'Ongoing',
+                    'Completed': 'Delivered', // Displayed 'Completed' is 'Delivered' in DB
+                    'Collected': 'Completed'  // Displayed 'Collected' is 'Completed' in DB
+                };
+                const dbStatus = statusMap[displayedStatus];
+
+                if (!dbStatus) return;
+
+                // Filter projects based on the database status
+                const projects = allProjectsWithStatus.filter(p => p.status === dbStatus);
+
+                // Populate and show the modal
+                const projectList = document.getElementById('projectList');
+                projectList.innerHTML = ''; // Clear previous list
+
+                if (projects.length > 0) {
+                    projects.forEach(p => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item';
+                        li.textContent = p.project_name;
+                        projectList.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = 'No projects found for this status.';
+                    projectList.appendChild(li);
+                }
+
+                document.getElementById('projectListModalLabel').textContent = `Projects: ${displayedStatus}`;
+                
+                const projectModal = new bootstrap.Modal(document.getElementById('projectListModal'));
+                projectModal.show();
+            }
+        }
       },
     });
   } else {

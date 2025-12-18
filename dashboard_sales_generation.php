@@ -9,8 +9,10 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
 $selectedProject = isset($_GET['project_id']) ? (int)$_GET['project_id'] : 0;
 
 try {
-    $stmt = $pdo->query("SELECT project_id, project_name FROM projects ORDER BY project_name");
-    $allProjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Fetch all projects with their status
+    $stmt = $pdo->query("SELECT project_id, project_name, status FROM projects ORDER BY project_name");
+    $allProjectsWithStatus = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $allProjects = $allProjectsWithStatus; // For compatibility
 
     $projectFilter = $selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "";
     $deliveryProjectFilter = $selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "";
@@ -245,11 +247,32 @@ if ($selectedProject > 0) {
   const phpData = {      
         projectStatusOverview: <?= json_encode($projectStatusOverview) ?>,
         opportunity: <?= json_encode($opportunity) ?>,
+        allProjectsWithStatus: <?= json_encode($allProjectsWithStatus) ?>
     };
 </script>
 
 <script src="assets/js/sortable.js"></script>
 <script src="assets/js/dashboard_sales_generation.js"></script>
+
+<!-- Project List Modal -->
+<div class="modal fade" id="projectListModal" tabindex="-1" aria-labelledby="projectListModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="projectListModalLabel">Projects</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group" id="projectList">
+          <!-- Project items will be injected here by JavaScript -->
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <?php require "template/footer.php"; ?>
 
