@@ -25,23 +25,23 @@ try {
         SELECT 
             COUNT(*) AS total,
             CASE p.status
-                WHEN 'Pending Evaluation' THEN 'Pending Evaluation'
+                WHEN 'Pending Evaluation' THEN 'Upcoming'
                 WHEN 'For Award' THEN 'For Award'
                 WHEN 'For Implementation' THEN 'For Implementation'
                 WHEN 'Ongoing' THEN 'Ongoing'
-                WHEN 'Delivered' THEN 'Delivered'
-                WHEN 'Completed' THEN 'Completed'
+                WHEN 'Delivered' THEN 'Completed'
+                WHEN 'Completed' THEN 'Collected'
                 ELSE p.status
             END AS status
         FROM projects p
         GROUP BY 
             CASE p.status
-                WHEN 'Pending Evaluation' THEN 'Pending Evaluation'
+                WHEN 'Pending Evaluation' THEN 'Upcoming'
                 WHEN 'For Award' THEN 'For Award'
                 WHEN 'For Implementation' THEN 'For Implementation'
                 WHEN 'Ongoing' THEN 'Ongoing'
-                WHEN 'Delivered' THEN 'Delivered'
-                WHEN 'Completed' THEN 'Completed'
+                WHEN 'Delivered' THEN 'Completed'
+                WHEN 'Completed' THEN 'Collected'
                 ELSE p.status
             END
         ORDER BY total DESC;

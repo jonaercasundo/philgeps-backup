@@ -9,12 +9,12 @@ const deliveryStatusColors = {
 
 // Project Status Colors (Green-Yellow-Red)
 const projectStatusColors = {
-  "Pending Evaluation": "#dc3545", // Red
+  "Upcoming": "#dc3545", // Red
   "For Award": "#fbc02d", // Yellow
   "For Implementation": "#e6b422", // Darker Yellow
   Ongoing: "#d4a81e", // Even Darker Yellow
-  Delivered: "#198754", // Green
-  Completed: "#157347", // Darker Green
+  Completed: "#198754", // Green
+  "Collected": "#157347", // Darker Green
 };
 
 const primaryColors = [
@@ -31,26 +31,26 @@ const primaryColors = [
 // Color variants
 const colorVariants = {
   light: {
-    Delivered: "rgba(25, 135, 84, 0.15)",
+    Completed: "rgba(25, 135, 84, 0.15)",
     Accepted: "rgba(251, 192, 45, 0.15)",
     Pending: "rgba(220, 53, 69, 0.15)",
     Cancelled: "rgba(176, 42, 55, 0.15)",
-    "Pending Evaluation": "rgba(220, 53, 69, 0.15)",
+    "Upcoming": "rgba(220, 53, 69, 0.15)",
     "For Award": "rgba(251, 192, 45, 0.15)",
     "For Implementation": "rgba(230, 180, 34, 0.15)",
     Ongoing: "rgba(212, 168, 30, 0.15)",
-    Completed: "rgba(21, 115, 71, 0.15)",
+    "Collected": "rgba(21, 115, 71, 0.15)",
   },
   border: {
-    Delivered: "#198754",
+    Completed: "#198754",
     Accepted: "#fbc02d",
     Pending: "#dc3545",
     Cancelled: "#b02a37",
-    "Pending Evaluation": "#dc3545",
+    "Upcoming": "#dc3545",
     "For Award": "#fbc02d",
     "For Implementation": "#e6b422",
     Ongoing: "#d4a81e",
-    Completed: "#157347",
+    "Collected": "#157347",
   },
 };
 
