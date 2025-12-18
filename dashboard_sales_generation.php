@@ -286,7 +286,7 @@ $(document).ready(function() {
     paging: true,
     responsive: false,
     fixedColumns: {
-      leftColumns: 1
+      rightColumns: 1
     },
     order: [[1, 'desc']],
     pageLength: 25,
