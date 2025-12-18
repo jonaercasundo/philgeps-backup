@@ -61,7 +61,7 @@ $mainNav = [
     "projects.php" => "Projects",
     "deliveries.php" => "Deliveries",
     "inventory.php" => "Warehouse",
-    "logistics.php" => "Logistics",
+    "logistics_package.php" => "Logistics",
     "billing.php" => "<span class='text-decoration-line-through'>Billing</span>",
     "reports.php" => "<span class='text-decoration-line-through'>Reports</span>",
     "users.php" => "Users"
@@ -74,7 +74,7 @@ switch($_SESSION['role']){
     "projects.php" => "Projects",
     "deliveries.php" => "Deliveries",
     "inventory.php" => "Warehouse",
-    "logistics.php" => "Logistics",
+    "logistics_package.php" => "Logistics",
     ];
   break;
   case "Warehouse Admin":
@@ -94,21 +94,21 @@ switch($_SESSION['role']){
     $mainNav = [
       "projects.php" => "Projects",
       "deliveries.php" => "Deliveries",
-      "logistics.php" => "Logistics",
+      "logistics_package.php" => "Logistics",
     ];
     
   break;
   case "Logistics":
     $mainNav = [
       // "deliveries.php" => "Deliveries",
-      "logistics.php" => "Logistics",
+      "logistics_package.php" => "Logistics",
     ];
   break;
   case "Viewer":
     $mainNav = [
       "projects.php" => "Projects",
       "deliveries.php" => "Deliveries",
-      "logistics.php" => "Logistics",
+      "logistics_package.php" => "Logistics",
     ];
     
   break;
@@ -185,12 +185,16 @@ if (isset($is_warehouse_page) && $is_warehouse_page === true):
 if (isset($is_logistics_page) && $is_logistics_page === true): 
 
     $logisticsNav = [
-      'logistics.php' => 'Overview',
       'logistics_details.php' => 'Logistics',
       'logistics_package.php' => 'Packages',
       'logistics_location.php' => 'Location',
       'logistics_reports.php' => 'Reports'
     ];
+    if($_SESSION['role'] == 'Logistics'){
+      $logisticsNav = [
+        'logistics_package.php' => 'Packages'
+      ];
+    }
 ?>
 
 <nav id="logistics_nav" class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">

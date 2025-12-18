@@ -49,7 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 
             break;
             case "Logistics":
-                header("Location: ../logistics.php?toast=Welcome ". $_SESSION['name']."!&type=success");
+                header("Location: ../logistics_package.php?toast=Welcome ". $_SESSION['name']."!&type=success");
             break;
             default:
                 header("Location: ../dashboard.php?toast=Welcome ". $_SESSION['name']."!&type=success");
