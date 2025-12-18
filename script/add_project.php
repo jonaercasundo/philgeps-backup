@@ -23,6 +23,14 @@ try {
         $_POST['rawNumber2']
     ]);
 
+    $project_id = $pdo->lastInsertId();
+
+    $sales_stmt = $pdo->prepare(
+        "INSERT INTO sales_generation (project_id, net_sales, cogs, total_cost_of_sales, pgp, gpm, opex, ppl, npm) 
+        VALUES (?, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00)"
+    );
+    $sales_stmt->execute([$project_id]);
+
     $stmt = $pdo->prepare("INSERT INTO activity_logs 
         (user_id, action) 
         VALUES (?, ?)");
