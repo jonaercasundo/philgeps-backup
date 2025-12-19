@@ -16,6 +16,7 @@
               <option>Warehouse Coordinator</option>
               <option>Office Admin</option>
               <option>Office Coordinator</option>
+              <option>Logistics</option>
               <option>Viewer</option>
             </select>
           </div>
@@ -82,7 +83,7 @@
                 <option value="Admin">Admin</option>
                 <option value="Office Coordinator">Office Coordinator</option>
                 <option value="Warehouse Coordinator">Warehouse Coordinator</option>
-            </select>
+                <option value="Logistics">Logistics</option>            </select>
           </div>
 
           <div id="warehouseContainer"class="mb-3 visually-hidden">
