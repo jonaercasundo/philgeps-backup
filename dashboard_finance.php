@@ -166,6 +166,7 @@ if ($selectedProject > 0) {
         }
     }
 }
+$projectTitleSuffix = ($selectedProject > 0) ? ' - ' . htmlspecialchars($selectedProjectName) : '';
 ?>
 
 <link rel="stylesheet" href="./assets/css/dashboard.css">
@@ -228,7 +229,7 @@ if ($selectedProject > 0) {
         <div class="card shadow-sm">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
               <div>
-                <h6 class="mb-0 fw-bold">Expense vs Income</h6>
+                <h6 class="mb-0 fw-bold">Expense Vs Income<?= $projectTitleSuffix ?></h6>
               </div>
               
             <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
@@ -243,7 +244,7 @@ if ($selectedProject > 0) {
       <div class="col-lg-12 chart-item" data-chart-id="item-price-variance-chart">
         <div class="card shadow-sm">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"> Item Price Variance</h6>
+            <h6 class="mb-0">Item Price Variance<?= $projectTitleSuffix ?></h6>
             <!-- <a href="report/print_income.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
               <i class="bi bi-printer"></i>
             </a> -->
@@ -259,7 +260,7 @@ if ($selectedProject > 0) {
       <div class="col-lg-12 chart-item" data-chart-id="income-expense-by-item-chart">
         <div class="card shadow-sm">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">Income & Expense by Item</h6>
+            <h6 class="mb-0">Income & Expense By Item<?= $projectTitleSuffix ?></h6>
             <!-- <a href="report/print_income_expense_by_item.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
               <i class="bi bi-printer"></i>
             </a> -->
@@ -275,7 +276,7 @@ if ($selectedProject > 0) {
       <div class="col-lg-6 chart-item" data-chart-id="income-by-item-chart">
         <div class="card shadow-sm">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">Items by Income</h6>
+            <h6 class="mb-0">Income By Item<?= $projectTitleSuffix ?></h6>
             <!-- <a href="report/print_income_by_item.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
               <i class="bi bi-printer"></i>
             </a> -->
@@ -291,7 +292,7 @@ if ($selectedProject > 0) {
       <div class="col-lg-6 chart-item" data-chart-id="expense-by-item-chart">
         <div class="card shadow-sm">
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0">Items by Expense</h6>
+            <h6 class="mb-0">Expense By Item<?= $projectTitleSuffix ?></h6>
             <!-- <a href="report/print_expense_by_item.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
               <i class="bi bi-printer"></i>
             </a> -->

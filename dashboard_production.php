@@ -324,7 +324,7 @@ if ($selectedProject > 0) {
             <div class="col-md-5">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Delivery Per Status</h6>
+                  <h6 class="mb-0">Delivery By Status</h6>
                   <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="text-decoration-none text-dark" target="_blank">
                     <i class="bi bi-printer"></i>
                   </a>
@@ -337,7 +337,7 @@ if ($selectedProject > 0) {
             <div class="col-md-7">
               <div class="card shadow-sm h-100">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0">Deliveries Status by Lot</h6>
+                  <h6 class="mb-0">Delivery Status Variance By Lot</h6>
                 </div>
                 <div class="card-body">
                   <canvas id="deliveryStatusPerLotChart" height="200"></canvas>
