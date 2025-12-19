@@ -9,12 +9,12 @@ const deliveryStatusColors = {
 
 // Project Status Colors (Green-Yellow-Red)
 const projectStatusColors = {
-  "Upcoming": "#dc3545", // Red
+  Upcoming: "#dc3545", // Red
   "For Award": "#fbc02d", // Yellow
   "For Implementation": "#e6b422", // Darker Yellow
   Ongoing: "#d4a81e", // Even Darker Yellow
   Completed: "#198754", // Green
-  "Collected": "#157347", // Darker Green
+  Collected: "#157347", // Darker Green
 };
 
 const primaryColors = [
@@ -35,22 +35,22 @@ const colorVariants = {
     Accepted: "rgba(251, 192, 45, 0.15)",
     Pending: "rgba(220, 53, 69, 0.15)",
     Cancelled: "rgba(176, 42, 55, 0.15)",
-    "Upcoming": "rgba(220, 53, 69, 0.15)",
+    Upcoming: "rgba(220, 53, 69, 0.15)",
     "For Award": "rgba(251, 192, 45, 0.15)",
     "For Implementation": "rgba(230, 180, 34, 0.15)",
     Ongoing: "rgba(212, 168, 30, 0.15)",
-    "Collected": "rgba(21, 115, 71, 0.15)",
+    Collected: "rgba(21, 115, 71, 0.15)",
   },
   border: {
     Completed: "#198754",
     Accepted: "#fbc02d",
     Pending: "#dc3545",
     Cancelled: "#b02a37",
-    "Upcoming": "#dc3545",
+    Upcoming: "#dc3545",
     "For Award": "#fbc02d",
     "For Implementation": "#e6b422",
     Ongoing: "#d4a81e",
-    "Collected": "#157347",
+    Collected: "#157347",
   },
 };
 
@@ -130,55 +130,61 @@ document.addEventListener("DOMContentLoaded", function () {
             },
           },
         },
-        onClick: function(evt, elements) {
-            if (elements && elements.length > 0) {
-                const elementIndex = elements[0].index;
-                const chart = this;
-                const label = chart.data.labels[elementIndex];
-                
-                // Extract status from label like "Upcoming (33.3%)"
-                const displayedStatus = label.split(' (')[0];
-                
-                // Map displayed status back to DB status
-                const statusMap = {
-                    'Upcoming': 'Pending Evaluation',
-                    'For Award': 'For Award',
-                    'For Implementation': 'For Implementation',
-                    'Ongoing': 'Ongoing',
-                    'Completed': 'Delivered', // Displayed 'Completed' is 'Delivered' in DB
-                    'Collected': 'Completed'  // Displayed 'Collected' is 'Completed' in DB
-                };
-                const dbStatus = statusMap[displayedStatus];
+        onClick: function (evt, elements) {
+          if (elements && elements.length > 0) {
+            const elementIndex = elements[0].index;
+            const chart = this;
+            const label = chart.data.labels[elementIndex];
 
-                if (!dbStatus) return;
+            // Extract status from label like "Upcoming (33.3%)"
+            const displayedStatus = label.split(" (")[0];
 
-                // Filter projects based on the database status
-                const projects = allProjectsWithStatus.filter(p => p.status === dbStatus);
+            // Map displayed status back to DB status
+            const statusMap = {
+              Upcoming: "Pending Evaluation",
+              "For Award": "For Award",
+              "For Implementation": "For Implementation",
+              Ongoing: "Ongoing",
+              Completed: "Delivered", // Displayed 'Completed' is 'Delivered' in DB
+              Collected: "Completed", // Displayed 'Collected' is 'Completed' in DB
+            };
+            const dbStatus = statusMap[displayedStatus];
 
-                // Populate and show the modal
-                const projectList = document.getElementById('projectList');
-                projectList.innerHTML = ''; // Clear previous list
+            if (!dbStatus) return;
 
-                if (projects.length > 0) {
-                    projects.forEach(p => {
-                        const li = document.createElement('li');
-                        li.className = 'list-group-item';
-                        li.textContent = p.project_name;
-                        projectList.appendChild(li);
-                    });
-                } else {
-                    const li = document.createElement('li');
-                    li.className = 'list-group-item';
-                    li.textContent = 'No projects found for this status.';
-                    projectList.appendChild(li);
-                }
+            // Filter projects based on the database status
+            const projects = allProjectsWithStatus.filter(
+              (p) => p.status === dbStatus
+            );
 
-                document.getElementById('projectListModalLabel').textContent = `Projects: ${displayedStatus}`;
-                
-                const projectModal = new bootstrap.Modal(document.getElementById('projectListModal'));
-                projectModal.show();
+            // Populate and show the modal
+            const projectList = document.getElementById("projectList");
+            projectList.innerHTML = ""; // Clear previous list
+
+            if (projects.length > 0) {
+              projects.forEach((p) => {
+                const li = document.createElement("li");
+                li.className = "list-group-item";
+                li.textContent = p.project_name;
+                projectList.appendChild(li);
+              });
+            } else {
+              const li = document.createElement("li");
+              li.className = "list-group-item";
+              li.textContent = "No projects found for this status.";
+              projectList.appendChild(li);
             }
-        }
+
+            document.getElementById(
+              "projectListModalLabel"
+            ).textContent = `Projects: ${displayedStatus}`;
+
+            const projectModal = new bootstrap.Modal(
+              document.getElementById("projectListModal")
+            );
+            projectModal.show();
+          }
+        },
       },
     });
   } else {
@@ -307,6 +313,72 @@ document.addEventListener("DOMContentLoaded", function () {
     createEmptyChart(
       document.getElementById("opportunityChart"),
       "No project financial data available"
+    );
+  }
+
+  // 📊 Contract Amount per Project
+  if (phpData.opportunity && phpData.opportunity.length > 0) {
+    const projects = phpData.opportunity.map((p) => p.project_name);
+    const contractData = phpData.opportunity.map(
+      (p) => parseFloat(p.contract_amount) || 0
+    );
+
+    new Chart(document.getElementById("contractVarianceChart"), { // Keep the same ID for existing HTML
+      type: "bar",
+      data: {
+        labels: projects,
+        datasets: [
+          {
+            label: "Contract Amount", // Changed label
+            data: contractData, // Changed data source
+            backgroundColor: "#198754", // Fixed color
+            borderColor: "#146c43", // Fixed color
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Projects",
+            },
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: "Contract Amount (₱)", // Changed title
+            },
+            ticks: {
+              callback: function (value) {
+                return "₱" + value.toLocaleString();
+              },
+            },
+          },
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                const contractAmount = context.raw;
+                return `Contract Amount: ₱${contractAmount.toLocaleString()}`;
+              },
+            },
+          },
+           legend: {
+                display: true // Display legend
+            }
+        },
+      },
+    });
+  } else {
+    createEmptyChart(
+      document.getElementById("contractVarianceChart"),
+      "No contract amount data available" // Updated message
     );
   }
 });

@@ -135,7 +135,7 @@ if ($selectedProject > 0) {
     <div class="col-lg-6 col-md-12 chart-item" data-chart-id="project-status">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">Projects Status</h6>
+          <h6 class="mb-0 fw-bold">Project By Status</h6>
           <div class="d-flex gap-2">
             <a href="report/print_delivery_status.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" 
               class="text-decoration-none text-dark" 
@@ -155,7 +155,7 @@ if ($selectedProject > 0) {
     <div class="col-lg-6 col-md-12 chart-item" data-chart-id="budget-variance">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">Budget Variance</h6>
+          <h6 class="mb-0 fw-bold">Budget Variance By Project</h6>
           <span class="drag-handle text-muted" style="cursor: grab;" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body" style="height: 400px; overflow-y: auto;">
@@ -164,11 +164,23 @@ if ($selectedProject > 0) {
       </div>
     </div>
 
+    <div class="col-12 chart-item" data-chart-id="contract-variance">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Contract Amount By Project</h6>
+                <span class="drag-handle text-muted" style="cursor: grab;" title="Drag to reorder">⋮⋮</span>
+            </div>
+            <div class="card-body">
+                <canvas id="contractVarianceChart" height="340"></canvas>
+            </div>
+        </div>
+    </div>
+
     <!-- Budget Variance Table -->
     <div class="col-12 chart-item" data-chart-id="budget-variance-table">
       <div class="card shadow-sm">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-bold">Budget Variance Table</h6>
+          <h6 class="mb-0 fw-bold">Project Details Table</h6>
           <span class="drag-handle text-muted" style="cursor: grab;" title="Drag to reorder">⋮⋮</span>
         </div>
         <div class="card-body">
