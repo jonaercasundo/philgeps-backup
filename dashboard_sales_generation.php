@@ -205,11 +205,11 @@ if ($selectedProject > 0) {
               <tbody>
                 <?php foreach ($projectSales as $item): ?>
                 <tr data-sales-gen-id="<?= $item['sales_gen_id'] ?>">
-                  <td contenteditable="true" class="text-truncate" style="max-width: 250px;">
+                  <td class="text-truncate" style="max-width: 250px;">
                     <?= htmlspecialchars($item['project_name']) ?>
                   </td>
-                  <td contenteditable="true">₱<?= number_format($item['abc'], 2) ?></td>
-                  <td contenteditable="true">₱<?= number_format($item['contract_amount'], 2) ?></td>
+                  <td>₱<?= number_format($item['abc'], 2) ?></td>
+                  <td>₱<?= number_format($item['contract_amount'], 2) ?></td>
                   <td contenteditable="true" data-field="net_sales"><?= number_format($item['net_sales'], 2) ?>%</td>
                   <td contenteditable="true" data-field="cogs">₱<?= number_format($item['cogs'], 2) ?></td>
                   <td contenteditable="true" data-field="total_cost_of_sales">₱<?= number_format($item['total_cost_of_sales'], 2) ?></td>
