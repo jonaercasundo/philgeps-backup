@@ -51,7 +51,7 @@ try {
                 p.width,
                 p.height,
                 p.length,
-                CONCAT(p.length,'x',p.width,'x',p.height) AS Dimension
+                CONCAT(p.width,'x',p.height,'x',p.length) AS Dimension
             FROM package p
             LEFT JOIN package_content pc ON p.package_id = pc.package_id
             LEFT JOIN item i ON pc.item_id = i.item_id
@@ -128,6 +128,30 @@ try {
             </tbody>
         </table>
         <script>
+
+        document.getElementById("addItemForm").addEventListener("submit", function(e) {
+            e.preventDefault(); // stop normal form submit
+            
+            let formData = new FormData(this);
+
+            fetch("script/add_items.php", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // show toast and refresh items if needed
+                    alert("✅ Package added!");
+                    location.reload(); // or close modal
+                } else {
+                    alert("❌ Error: " + data.message);
+                }
+            })
+            .catch(err => console.log("Server error: " + err));
+        });
+
+
            // Add More Items Button (for Add Modal)
             document.getElementById("addMoreItem").addEventListener("click", function () {
                 let container = document.getElementById("itemsContainer");
