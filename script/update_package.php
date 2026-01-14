@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $qtys        = $_POST['qty'] ?? [];
 
     if (!$package_id) {
-        header("Location: ../packages.php?toast=Missing+package+ID&type=danger");
+        echo json_encode(['success' => false, 'message' => 'Missing package ID']);
         exit;
     }
 
@@ -98,11 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     } catch (PDOException $e) {
         $pdo->rollBack();
-        $pdo->commit();
         echo json_encode([
-            'success' => true,
-            'message' => 'Edited Package',
-            'redirect' => 'packages.php?id=' . $projectInfo['project_id'] . '&toast=Failed Editing Package&type=danger'
+            'success' => false,
+            'message' => $e->getMessage()
         ]);
         exit;
 

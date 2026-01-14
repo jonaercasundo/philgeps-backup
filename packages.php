@@ -142,9 +142,7 @@ try {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    // show toast and refresh items if needed
-                    alert("✅ Package added!");
-                    location.reload(); // or close modal
+                    window.location.href = data.redirect;
                 } else {
                     alert("❌ Error: " + data.message);
                 }
@@ -249,7 +247,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Save
   document.getElementById("saveEditBtn").addEventListener("click", function() {
     let formData = new FormData(document.getElementById("editForm"));
 
@@ -262,7 +259,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (resp.success) {
         window.location.href = resp.redirect;
       } else {
-        window.location.href = resp.redirect;
+        alert("❌ Error: " + resp.message);
       }
     });
   });

@@ -141,11 +141,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         $pdo->commit();
-        header("Location: ../packages.php?id=" . $project_id . "&toast=Packages%20added%20successfully&type=success");
+
+        echo json_encode([
+            'success' => true, 
+            'redirect' => "/philgeps/packages.php?id=" . $project_id . "&toast=Packages%20added%20successfully&type=success"
+        ]);
         exit;
     } catch (PDOException $e) {
         $pdo->rollBack();
-        header("Location: ../packages.php?id=" . $project_id . "&toast=" . urlencode($e->getMessage()) . "&type=danger");
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         exit;
     }
 }
