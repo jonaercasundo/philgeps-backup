@@ -55,9 +55,10 @@ try {
             FROM package p
             LEFT JOIN package_content pc ON p.package_id = pc.package_id
             LEFT JOIN item i ON pc.item_id = i.item_id
-            INNER JOIN keystage k ON p.keystage_id = k.keystage_id
-            INNER JOIN lot l ON k.lot_id = l.lot_id
+		LEFT JOIN keystage k ON p.keystage_id = k.keystage_id
+		LEFT JOIN lot l ON k.lot_id = l.lot_id            
             WHERE l.project_id = ?
+            OR p.keystage_id IS NULL
             GROUP BY p.package_id, p.package_num, p.keystage_id, p.length, p.width, p.height
             ORDER BY p.package_num ASC
         ");
