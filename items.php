@@ -151,5 +151,35 @@ function updateEdit(itemId){
     document.getElementById("edititem_id").value = id;
     document.getElementById("editname").value = itemName;
     document.getElementById("editunit").value = unit;
-}</script>
+}
+
+// JavaScript for Add Item Form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const addItemForm = document.getElementById('addItemForm');
+    if (addItemForm) {
+        addItemForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(this);
+
+            fetch('script/add_item.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    alert('❌ Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Network or parsing error:', error);
+                alert('An error occurred while adding the item.');
+            });
+        });
+    }
+});
+</script>
 <?php require "template/footer.php"; ?>

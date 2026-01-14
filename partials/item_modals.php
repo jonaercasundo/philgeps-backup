@@ -1,3 +1,29 @@
+<!-- Add Item Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header"><h5>Add Item</h5></div>
+      <div class="modal-body">
+        <form method="POST" action="script/add_item.php" id="addItemForm">
+          <input type="hidden" name="project_id" value="<?= htmlspecialchars($project_id) ?>">
+          <div class="mb-3">
+            <label for="itemName">Item Name</label>
+            <input id="itemName" name="itemName" type="text" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="unit">Unit</label>
+            <input id="unit" name="unit" type="text" class="form-control" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-primary" form="addItemForm" type="submit">Add Item</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Edit Item Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
   <div class="modal-dialog modal-md">
