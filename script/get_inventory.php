@@ -3,6 +3,8 @@ require_once "../config/db.php";
 session_start();
 
 $warehouse_id = $_SESSION['warehouse_id'] ?? null;
+$user_role = $_SESSION['role'] ?? null;
+
 // DataTables parameters
 $draw = isset($_GET['draw']) ? intval($_GET['draw']) : 1;
 $start = isset($_GET['start']) ? intval($_GET['start']) : 0;
@@ -26,7 +28,7 @@ if (isset($pdo) && $pdo !== null) {
         $totalQuery = "SELECT COUNT(*) as total FROM inventory";
         $totalParams = [];
         
-        if ($warehouse_id) {
+        if ($warehouse_id && $user_role !== 'Warehouse Admin') {
             $totalQuery .= " WHERE warehouse_id = :warehouse_id";
             $totalParams[':warehouse_id'] = $warehouse_id;
         }
@@ -57,7 +59,7 @@ if (isset($pdo) && $pdo !== null) {
         $whereClauses = [];
         $params = [];
         
-        if ($warehouse_id) {
+        if ($warehouse_id && $user_role !== 'Warehouse Admin') {
             $whereClauses[] = "i.warehouse_id = :warehouse_id";
             $params[':warehouse_id'] = $warehouse_id;
         }
