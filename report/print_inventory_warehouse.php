@@ -8,6 +8,7 @@
 
     $selectedProject = isset($_GET['project_id']) ? intval($_GET['project_id']) : 0;
     $selectedDate = isset($_GET['selectedDate']) ? $_GET['selectedDate'] : date('Y-m-d');
+    $selectedWarehouse = isset($_GET['warehouse_id']) ? intval($_GET['warehouse_id']) : 0;
     $selectedProjectName = "";
 
     if ($selectedProject > 0) {
@@ -16,6 +17,9 @@
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $selectedProjectName = $result['project_name'] ?? "";
     }
+
+    $projectFilter = $selectedProject > 0 ? "AND i.project_id = $selectedProject" : "";
+    $warehouseFilter = $selectedWarehouse > 0 ? "AND w.warehouse_id = $selectedWarehouse" : "";
 
     if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         if (ob_get_length()) ob_clean();
@@ -43,6 +47,7 @@
             WHERE inv.inventory_status = 'Approved'
                 AND inv.qty > 0
                 " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+                $warehouseFilter
             GROUP BY w.warehouse_id, w.warehouse_name
             ORDER BY total_quantity DESC
         ";
@@ -93,6 +98,7 @@
             JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
             WHERE inv.inventory_status = 'Approved'
                 " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+                $warehouseFilter
             HAVING qty > 0
             ORDER BY w.warehouse_name, i.item_name
         ";
@@ -126,6 +132,7 @@
         WHERE inv.inventory_status = 'Approved'
             AND inv.qty > 0
             " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+            $warehouseFilter
         GROUP BY w.warehouse_id, w.warehouse_name
         ORDER BY total_quantity DESC
     ";
@@ -157,6 +164,7 @@
         JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
         WHERE inv.inventory_status = 'Approved'
             " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+            $warehouseFilter
         HAVING qty > 0
         ORDER BY w.warehouse_name, i.item_name
     ";
@@ -175,7 +183,7 @@
 
 <div class="row my-3 align-items-end">
     <div class="col-md-12 d-flex justify-content-end gap-2">
-        <a href="?export=csv<?= $selectedProject > 0 ? '&project_id=' . $selectedProject : '' ?>&selectedDate=<?= htmlspecialchars($selectedDate) ?>" class="btn btn-success">
+        <a href="?export=csv<?= $selectedProject > 0 ? '&project_id=' . $selectedProject : '' ?>&selectedDate=<?= htmlspecialchars($selectedDate) ?>&warehouse_id=<?= $selectedWarehouse ?>" class="btn btn-success">
             <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
         </a>
         <button class="btn btn-primary" onclick="printCombinedReport()">
@@ -225,6 +233,13 @@
             <?php if($selectedProject > 0): ?>
                 <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
             <?php endif; ?>
+
+            <label for="warehouseFilter" class="form-label mb-0">
+                <strong>Filter by Warehouse:</strong>
+            </label>
+            <select class="form-select form-select-sm" id="warehouseFilter" name="warehouse_id" style="max-width: 200px;">
+                <option value="0">All Warehouses</option>
+            </select>
 
             <label for="dateFilter" class="form-label mb-0">
                 <strong>Filter by Date:</strong>
@@ -278,6 +293,31 @@
 
 <script>
     $(document).ready(function() {
+        // Fetch and populate warehouse filter
+        const selectedWarehouse = <?= $selectedWarehouse ?>;
+        $.ajax({
+            url: '../script/get_warehouse_list.php',
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                const warehouseFilter = $('#warehouseFilter');
+                if (Array.isArray(data)) {
+                    data.forEach(function(warehouse) {
+                        warehouseFilter.append(
+                            $('<option>', {
+                                value: warehouse.warehouse_id,
+                                text: warehouse.warehouse_name,
+                                selected: warehouse.warehouse_id == selectedWarehouse
+                            })
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Failed to fetch warehouse list:", status, error);
+            }
+        });
+
         $('#inventoryQuantityTable').DataTable({
             scrollY: "30vh",
             scrollCollapse: true,
