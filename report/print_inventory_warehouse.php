@@ -306,11 +306,17 @@
 
 <script>
     function printCombinedReport() {
-    printMultipleTables(
-        ['inventoryQuantityTable', 'inventoryWarehouseTable'],
-        'Inventory Report',
-        '<?= $selectedProject > 0 ? htmlspecialchars($selectedProjectName) : "" ?>',
-        ['Inventory Quantity Summary', 'Inventory by Warehouse Details - As of <?= date("F d, Y", strtotime($selectedDate)) ?>']
-    );
-}
+        const table = $('#inventoryWarehouseTable').DataTable();
+
+        // Use .one() to bind a single-use event listener.
+        // When the table is redrawn with all entries, the print function will execute.
+        table.one('draw.dt', function () {
+            printMultipleTables(
+                ['inventoryQuantityTable', 'inventoryWarehouseTable'],
+                'Inventory Report',
+                '<?= $selectedProject > 0 ? htmlspecialchars($selectedProjectName) : "" ?>',
+                ['Inventory Quantity Summary', 'Inventory by Warehouse Details - As of <?= date("F d, Y", strtotime($selectedDate)) ?>']
+            );
+        }).page.len(-1).draw(); // Set page length to show all entries and redraw.
+    }
 </script>
