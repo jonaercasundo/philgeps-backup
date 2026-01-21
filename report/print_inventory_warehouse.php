@@ -78,35 +78,83 @@
         fputcsv($output, []);
         fputcsv($output, ['Warehouse', 'Item Name', 'Unit', 'Quantity']);
         
-        // Fetch inventory by warehouse data
-        $inventoryByWarehouseQuery = "
-            SELECT 
-                w.warehouse_name,
-                i.item_name,
-                i.unit,
-                COALESCE(
-                    (SELECT ih.new_qty
-                    FROM inventory_history ih
-                    WHERE ih.item_id = i.item_id 
-                      AND ih.warehouse_id = w.warehouse_id 
-                      AND DATE(ih.changed_at) <= :selectedDate
-                    ORDER BY ih.changed_at DESC 
-                    LIMIT 1),
-                    <?= $fallbackQty ?>
-                ) as qty
-            FROM inventory inv
-            JOIN item i ON inv.item_id = i.item_id
-            JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
-            WHERE inv.inventory_status = 'Approved'
-                " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
-                $warehouseFilter
-            HAVING qty > 0
-            ORDER BY w.warehouse_name, i.item_name
-        ";
-
-        $stmt = $pdo->prepare($inventoryByWarehouseQuery);
-        $stmt->execute(['selectedDate' => $selectedDate]);
-        $inventoryByWarehouseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Fetch inventory by warehouse data
+        
+                if ($selectedDate == date('Y-m-d')) {
+        
+                    $qtyCalculation = "inv.qty";
+        
+                } else {
+        
+                    $qtyCalculation = "COALESCE(
+        
+                        (SELECT ih.new_qty
+        
+                        FROM inventory_history ih
+        
+                        WHERE ih.item_id = i.item_id 
+        
+                          AND ih.warehouse_id = w.warehouse_id 
+        
+                          AND DATE(ih.changed_at) <= :selectedDate
+        
+                        ORDER BY ih.changed_at DESC 
+        
+                        LIMIT 1),
+        
+                        0)";
+        
+                }
+        
+                
+        
+                $inventoryByWarehouseQuery = "
+        
+                    SELECT 
+        
+                        w.warehouse_name,
+        
+                        i.item_name,
+        
+                        i.unit,
+        
+                        $qtyCalculation as qty
+        
+                    FROM inventory inv
+        
+                    JOIN item i ON inv.item_id = i.item_id
+        
+                    JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
+        
+                    WHERE inv.inventory_status = 'Approved'
+        
+                        " . ($selectedProject > 0 ? "AND i.project_id = $selectedProject" : "") . "
+        
+                        $warehouseFilter
+        
+                    HAVING qty > 0
+        
+                    ORDER BY w.warehouse_name, i.item_name
+        
+                ";
+        
+        
+        
+                $stmt = $pdo->prepare($inventoryByWarehouseQuery);
+        
+        
+        
+                if ($selectedDate == date('Y-m-d')) {
+        
+                    $stmt->execute();
+        
+                } else {
+        
+                    $stmt->execute(['selectedDate' => $selectedDate]);
+        
+                }
+        
+                $inventoryByWarehouseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         foreach ($inventoryByWarehouseData as $row) {
             fputcsv($output, [
@@ -145,21 +193,26 @@
     $totalQuantity = array_sum(array_column($inventoryQuantityData, 'total_quantity'));
 
     // Fetch Inventory by Warehouse Data
+    if ($selectedDate == date('Y-m-d')) {
+        $qtyCalculation = "inv.qty";
+    } else {
+        $qtyCalculation = "COALESCE(
+            (SELECT ih.new_qty
+            FROM inventory_history ih
+            WHERE ih.item_id = i.item_id 
+              AND ih.warehouse_id = w.warehouse_id 
+              AND DATE(ih.changed_at) <= :selectedDate
+            ORDER BY ih.changed_at DESC 
+            LIMIT 1),
+            0)";
+    }
+
     $inventoryByWarehouseQuery = "
         SELECT 
             w.warehouse_name,
             i.item_name,
             i.unit,
-            COALESCE(
-                (SELECT ih.new_qty
-                FROM inventory_history ih
-                WHERE ih.item_id = i.item_id 
-                AND ih.warehouse_id = w.warehouse_id 
-                AND DATE(ih.changed_at) <= :selectedDate
-                ORDER BY ih.changed_at DESC 
-                LIMIT 1),
-                0
-            ) as qty
+            $qtyCalculation as qty
         FROM inventory inv
         JOIN item i ON inv.item_id = i.item_id
         JOIN warehouse w ON inv.warehouse_id = w.warehouse_id
@@ -171,7 +224,12 @@
     ";
 
     $stmt = $pdo->prepare($inventoryByWarehouseQuery);
-    $stmt->execute(['selectedDate' => $selectedDate]);
+
+    if ($selectedDate == date('Y-m-d')) {
+        $stmt->execute();
+    } else {
+        $stmt->execute(['selectedDate' => $selectedDate]);
+    }
     $inventoryByWarehouseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
