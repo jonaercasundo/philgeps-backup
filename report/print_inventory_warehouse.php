@@ -20,6 +20,7 @@
 
     $projectFilter = $selectedProject > 0 ? "AND i.project_id = $selectedProject" : "";
     $warehouseFilter = $selectedWarehouse > 0 ? "AND w.warehouse_id = $selectedWarehouse" : "";
+    $fallbackQty = ($selectedDate == date('Y-m-d')) ? 'inv.qty' : '0';
 
     if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         if (ob_get_length()) ob_clean();
@@ -91,7 +92,7 @@
                       AND DATE(ih.changed_at) <= :selectedDate
                     ORDER BY ih.changed_at DESC 
                     LIMIT 1),
-                    inv.qty
+                    <?= $fallbackQty ?>
                 ) as qty
             FROM inventory inv
             JOIN item i ON inv.item_id = i.item_id
@@ -157,7 +158,7 @@
                 AND DATE(ih.changed_at) <= :selectedDate
                 ORDER BY ih.changed_at DESC 
                 LIMIT 1),
-                inv.qty
+                0
             ) as qty
         FROM inventory inv
         JOIN item i ON inv.item_id = i.item_id
