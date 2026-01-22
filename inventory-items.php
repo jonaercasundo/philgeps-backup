@@ -21,7 +21,7 @@
 
         <!-- Header: fixed height -->
         <div class="px-3 d-flex justify-content-between align-items-center py-2 border-bottom flex-shrink-0">
-            <h5 class="mb-0 text-dark opacity-75">Add Package Items</h5> 
+            <h5 class="mb-0 text-dark opacity-75">Add Items</h5> 
         </div>
 
         <!-- QR Reader container: fixed height and center content -->
@@ -52,7 +52,7 @@
 
         <!-- Footer button: fixed height -->
         <div class="px-3 py-2 border-top flex-shrink-0">
-            <button class="btn btn-outline-secondary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#addModal">Add Package Items</button>
+            <button class="btn btn-outline-secondary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#addModal">Add Items</button>
         </div>
     </div>
     <div class="col-md-9 d-flex flex-column">
@@ -64,9 +64,8 @@
         <!-- Large Main Content/Display Area -->
         <div class="flex-grow-1">
             <div class="bg-white px-4 rounded shadow-sm h-100">
-                 <div class="d-flex align-items-center justify-content-between mb-3 ">
+                 <div class="d-flex align-items-center mb-3">
                        <h5 class="mb-0 text-dark">Inventory List</h5>
-                       <a href="inventory-items.php" class="btn btn-primary ms-2">Add Item</a>
                 </div>
              
 
