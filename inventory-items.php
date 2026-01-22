@@ -21,7 +21,7 @@
 
         <!-- Header: fixed height -->
         <div class="px-3 d-flex justify-content-between align-items-center py-2 border-bottom flex-shrink-0">
-            <h5 class="mb-0 text-dark opacity-75">Add Items</h5> 
+            <h5 class="mb-0 text-dark opacity-75">Add Specific Items</h5> 
         </div>
 
         <!-- QR Reader container: fixed height and center content -->
@@ -45,7 +45,7 @@
                 </tr>
             </thead>
             <tbody id="itemBodytable">
-                <td colspan="2" class="text-center text-muted">No packages scanned yet</td>
+                <td colspan="2" class="text-center text-muted">No items scanned yet</td>
             </tbody>
             </table>
         </div>
@@ -475,51 +475,84 @@
 
 <!-- QR -->
 <script>
+    // Global tracking of scanned items
+    const scannedItems = {}; // Using an object to store item ID, name, and quantity
+
     function simulateScan(num) {
         const testQRData = JSON.stringify({
-            action: "addPackage",
-            package: num
+            action: "addItem",
+            item: num
         });
         onScanSuccess(testQRData);
     }
 
-    // Handle USB scanner input (package_id only)
-document.getElementById('usbScannerInput').addEventListener("keypress", function (event) {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        const scannedCode = this.value.trim();
-        this.value = ""; // clear input
+    // Handle USB scanner input (item_id only)
+    document.getElementById('usbScannerInput').addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            const scannedCode = this.value.trim();
+            this.value = ""; // clear input
 
-        if (!scannedCode) return;
+            if (!scannedCode) return;
 
-        console.log("Scanned Package ID:", scannedCode);
+            console.log("Scanned Item ID:", scannedCode);
+            handleItemScan(scannedCode);
+        }
+    });
 
-        // Directly call addPackage without JSON wrapping
-        onScanSuccess({ package: scannedCode });
+    // Handle item scan success (QR or USB)
+    function onScanSuccess(decodedText, decodedResult) {
+        let itemID;
+        try {
+            const data = JSON.parse(decodedText);
+            if (data && data.item) {
+                itemID = data.item;
+            } else {
+                 console.warn("QR code is not in the expected format (e.g., {\"item\":\"123\"})", decodedText);
+                 // Fallback to treat the whole string as itemID
+                 itemID = decodedText.trim();
+            }
+        } catch (e) {
+            // Assume it's a raw item_id if not JSON
+            itemID = decodedText.trim();
+        }
+
+        if (itemID) {
+            handleItemScan(itemID);
+        } else {
+            console.warn("Scanned data is empty or invalid.", decodedText);
+        }
     }
-});
 
-// Global tracking of scanned packages
-const addedPackages = [];
-
-// Handle package scan success (QR or USB)
-function onScanSuccess(data) {
-    const packageID = data.package;
-
-    if (!packageID) {
-        console.warn("Invalid scan data:", data);
-        return;
+    function handleItemScan(itemID) {
+        if (scannedItems[itemID]) {
+            // If item already exists, increment its quantity
+            scannedItems[itemID].quantity++;
+            console.log("Incremented quantity for item:", itemID);
+            loadItemsView();
+        } else {
+            // If new item, fetch its details
+            console.log("Scanned new item:", itemID);
+            fetch(`script/get_item_details.php?item_id=${encodeURIComponent(itemID)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        scannedItems[itemID] = {
+                            name: data.item.item_name,
+                            quantity: 1
+                        };
+                        loadItemsView();
+                    } else {
+                        console.warn("Could not find details for item", itemID, data.message);
+                        alert("Error: " + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error("Fetch error (item details):", err);
+                    alert("Error fetching item details. Please check the console.");
+                });
+        }
     }
-
-    if (!addedPackages.includes(packageID)) {
-        addedPackages.push(packageID);
-        console.log("Added package:", packageID);
-        loadItemsView();
-    } else {
-        console.log("Package already scanned:", packageID);
-    }
-}
-
 
     function loadItemsView() {
         const tbody = document.getElementById('itemBodytable');
@@ -529,75 +562,55 @@ function onScanSuccess(data) {
         }
         tbody.innerHTML = '';
 
-        if (addedPackages.length === 0) {
+        if (Object.keys(scannedItems).length === 0) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="2" class="text-center text-muted">No packages scanned yet</td>`;
+            tr.innerHTML = `<td colspan="2" class="text-center text-muted">No items scanned yet</td>`;
             tbody.appendChild(tr);
             return;
         }
 
-        console.log("Loading Items View for packages:", addedPackages);
+        console.log("Loading Items View for items:", scannedItems);
 
-        addedPackages.forEach(pkg => {
-            fetch(`script/get_package.php?package_id=${encodeURIComponent(pkg)}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && Array.isArray(data.items)) {
-                    // Add a header row for this package
-                    const headerRow = document.createElement('tr');
-                    headerRow.innerHTML = `<td style="font-weight:bold; background:#f0f0f0;">Package: LOT ${data.package.lot_name} KEYSTAGE ${data.package.keystage_name} KEYSTAGE ${data.package.description}</td><td contenteditable="true" data-package-id="${data.package.package_id}" onblur="changeQuantity(this)">1</td>`;
-                    tbody.appendChild(headerRow);
-
-                    // Add each item row for this package
-                    data.items.forEach(item => {
-                        const tr = document.createElement('tr');
-                        tr.setAttribute('data-item-id', item.item_id);  // <-- add this
-                        tr.innerHTML = `<td>${item.item_name || ''}</td><td data-base-qty="${item.qty || ''}" class="item-${data.package.package_id}">${item.qty || ''}</td>`;
-                        tbody.appendChild(tr);
-                    });
-
-                } else {
-                    console.warn("No items for package", pkg, data);
-                }
-            })
-            .catch(err => console.error("Fetch error (items):", err));
-        });
+        for (const itemId in scannedItems) {
+            const item = scannedItems[itemId];
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-item-id', itemId);
+            tr.innerHTML = `
+                <td>${item.name}</td>
+                <td contenteditable="true" onblur="updateQuantity(this, '${itemId}')">${item.quantity}</td>
+            `;
+            tbody.appendChild(tr);
+        }
     }
-    function changeQuantity(el) {
-    const packageId = el.dataset.packageId; // use data-package-id in your td
-    const items = document.querySelectorAll(".item-" + packageId);
 
-    const newQty = parseInt(el.textContent.trim()) || 0;
-
-    items.forEach(item => {
-        // Assuming item.innerHTML holds the base quantity
-        const baseQty = parseInt(item.dataset.baseQty) || 1; // store original qty in data attribute
-        item.textContent = baseQty * newQty;
-    });
-}
+    function updateQuantity(el, itemId) {
+        const newQty = parseInt(el.textContent.trim()) || 0;
+        if (scannedItems[itemId]) {
+            if (newQty > 0) {
+                scannedItems[itemId].quantity = newQty;
+            } else {
+                // If quantity is set to 0 or invalid, remove the item from the list
+                delete scannedItems[itemId];
+                loadItemsView(); // Refresh view to remove the row
+            }
+        }
+    }
 
     // Add inventory - bulk submit all items
     function addForm(type, scriptUrl) {
-        // Collect all scanned items from the table
+        // Collect all scanned items from the object
         const items = [];
         
-        // Get all rows from the item table
-        const rows = document.querySelectorAll('#itemBodytable tr');
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length === 2) {
-                const quantity = parseInt(cells[1].textContent.trim());
-                const itemId = row.getAttribute('data-item-id');
-                
-                if (itemId && !isNaN(quantity) && quantity > 0) {
-                    items.push({
-                        warehouse_id: 1,
-                        item_id: parseInt(itemId),
-                        quantity: quantity
-                    });
-                }
+        for (const itemId in scannedItems) {
+            const item = scannedItems[itemId];
+            if (item.quantity > 0) {
+                items.push({
+                    warehouse_id: 1, // Assuming a default warehouse_id, update if needed
+                    item_id: parseInt(itemId),
+                    quantity: item.quantity
+                });
             }
-        });
+        }
 
         if (items.length === 0) {
             alert('No valid items found to add to inventory.');
@@ -616,6 +629,7 @@ function onScanSuccess(data) {
         const formData = new FormData();
         formData.append('items_json', JSON.stringify(items));
         formData.append('password', password);
+        
         // Show loading state
         const submitBtn = document.querySelector('#addModal .btn-primary');
         const originalText = submitBtn.textContent;
@@ -631,26 +645,23 @@ function onScanSuccess(data) {
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
             if (data.success) {
-                // Clear the scanned items table
-                document.getElementById('itemBodytable').innerHTML = '<tr><td colspan="2" class="text-center text-muted">No packages scanned yet</td></tr>';
-                // Clear the scanned packages
-                addedPackages.length = 0;
+                // Clear the scanned items object and table
+                Object.keys(scannedItems).forEach(key => delete scannedItems[key]);
+                loadItemsView();
+
                 // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
                 if (modal) modal.hide();
                 
-                // Use toast from response if available, otherwise use message
                 const toastMessage = data.toast || data.message;
                 const toastType = data.type || 'success';
-                window.location.href = 'inventory.php?toast=' + encodeURIComponent(toastMessage) + '&type=' + toastType;
+                window.location.href = 'inventory-items.php?toast=' + encodeURIComponent(toastMessage) + '&type=' + toastType;
             } else {
-                // If there's a toast in response, redirect to show toast
                 if (data.toast) {
                     const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
                     if (modal) modal.hide();
-                    window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.toast) + '&type=' + (data.type || 'danger');
+                    window.location.href = 'inventory-items.php?toast=' + encodeURIComponent(data.toast) + '&type=' + (data.type || 'danger');
                 } else {
-                    // Otherwise show alert
                     alert('Error: ' + data.message);
                 }
             }
@@ -664,7 +675,7 @@ function onScanSuccess(data) {
     }
 
     // Start scanner
-    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
     html5QrcodeScanner.render(onScanSuccess);
 </script>
 

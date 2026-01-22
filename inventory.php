@@ -66,7 +66,7 @@
             <div class="bg-white px-4 rounded shadow-sm h-100">
                  <div class="d-flex align-items-center justify-content-between mb-3 ">
                        <h5 class="mb-0 text-dark">Inventory List</h5>
-                       <a href="inventory-items.php" class="btn btn-primary ms-2">Add Item</a>
+                       <a href="inventory-items.php" class="btn btn-primary ms-2">Add Specific Item</a>
                 </div>
              
 
