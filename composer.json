@@ -1,6 +1,7 @@
 {
     "require": {
         "endroid/qr-code": "4.0",
-        "dompdf/dompdf": "^3.1"
+        "dompdf/dompdf": "^3.1",
+        "picqer/php-barcode-generator": "^3.2"
     }
 }

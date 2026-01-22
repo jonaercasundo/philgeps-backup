@@ -82,7 +82,8 @@ try {
         <button data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success mb-3">+ Add New Package</button>
       </div>
       <div class="d-flex mb-3">
-        <a href = "script/generate_qr_per_package.php?project_id=<?=$project_id?>" target="_blank"><button class="btn btn-primary mb-3">Generate QR</button></a>
+        <a href="script/generate_qr_per_package.php?project_id=<?=$project_id?>" target="_blank" class="btn btn-primary mb-3">Generate QR</a>
+        <a href="script/generate_barcode_per_package.php?project_id=<?=$project_id?>" target="_blank" class="btn btn-info mb-3 ms-2">Generate Barcode</a>
       </div>
   </div>
 

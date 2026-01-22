@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-master',
+        'version' => 'dev-master',
+        'reference' => '9528bdd272dac85688794ae2185e891d46eee6a5',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-master',
+            'version' => 'dev-master',
+            'reference' => '9528bdd272dac85688794ae2185e891d46eee6a5',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -79,6 +79,15 @@
             'reference' => 'fcf91eb64359852f00d921887b219479b4f21251',
             'type' => 'library',
             'install_path' => __DIR__ . '/../masterminds/html5',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'picqer/php-barcode-generator' => array(
+            'pretty_version' => 'v3.2.4',
+            'version' => '3.2.4.0',
+            'reference' => '16a5cfb74eb8b7a0aa2e60427d98599aa8259380',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../picqer/php-barcode-generator',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
