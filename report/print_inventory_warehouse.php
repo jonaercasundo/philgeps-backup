@@ -345,11 +345,19 @@
                     <td class="text-end"><?= number_format($row['qty']) ?></td>
                 </tr>
                 <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-<?php require "../template/footer.php"; ?>
+                    </tbody>
+                </table>
+            </div>
+            </div>
+            
+            <style media="print">
+                @page {
+                    margin: 0;
+                }
+                body {
+                    margin: 1.5cm;
+                }
+            </style><?php require "../template/footer.php"; ?>
 
 <script>
     $(document).ready(function() {

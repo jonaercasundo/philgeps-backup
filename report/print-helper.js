@@ -5,85 +5,88 @@
  * @param {string} subtitle - Report subtitle (optional)
  * @param {object} options - Additional options (optional)
  */
-function printTable(tableId, title, subtitle = '', options = {}) {
-    // Default options
-    const defaultOptions = {
-        showDate: true,
-        showHeader: true,
-        customStyles: '',
-        pageOrientation: 'portrait',
-        includeHeaders: true, // For multiple tables, include section headers
-        sectionTitles: [] // Titles for each section when printing multiple tables
-    };
-    
-    const config = { ...defaultOptions, ...options };
-    
-    // Store original content
-    const originalContent = document.body.innerHTML;
-    
-    // Handle single or multiple tables
-    const tableIds = Array.isArray(tableId) ? tableId : [tableId];
-    
-    // Collect all tables
-    let tablesHTML = '';
-    tableIds.forEach((id, index) => {
-        const table = document.getElementById(id);
-        if (!table) {
-            console.warn(`Table with ID "${id}" not found!`);
-            return;
-        }
-        
-        // Add section title if provided
-        if (config.includeHeaders && config.sectionTitles[index]) {
-            tablesHTML += `
-                <h3 style="margin-top: ${index > 0 ? '40px' : '0'}; margin-bottom: 15px; font-size: 18px; color: #333;">
+function printTable(tableId, title, subtitle = "", options = {}) {
+  // Default options
+  const defaultOptions = {
+    showDate: true,
+    showHeader: true,
+    customStyles: "",
+    pageOrientation: "portrait",
+    includeHeaders: true, // For multiple tables, include section headers
+    sectionTitles: [], // Titles for each section when printing multiple tables
+  };
+
+  const config = { ...defaultOptions, ...options };
+
+  // Store original content
+  const originalContent = document.body.innerHTML;
+
+  // Handle single or multiple tables
+  const tableIds = Array.isArray(tableId) ? tableId : [tableId];
+
+  // Collect all tables
+  let tablesHTML = "";
+  tableIds.forEach((id, index) => {
+    const table = document.getElementById(id);
+    if (!table) {
+      console.warn(`Table with ID "${id}" not found!`);
+      return;
+    }
+
+    // Add section title if provided
+    if (config.includeHeaders && config.sectionTitles[index]) {
+      tablesHTML += `
+                <h3 style="margin-top: ${index > 0 ? "40px" : "0"}; margin-bottom: 15px; font-size: 18px; color: #333;">
                     ${config.sectionTitles[index]}
                 </h3>
             `;
-        }
-        
-        // Add spacing between tables
-        if (index > 0) {
-            tablesHTML += '<div style="margin-top: 30px;"></div>';
-        }
-        
-        tablesHTML += table.outerHTML;
-    });
-    
-    if (!tablesHTML) {
-        alert('No tables found to print!');
-        document.body.innerHTML = originalContent;
-        return;
     }
-    
-    // Create header
-    let headerHTML = '';
-    if (config.showHeader) {
-        headerHTML = `
+
+    // Add spacing between tables
+    if (index > 0) {
+      tablesHTML += '<div style="margin-top: 30px;"></div>';
+    }
+
+    tablesHTML += table.outerHTML;
+  });
+
+  if (!tablesHTML) {
+    alert("No tables found to print!");
+    document.body.innerHTML = originalContent;
+    return;
+  }
+
+  // Create header
+  let headerHTML = "";
+  if (config.showHeader) {
+    headerHTML = `
             <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px;">
                 <h1 style="margin: 0 0 10px 0; font-size: 24px;">${title}</h1>
-                ${subtitle ? `<h2 style="margin: 0 0 10px 0; font-size: 18px; color: #666;">${subtitle}</h2>` : ''}
-                ${config.showDate ? `<p style="margin: 0; font-size: 14px; color: #888;">Generated on: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>` : ''}
+                ${subtitle ? `<h2 style="margin: 0 0 10px 0; font-size: 18px; color: #666;">${subtitle}</h2>` : ""}
+                ${config.showDate ? `<p style="margin: 0; font-size: 14px; color: #888;">Generated on: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>` : ""}
             </div>
         `;
-    }
-    
-    // Create print content
-    const printContent = `
+  }
+
+  // Create print content
+  const printContent = `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
             ${headerHTML}
             ${tablesHTML}
         </div>
     `;
-    
-    // Replace body content
-    document.body.innerHTML = printContent;
-    
-    // Add print-specific styling
-    const style = document.createElement('style');
-    style.innerHTML = `
+
+  // Replace body content
+  document.body.innerHTML = printContent;
+
+  // Add print-specific styling
+  const style = document.createElement("style");
+  style.innerHTML = `
         @media print {
-            body { margin: 0; padding: 20px; }
+            body { 
+                margin: 0;
+                padding: 0;
+            }
             table { 
                 width: 100% !important; 
                 border-collapse: collapse !important;
@@ -124,20 +127,30 @@ function printTable(tableId, title, subtitle = '', options = {}) {
         @page {
             size: ${config.pageOrientation};
             margin: 0.5in;
+
+            /* Attempt to clear the browser-generated headers and footers */
+            @top-left { content: "" }
+            @top-center { content: "" }
+            @top-right { content: "" }
+            @bottom-left { content: "" }
+            @bottom-center { content: "" }
+            @bottom-right { content: "" }
         }
     `;
-    document.head.appendChild(style);
-    
-    // Print
-    window.print();
-    
-    // Restore original content
-    document.body.innerHTML = originalContent;
-    
-    // Dispatch event to notify that print is complete
-    window.dispatchEvent(new CustomEvent('printComplete', { 
-        detail: { tableId: tableIds, title, subtitle } 
-    }));
+  document.head.appendChild(style);
+
+  // Print
+  window.print();
+
+  // Restore original content
+  document.body.innerHTML = originalContent;
+
+  // Dispatch event to notify that print is complete
+  window.dispatchEvent(
+    new CustomEvent("printComplete", {
+      detail: { tableId: tableIds, title, subtitle },
+    }),
+  );
 }
 
 /**
@@ -148,19 +161,25 @@ function printTable(tableId, title, subtitle = '', options = {}) {
  * @param {array} sectionTitles - Array of section titles for each table (optional)
  * @param {object} options - Additional options (optional)
  */
-function printMultipleTables(tableIds, title, subtitle = '', sectionTitles = [], options = {}) {
-    const config = {
-        ...options,
-        includeHeaders: true,
-        sectionTitles: sectionTitles
-    };
-    
-    printTable(tableIds, title, subtitle, config);
+function printMultipleTables(
+  tableIds,
+  title,
+  subtitle = "",
+  sectionTitles = [],
+  options = {},
+) {
+  const config = {
+    ...options,
+    includeHeaders: true,
+    sectionTitles: sectionTitles,
+  };
+
+  printTable(tableIds, title, subtitle, config);
 }
 
 /**
  * Quick print function for simple use (single table)
  */
 function quickPrint(tableId, title) {
-    printTable(tableId, title);
+  printTable(tableId, title);
 }
