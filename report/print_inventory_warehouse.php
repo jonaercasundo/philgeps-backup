@@ -236,9 +236,6 @@
 <div class="container-fluid py-4 px-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>📦 Inventory Report <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h4>
-        <a href="../dashboard.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
-        </a>
     </div>
 
     <div class="row my-3 align-items-end">
