@@ -233,121 +233,122 @@
     $inventoryByWarehouseData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>📦 Inventory Report <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h4>
-    <a href="../dashboard.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Dashboard
-    </a>
-</div>
-
-<div class="row my-3 align-items-end">
-    <div class="col-md-12 d-flex justify-content-end gap-2">
-        <a href="?export=csv<?= $selectedProject > 0 ? '&project_id=' . $selectedProject : '' ?>&selectedDate=<?= htmlspecialchars($selectedDate) ?>&warehouse_id=<?= $selectedWarehouse ?>" class="btn btn-success">
-            <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+<div class="container-fluid py-4 px-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>📦 Inventory Report <?= $selectedProject > 0 ? "- " . htmlspecialchars($selectedProjectName) : "" ?></h4>
+        <a href="../dashboard.php<?= $selectedProject > 0 ? '?project_id=' . $selectedProject : '' ?>" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
         </a>
-        <button class="btn btn-primary" onclick="printCombinedReport()">
-            <i class="bi bi-printer"></i> Print
-        </button>
     </div>
-</div>
 
-<!--Tables -->
-<div id="InventoryReport">
-    <!-- Inventory Quantity Summary Table -->
-    <h5 class="mt-4 mb-3">Inventory Quantity Summary</h5>
-    <table id="inventoryQuantityTable" class="table table-bordered shadow-sm mb-5">
-        <thead class="table-dark">
-            <tr>
-                <th>Warehouse Name</th>
-                <th>Total Items</th>
-                <th>Total Quantity</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($inventoryQuantityData as $row): ?>
-            <tr>
-                <td class="text-start"><?= htmlspecialchars($row['warehouse_name']) ?></td>
-                <td class="text-center"><?= number_format($row['total_items']) ?></td>
-                <td class="text-end"><?= number_format($row['total_quantity']) ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-        <tfoot class="table-secondary">
-            <tr>
-                <th class="text-start">Total</th>
-                <th class="text-center"><?= number_format($totalItems) ?></th>
-                <th class="text-end"><?= number_format($totalQuantity) ?></th>
-            </tr>
-        </tfoot>
-    </table>
-
-    <hr>
-    <!-- Inventory by Warehouse Details Table -->
-    <div class="row my-3">
-        <div class="col-md-6 col-sm-12">
-            <h5 class="mb-0">Inventory by Warehouse Details</h5>
-        </div>
-        <div class="col-md-6 col-sm-12">
-            <form method="GET" class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-            <?php if($selectedProject > 0): ?>
-                <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
-            <?php endif; ?>
-
-            <label for="warehouseFilter" class="form-label mb-0">
-                <strong>Filter by Warehouse:</strong>
-            </label>
-            <select class="form-select form-select-sm" id="warehouseFilter" name="warehouse_id" style="max-width: 200px;">
-                <option value="0">All Warehouses</option>
-            </select>
-
-            <label for="dateFilter" class="form-label mb-0">
-                <strong>Filter by Date:</strong>
-            </label>
-
-            <input 
-                type="date" 
-                class="form-control form-control-sm" 
-                id="dateFilter" 
-                name="selectedDate" 
-                value="<?= htmlspecialchars($selectedDate) ?>" 
-                style="max-width: 200px;"
-            >
-
-            <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
-                <i class="bi bi-funnel"></i> Apply
+    <div class="row my-3 align-items-end">
+        <div class="col-md-12 d-flex justify-content-end gap-2">
+            <a href="?export=csv<?= $selectedProject > 0 ? '&project_id=' . $selectedProject : '' ?>&selectedDate=<?= htmlspecialchars($selectedDate) ?>&warehouse_id=<?= $selectedWarehouse ?>" class="btn btn-success">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+            </a>
+            <button class="btn btn-primary" onclick="printCombinedReport()">
+                <i class="bi bi-printer"></i> Print
             </button>
-            </form>
         </div>
     </div>
 
-    <?php if($selectedDate !== date('Y-m-d')): ?>
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Showing inventory as of: <strong><?= date('F d, Y', strtotime($selectedDate)) ?></strong>
+    <!--Tables -->
+    <div id="InventoryReport">
+        <!-- Inventory Quantity Summary Table -->
+        <h5 class="mt-4 mb-3">Inventory Quantity Summary</h5>
+        <table id="inventoryQuantityTable" class="table table-bordered shadow-sm mb-5">
+            <thead class="table-dark">
+                <tr>
+                    <th>Warehouse Name</th>
+                    <th>Total Items</th>
+                    <th>Total Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($inventoryQuantityData as $row): ?>
+                <tr>
+                    <td class="text-start"><?= htmlspecialchars($row['warehouse_name']) ?></td>
+                    <td class="text-center"><?= number_format($row['total_items']) ?></td>
+                    <td class="text-end"><?= number_format($row['total_quantity']) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+            <tfoot class="table-secondary">
+                <tr>
+                    <th class="text-start">Total</th>
+                    <th class="text-center"><?= number_format($totalItems) ?></th>
+                    <th class="text-end"><?= number_format($totalQuantity) ?></th>
+                </tr>
+            </tfoot>
+        </table>
+
+        <hr>
+        <!-- Inventory by Warehouse Details Table -->
+        <div class="row my-3">
+            <div class="col-md-6 col-sm-12">
+                <h5 class="mb-0">Inventory by Warehouse Details</h5>
+            </div>
+            <div class="col-md-6 col-sm-12">
+                <form method="GET" class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                <?php if($selectedProject > 0): ?>
+                    <input type="hidden" name="project_id" value="<?= $selectedProject ?>">
+                <?php endif; ?>
+
+                <label for="warehouseFilter" class="form-label mb-0">
+                    <strong>Filter by Warehouse:</strong>
+                </label>
+                <select class="form-select form-select-sm" id="warehouseFilter" name="warehouse_id" style="max-width: 200px;">
+                    <option value="0">All Warehouses</option>
+                </select>
+
+                <label for="dateFilter" class="form-label mb-0">
+                    <strong>Filter by Date:</strong>
+                </label>
+
+                <input 
+                    type="date" 
+                    class="form-control form-control-sm" 
+                    id="dateFilter" 
+                    name="selectedDate" 
+                    value="<?= htmlspecialchars($selectedDate) ?>" 
+                    style="max-width: 200px;"
+                >
+
+                <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+                    <i class="bi bi-funnel"></i> Apply
+                </button>
+                </form>
+            </div>
         </div>
-    <?php endif; ?>
 
-    <table id="inventoryWarehouseTable" class="table table-bordered shadow-sm">
-        <thead class="table-dark">
-            <tr>
-                <th>Warehouse Name</th>
-                <th>Item Name</th>
-                <th>Unit</th>
-                <th>Quantity</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($inventoryByWarehouseData as $row): ?>
-            <tr>
-                <td class="text-start"><?= htmlspecialchars($row['warehouse_name']) ?></td>
-                <td class="text-start"><?= htmlspecialchars($row['item_name']) ?></td>
-                <td class="text-center"><?= htmlspecialchars($row['unit']) ?></td>
-                <td class="text-end"><?= number_format($row['qty']) ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+        <?php if($selectedDate !== date('Y-m-d')): ?>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Showing inventory as of: <strong><?= date('F d, Y', strtotime($selectedDate)) ?></strong>
+            </div>
+        <?php endif; ?>
+
+        <table id="inventoryWarehouseTable" class="table table-bordered shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>Warehouse Name</th>
+                    <th>Item Name</th>
+                    <th>Unit</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($inventoryByWarehouseData as $row): ?>
+                <tr>
+                    <td class="text-start"><?= htmlspecialchars($row['warehouse_name']) ?></td>
+                    <td class="text-start"><?= htmlspecialchars($row['item_name']) ?></td>
+                    <td class="text-center"><?= htmlspecialchars($row['unit']) ?></td>
+                    <td class="text-end"><?= number_format($row['qty']) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
-
 <?php require "../template/footer.php"; ?>
 
 <script>

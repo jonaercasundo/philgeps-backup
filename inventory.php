@@ -64,11 +64,20 @@
         <!-- Large Main Content/Display Area -->
         <div class="flex-grow-1">
             <div class="bg-white px-4 rounded shadow-sm h-100">
-                 <div class="d-flex align-items-center justify-content-between mb-3 ">
-                       <h5 class="mb-0 text-dark">Inventory List</h5>
-                       <a href="inventory-items.php" class="btn btn-primary ms-2">Add Specific Item</a>
-                </div>
-             
+                <div class="d-flex align-items-center justify-content-between mb-3">
+    <!-- Left group: title + printer -->
+    <div class="d-flex align-items-center">
+        <h5 class="mb-0 text-dark">Inventory List</h5>
+        <?php if (in_array($_SESSION['role'], ['Warehouse Admin', 'Office Admin'])): ?>
+        <a href="report/print_inventory_warehouse.php" class="text-decoration-none text-dark ms-3" target="_blank">
+            <i class="bi bi-printer"></i>
+        </a>
+        <?php endif; ?>
+    </div>
+
+    <!-- Right button -->
+    <a href="inventory-items.php" class="btn btn-primary">Add Specific Item</a>
+</div>
 
                 <table id="inventoryTable" class="table table-bordered table-striped">
                     <thead class="table-dark text-center">
