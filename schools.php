@@ -84,7 +84,9 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
             <td id="person<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact_person']) ?></td>
             <td id="contact<?= htmlspecialchars($project['school_id']) ?>s"><?= htmlspecialchars($project['contact']) ?></td>
             <td class="text-center">
-              <button  class="btn btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;"><i class="bi bi-trash fs-4"></i></button></td>
+                        <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit('<?= htmlspecialchars($project['school_id']) ?>')"><i class="bi bi-pencil-square fs-4"></i></button>
+                        <button  class="btn btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = '<?= htmlspecialchars($project['school_id']) ?>';"><i class="bi bi-trash fs-4"></i></button>
+              </td>
           </tr>
         <?php }; ?>
     </tbody>
@@ -134,27 +136,33 @@ redirectIfNotAuthorized($allowed_roles, 'index.php');
 <script src="assets/js/project_details.js"></script>
 
 <script>
-//function updateEdit(schoolId){
-//const id = document.getElementById("id"+schoolId+"s").innerHTML;
-//const name = document.getElementById("name"+schoolId+"s").innerHTML;
-//const address = document.getElementById("address"+schoolId+"s").innerHTML;
-//const person = document.getElementById("person"+schoolId+"s").innerHTML;
-//const contact = document.getElementById("contact"+schoolId+"s").innerHTML;
-//const municipalty = document.getElementById("municipality"+schoolId+"s").innerHTML;
-//const division = document.getElementById("division"+schoolId+"s").innerHTML;
-//const region = document.getElementById("region"+schoolId+"s").innerHTML;
 
-//document.getElementById("editid").value = id;
-//document.getElementById("editname").value = name;
-//document.getElementById("editaddress").value = address;
-//document.getElementById("editcontact").value = contact;
-//document.getElementById("editperson").value = person;
-//document.getElementById("editmunicipality").value = municipalty;
-//document.getElementById("editdivision").value = division;
-//document.getElementById("editregion").value = region;
+function truncateText(text) {
+    // Implement your truncation logic if needed, otherwise return the original text
+    return text;
+}
 
+function updateEdit(schoolId){
+    const id = document.getElementById("id"+schoolId+"s").innerHTML;
+    const name = document.getElementById("name"+schoolId+"s").innerHTML;
+    const address = document.getElementById("address"+schoolId+"s").innerHTML;
+    const person = document.getElementById("person"+schoolId+"s").innerHTML;
+    const contact = document.getElementById("contact"+schoolId+"s").innerHTML;
+    const municipality = document.getElementById("municipality"+schoolId+"s").innerHTML;
+    const division = document.getElementById("division"+schoolId+"s").innerHTML;
+    const region = document.getElementById("region"+schoolId+"s").innerHTML;
 
-//}
+    document.getElementById("editoriginalid").value = id;
+    document.getElementById("editid").value = id;
+    document.getElementById("editname").value = name;
+    document.getElementById("editaddress").value = address;
+    document.getElementById("editcontact").value = contact;
+    document.getElementById("editperson").value = person;
+    document.getElementById("editmunicipality").value = municipality;
+    document.getElementById("editdivision").value = division;
+    document.getElementById("editregion").value = region;
+}
+
 // Populate region on page load
 document.addEventListener("DOMContentLoaded", function () {
     populateFilter("filterRegion", "SELECT DISTINCT region AS options FROM school ORDER BY region ASC");
@@ -248,8 +256,8 @@ function updateTable(page = 1) {
                     <td id='person${truncateText(row.school_id)}s'>${row.contact_person}</td>
                     <td id='contact${truncateText(row.school_id)}s'>${row.contact}</td>
                     <td class="text-center">
-                        <!--button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(${row.school_id})"><i class="bi bi-pencil-square fs-4"></i></button-->
-                        <button  class="btn btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = <?= htmlspecialchars($project['school_id']) ?>;"><i class="bi bi-trash fs-4"></i></button></td>
+                        <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit('${row.school_id}')"><i class="bi bi-pencil-square fs-4"></i></button>
+                        <button class="btn btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_school').value = '${row.school_id}';"><i class="bi bi-trash fs-4"></i></button>
                     </td>
                 </tr>`).join("");
         }
@@ -281,5 +289,72 @@ document.getElementById("filterButt").addEventListener("click", () => updateTabl
 document.getElementById("searchButton").addEventListener("click", () => updateTable(1));
 document.getElementById("searchInput").addEventListener("keypress", e => { if(e.key==="Enter") updateTable(1); });
 
+// Toast message display
+document.addEventListener("DOMContentLoaded", function() {
+    const editSaveBtn = document.getElementById("editSaveBtn");
+    const editForm = document.getElementById("editForm");
+
+    editSaveBtn.addEventListener("click", function() {
+        showLoading();
+        const formData = new FormData(editForm);
+
+        fetch("script/edit_school.php", {
+            method: "POST",
+            body: formData,
+        })
+        .then(res => res.json())
+        .then(data => {
+            hideLoading();
+            let toastMessage = encodeURIComponent(data.message);
+            let toastType = data.success ? 'success' : 'danger';
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+
+            window.location.href = `schools.php?id=${id}&toast=${toastMessage}&type=${toastType}`;
+        })
+        .catch(err => {
+            hideLoading();
+            console.error("Error:", err);
+            alert("An error occurred. Please try again.");
+        });
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const toastMessage = urlParams.get('toast');
+    const toastType = urlParams.get('type');
+
+    if (toastMessage && toastType) {
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        toastContainer.style.zIndex = '1050';
+
+        const toastElement = document.createElement('div');
+        toastElement.className = `toast align-items-center text-bg-${toastType} border-0 show`;
+        toastElement.setAttribute('role', 'alert');
+        toastElement.setAttribute('aria-live', 'assertive');
+        toastElement.setAttribute('aria-atomic', 'true');
+
+        toastElement.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${decodeURIComponent(toastMessage)}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        toastContainer.appendChild(toastElement);
+        document.body.appendChild(toastContainer);
+
+        const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toastElement);
+        toastBootstrap.show();
+
+        // Remove toast parameters from URL
+        urlParams.delete('toast');
+        urlParams.delete('type');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, document.title, newUrl);
+    }
+});
 </script>
 <?php require "template/footer.php"; ?>

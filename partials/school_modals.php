@@ -62,6 +62,7 @@ $project_id = $_GET['id'];
       <div class="modal-body">
         <form method="POST" action="script/edit_school.php" id="editForm">
           <input type="hidden" name="project_id" value="<?= $id ?>">
+          <input type="hidden" id="editoriginalid" name="original_school_id">
           <div class="mb-3"><label>School ID</label><input required id="editid" name="id" type="text" class="form-control"></div>
           <div class="mb-3"><label>School Name</label><input required id="editname" name="school" type="text" class="form-control"></div>
           <div class="mb-3"><label>Address</label><input required id="editaddress" name="address" type="text" class="form-control"></div>
@@ -74,7 +75,7 @@ $project_id = $_GET['id'];
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="submit" class="btn btn-primary" form="editForm">Save</button>
+        <button type="button" class="btn btn-primary" id="editSaveBtn">Save</button>
       </div>
     </div>
   </div>
