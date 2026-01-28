@@ -141,15 +141,31 @@ document.addEventListener("DOMContentLoaded", function () {
       const items = warehouseGroups[warehouseName];
       const itemCount = items.length;
       // Calculate total actual and expected quantities for header
-      const totalActualQty = items.reduce((sum, item) => sum + parseInt(item.actual_qty || 0), 0);
-      const totalExpectedQty = items.reduce((sum, item) => sum + parseInt(item.expected_qty || 0), 0);
+      const totalActualQty = items.reduce(
+        (sum, item) => sum + parseInt(item.actual_qty || 0),
+        0,
+      );
+      const totalExpectedQty = items.reduce(
+        (sum, item) => sum + parseInt(item.expected_qty || 0),
+        0,
+      );
       const totalCombinedQty = totalActualQty + totalExpectedQty;
 
       // Sort items by combined quantity (descending)
-      items.sort((a, b) => (parseInt(b.actual_qty || 0) + parseInt(b.expected_qty || 0)) - (parseInt(a.actual_qty || 0) + parseInt(a.expected_qty || 0)));
+      items.sort(
+        (a, b) =>
+          parseInt(b.actual_qty || 0) +
+          parseInt(b.expected_qty || 0) -
+          (parseInt(a.actual_qty || 0) + parseInt(a.expected_qty || 0)),
+      );
 
       // Find max combined quantity for this warehouse for color scaling
-      const maxCombinedQuantity = Math.max(...items.map((item) => (parseInt(item.actual_qty || 0) + parseInt(item.expected_qty || 0))));
+      const maxCombinedQuantity = Math.max(
+        ...items.map(
+          (item) =>
+            parseInt(item.actual_qty || 0) + parseInt(item.expected_qty || 0),
+        ),
+      );
 
       // Create a new row for every 2 cards
       if (index % 2 === 0) {
@@ -168,9 +184,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
                     <div class="card-body" style="height: 400px; overflow-y: auto;">
                         <canvas id="warehouseChart_${index}" width="600" height="${Math.max(
-        400,
-        items.length * 20
-      )}"></canvas>
+                          400,
+                          items.length * 20,
+                        )}"></canvas>
                     </div>
                 </div>
             `;
@@ -186,8 +202,8 @@ document.addEventListener("DOMContentLoaded", function () {
             {
               label: "Actual Quantity",
               data: items.map((item) => parseInt(item.actual_qty || 0)),
-              backgroundColor: deliveryStatusColors.Accepted, // Green for Actual
-              borderColor: colorVariants.border.Accepted,
+              backgroundColor: deliveryStatusColors.Delivered, // Green for Actual
+              borderColor: colorVariants.border.Delivered,
               borderWidth: 1.5,
               borderRadius: 4,
               borderSkipped: false,
@@ -225,10 +241,12 @@ document.addEventListener("DOMContentLoaded", function () {
                   const expected = parseInt(item.expected_qty || 0);
                   const total = actual + expected;
                   if (context.dataset.label === "Actual Quantity") {
-                    const percentage = total > 0 ? ((actual / total) * 100).toFixed(1) : 0;
+                    const percentage =
+                      total > 0 ? ((actual / total) * 100).toFixed(1) : 0;
                     return `Actual: ${actual.toLocaleString()} ${item.unit} (${percentage}%)`;
                   } else {
-                    const percentage = total > 0 ? ((expected / total) * 100).toFixed(1) : 0;
+                    const percentage =
+                      total > 0 ? ((expected / total) * 100).toFixed(1) : 0;
                     return `Expected: ${expected.toLocaleString()} ${item.unit} (${percentage}%)`;
                   }
                 },
@@ -272,16 +290,25 @@ document.addEventListener("DOMContentLoaded", function () {
     const overallItemExpected = {};
 
     inventoryByWarehouse.forEach((item) => {
-      overallItemActuals[item.item_name] = (overallItemActuals[item.item_name] || 0) + parseInt(item.actual_qty || 0);
-      overallItemExpected[item.item_name] = (overallItemExpected[item.item_name] || 0) + parseInt(item.expected_qty || 0);
+      overallItemActuals[item.item_name] =
+        (overallItemActuals[item.item_name] || 0) +
+        parseInt(item.actual_qty || 0);
+      overallItemExpected[item.item_name] =
+        (overallItemExpected[item.item_name] || 0) +
+        parseInt(item.expected_qty || 0);
     });
 
     const labels = Object.keys(overallItemActuals);
-    const actualData = labels.map(label => overallItemActuals[label]);
-    const expectedData = labels.map(label => overallItemExpected[label]);
+    const actualData = labels.map((label) => overallItemActuals[label]);
+    const expectedData = labels.map((label) => overallItemExpected[label]);
 
     // Find max combined quantity for overall inventory for color scaling
-    const maxOverallCombinedQuantity = Math.max(...labels.map(label => (overallItemActuals[label] || 0) + (overallItemExpected[label] || 0)));
+    const maxOverallCombinedQuantity = Math.max(
+      ...labels.map(
+        (label) =>
+          (overallItemActuals[label] || 0) + (overallItemExpected[label] || 0),
+      ),
+    );
 
     const col = document.createElement("div");
     col.className = "col-lg-6 col-md-6 mb-3";
@@ -296,7 +323,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 <div class="card-body" style="height: 400px; overflow-y: auto;">
                     <canvas id="overallInventoryChart" width="600" height="${Math.max(
                       400,
-                      labels.length * 20
+                      labels.length * 20,
                     )}"></canvas>
                 </div>
             </div>
@@ -313,8 +340,8 @@ document.addEventListener("DOMContentLoaded", function () {
           {
             label: "Overall Actual Quantity",
             data: actualData,
-            backgroundColor: deliveryStatusColors.Accepted,
-            borderColor: colorVariants.border.Accepted,
+            backgroundColor: deliveryStatusColors.Delivered,
+            borderColor: colorVariants.border.Delivered,
             borderWidth: 1.5,
             borderRadius: 4,
             borderSkipped: false,
@@ -345,10 +372,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 const total = actual + expected;
 
                 if (context.dataset.label === "Overall Actual Quantity") {
-                  const percentage = total > 0 ? ((actual / total) * 100).toFixed(1) : 0;
+                  const percentage =
+                    total > 0 ? ((actual / total) * 100).toFixed(1) : 0;
                   return `Actual: ${actual.toLocaleString()} (${percentage}%)`;
                 } else {
-                  const percentage = total > 0 ? ((expected / total) * 100).toFixed(1) : 0;
+                  const percentage =
+                    total > 0 ? ((expected / total) * 100).toFixed(1) : 0;
                   return `Expected: ${expected.toLocaleString()} (${percentage}%)`;
                 }
               },
@@ -476,7 +505,7 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
     createEmptyChart(
       document.getElementById("acceptedPerRegionChart"),
-      "No region data available"
+      "No region data available",
     );
   }
 
@@ -575,7 +604,7 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
     createEmptyChart(
       document.getElementById("deliveredPerRegionChart"),
-      "No region data available"
+      "No region data available",
     );
   }
 
@@ -674,7 +703,7 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
     createEmptyChart(
       document.getElementById("acceptedPerLotChart"),
-      "No lot data available"
+      "No lot data available",
     );
   }
 
@@ -773,7 +802,7 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
     createEmptyChart(
       document.getElementById("deliveredPerLotChart"),
-      "No lot data available"
+      "No lot data available",
     );
   }
 
@@ -781,10 +810,10 @@ document.addEventListener("DOMContentLoaded", function () {
   if (deliveriesByWarehouse && deliveriesByWarehouse.length > 0) {
     const warehouses = deliveriesByWarehouse.map((w) => w.warehouse_name);
     const expectedData = deliveriesByWarehouse.map((w) =>
-      parseInt(w.expected_deliveries)
+      parseInt(w.expected_deliveries),
     );
     const actualData = deliveriesByWarehouse.map((w) =>
-      parseInt(w.actual_deliveries)
+      parseInt(w.actual_deliveries),
     );
 
     new Chart(document.getElementById("deliveriesByWarehouseChart"), {
@@ -843,7 +872,7 @@ document.addEventListener("DOMContentLoaded", function () {
                       ? Math.round(
                           (warehouseData.actual_deliveries /
                             warehouseData.expected_deliveries) *
-                            100
+                            100,
                         )
                       : 0;
                   return `Actual: ${context.parsed.y} deliveries | ${completionRate}% Complete | ${status}`;
@@ -880,7 +909,7 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
     createEmptyChart(
       document.getElementById("deliveriesByWarehouseChart"),
-      "No deliveries data available for selected project"
+      "No deliveries data available for selected project",
     );
   }
 
