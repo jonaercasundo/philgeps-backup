@@ -140,13 +140,16 @@ document.addEventListener("DOMContentLoaded", function () {
     warehouseNames.forEach((warehouseName, index) => {
       const items = warehouseGroups[warehouseName];
       const itemCount = items.length;
-      const totalQty = items.reduce((sum, item) => sum + parseInt(item.qty), 0);
+      // Calculate total actual and expected quantities for header
+      const totalActualQty = items.reduce((sum, item) => sum + parseInt(item.actual_qty || 0), 0);
+      const totalExpectedQty = items.reduce((sum, item) => sum + parseInt(item.expected_qty || 0), 0);
+      const totalCombinedQty = totalActualQty + totalExpectedQty;
 
-      // Sort items by quantity (descending)
-      items.sort((a, b) => parseInt(b.qty) - parseInt(a.qty));
+      // Sort items by combined quantity (descending)
+      items.sort((a, b) => (parseInt(b.actual_qty || 0) + parseInt(b.expected_qty || 0)) - (parseInt(a.actual_qty || 0) + parseInt(a.expected_qty || 0)));
 
-      // Find max quantity for this warehouse for color scaling
-      const maxQuantity = Math.max(...items.map((item) => parseInt(item.qty)));
+      // Find max combined quantity for this warehouse for color scaling
+      const maxCombinedQuantity = Math.max(...items.map((item) => (parseInt(item.actual_qty || 0) + parseInt(item.expected_qty || 0))));
 
       // Create a new row for every 2 cards
       if (index % 2 === 0) {
@@ -161,7 +164,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 <div class="card h-100">
                     <div class="card-header bg-light">
                         <h6 class="mb-1">${warehouseName}</h6>
-                        <small class="text-muted">${itemCount} items | Total: ${totalQty} units</small>
+                        <small class="text-muted">${itemCount} items | Total: ${totalCombinedQty} units (Actual: ${totalActualQty}, Expected: ${totalExpectedQty})</small>
                     </div>
                     <div class="card-body" style="height: 400px; overflow-y: auto;">
                         <canvas id="warehouseChart_${index}" width="600" height="${Math.max(
@@ -174,21 +177,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
       row.appendChild(col);
 
-      // Initialize chart with quantity-based colors using existing variables
+      // Initialize chart as a stacked bar chart
       new Chart(document.getElementById(`warehouseChart_${index}`), {
         type: "bar",
         data: {
           labels: items.map((item) => item.item_name),
           datasets: [
             {
-              label: "Quantity",
-              data: items.map((item) => parseInt(item.qty)),
-              backgroundColor: items.map((item) =>
-                getQuantityColor(parseInt(item.qty), maxQuantity)
-              ),
-              borderColor: items.map((item) =>
-                getQuantityColor(parseInt(item.qty), maxQuantity)
-              ),
+              label: "Actual Quantity",
+              data: items.map((item) => parseInt(item.actual_qty || 0)),
+              backgroundColor: deliveryStatusColors.Accepted, // Green for Actual
+              borderColor: colorVariants.border.Accepted,
+              borderWidth: 1.5,
+              borderRadius: 4,
+              borderSkipped: false,
+            },
+            {
+              label: "Expected Quantity",
+              data: items.map((item) => parseInt(item.expected_qty || 0)),
+              backgroundColor: deliveryStatusColors.Pending, // Red for Expected (Pending)
+              borderColor: colorVariants.border.Pending,
               borderWidth: 1.5,
               borderRadius: 4,
               borderSkipped: false,
@@ -200,7 +208,7 @@ document.addEventListener("DOMContentLoaded", function () {
           responsive: false,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false },
+            legend: { display: true }, // Show legend for Actual/Expected
             tooltip: {
               backgroundColor: "#fff",
               titleColor: "#333",
@@ -213,23 +221,30 @@ document.addEventListener("DOMContentLoaded", function () {
               callbacks: {
                 label: function (context) {
                   const item = items[context.dataIndex];
-                  const percentage =
-                    totalQty > 0 ? ((item.qty / totalQty) * 100).toFixed(1) : 0;
-                  return `${parseInt(item.qty).toLocaleString()} ${
-                    item.unit
-                  } (${percentage}%)`;
+                  const actual = parseInt(item.actual_qty || 0);
+                  const expected = parseInt(item.expected_qty || 0);
+                  const total = actual + expected;
+                  if (context.dataset.label === "Actual Quantity") {
+                    const percentage = total > 0 ? ((actual / total) * 100).toFixed(1) : 0;
+                    return `Actual: ${actual.toLocaleString()} ${item.unit} (${percentage}%)`;
+                  } else {
+                    const percentage = total > 0 ? ((expected / total) * 100).toFixed(1) : 0;
+                    return `Expected: ${expected.toLocaleString()} ${item.unit} (${percentage}%)`;
+                  }
                 },
               },
             },
           },
           scales: {
             x: {
+              stacked: true, // Make x-axis stacked
               beginAtZero: true,
               title: { display: true, text: "Quantity" },
               grid: { color: "#eee" },
               ticks: { precision: 0 },
             },
             y: {
+              stacked: true, // Make y-axis stacked
               title: { display: false },
               grid: { display: false },
               ticks: {
@@ -253,17 +268,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Group by item and calculate totals for overall inventory
-    const itemTotals = {};
+    const overallItemActuals = {};
+    const overallItemExpected = {};
+
     inventoryByWarehouse.forEach((item) => {
-      itemTotals[item.item_name] =
-        (itemTotals[item.item_name] || 0) + parseInt(item.qty);
+      overallItemActuals[item.item_name] = (overallItemActuals[item.item_name] || 0) + parseInt(item.actual_qty || 0);
+      overallItemExpected[item.item_name] = (overallItemExpected[item.item_name] || 0) + parseInt(item.expected_qty || 0);
     });
 
-    const labels = Object.keys(itemTotals);
-    const totals = Object.values(itemTotals);
+    const labels = Object.keys(overallItemActuals);
+    const actualData = labels.map(label => overallItemActuals[label]);
+    const expectedData = labels.map(label => overallItemExpected[label]);
 
-    // Find max quantity for overall inventory for color scaling
-    const maxOverallQuantity = Math.max(...totals);
+    // Find max combined quantity for overall inventory for color scaling
+    const maxOverallCombinedQuantity = Math.max(...labels.map(label => (overallItemActuals[label] || 0) + (overallItemExpected[label] || 0)));
 
     const col = document.createElement("div");
     col.className = "col-lg-6 col-md-6 mb-3";
@@ -293,14 +311,19 @@ document.addEventListener("DOMContentLoaded", function () {
         labels: labels,
         datasets: [
           {
-            label: "Total Quantity",
-            data: totals,
-            backgroundColor: totals.map((quantity) =>
-              getQuantityColor(quantity, maxOverallQuantity)
-            ),
-            borderColor: totals.map((quantity) =>
-              getQuantityColor(quantity, maxOverallQuantity)
-            ),
+            label: "Overall Actual Quantity",
+            data: actualData,
+            backgroundColor: deliveryStatusColors.Accepted,
+            borderColor: colorVariants.border.Accepted,
+            borderWidth: 1.5,
+            borderRadius: 4,
+            borderSkipped: false,
+          },
+          {
+            label: "Overall Expected Quantity",
+            data: expectedData,
+            backgroundColor: deliveryStatusColors.Pending,
+            borderColor: colorVariants.border.Pending,
             borderWidth: 1.5,
             borderRadius: 4,
             borderSkipped: false,
@@ -312,23 +335,36 @@ document.addEventListener("DOMContentLoaded", function () {
         responsive: false,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
+          legend: { display: true },
           tooltip: {
             callbacks: {
               label: function (context) {
-                return `Total: ${context.parsed.x.toLocaleString()}`;
+                const itemLabel = labels[context.dataIndex];
+                const actual = overallItemActuals[itemLabel] || 0;
+                const expected = overallItemExpected[itemLabel] || 0;
+                const total = actual + expected;
+
+                if (context.dataset.label === "Overall Actual Quantity") {
+                  const percentage = total > 0 ? ((actual / total) * 100).toFixed(1) : 0;
+                  return `Actual: ${actual.toLocaleString()} (${percentage}%)`;
+                } else {
+                  const percentage = total > 0 ? ((expected / total) * 100).toFixed(1) : 0;
+                  return `Expected: ${expected.toLocaleString()} (${percentage}%)`;
+                }
               },
             },
           },
         },
         scales: {
           x: {
+            stacked: true,
             beginAtZero: true,
             title: { display: true, text: "Total Quantity" },
             grid: { color: "#eee" },
             ticks: { precision: 0 },
           },
           y: {
+            stacked: true,
             title: { display: false },
             grid: { display: false },
             ticks: {
