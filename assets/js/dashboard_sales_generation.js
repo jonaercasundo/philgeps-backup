@@ -233,6 +233,14 @@ document.addEventListener("DOMContentLoaded", function () {
               display: true,
               text: "Projects",
             },
+            ticks: {
+              callback: function (value, index, ticks) {
+                const label = this.getLabelForValue(value);
+                return label.length > 25
+                  ? label.substring(0, 25) + "..."
+                  : label;
+              },
+            },
           },
           y: {
             stacked: true,
@@ -346,6 +354,14 @@ document.addEventListener("DOMContentLoaded", function () {
             title: {
               display: true,
               text: "Projects",
+            },
+            ticks: {
+              callback: function (value, index, ticks) {
+                const label = this.getLabelForValue(value);
+                return label.length > 25
+                  ? label.substring(0, 25) + "..."
+                  : label;
+              },
             },
           },
           y: {
