@@ -9,7 +9,7 @@ const deliveryStatusColors = {
 
 // Project Status Colors (Green-Yellow-Red)
 const projectStatusColors = {
-  Upcoming: "#dc3545", // Red
+  Pending: "#dc3545", // Red
   "For Award": "#fbc02d", // Yellow
   "For Implementation": "#e6b422", // Darker Yellow
   Ongoing: "#d4a81e", // Even Darker Yellow
@@ -96,23 +96,24 @@ document.addEventListener("DOMContentLoaded", function () {
   if (projectStatusOverview.length > 0) {
     const totalOverall = projectStatusOverview.reduce(
       (sum, r) => sum + parseFloat(r.total || 0),
-      0
+      0,
     );
 
     new Chart(document.getElementById("projectStatusChart"), {
       type: "pie",
       data: {
         labels: projectStatusOverview.map(
-          (r) => `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`
+          (r) =>
+            `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`,
         ),
         datasets: [
           {
             data: projectStatusOverview.map((r) => r.total),
             backgroundColor: projectStatusOverview.map(
-              (r) => projectStatusColors[r.status]
+              (r) => projectStatusColors[r.status],
             ),
             borderColor: projectStatusOverview.map(
-              (r) => projectStatusColors[r.status]
+              (r) => projectStatusColors[r.status],
             ),
             borderWidth: 2,
           },
@@ -154,7 +155,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // Filter projects based on the database status
             const projects = allProjectsWithStatus.filter(
-              (p) => p.status === dbStatus
+              (p) => p.status === dbStatus,
             );
 
             // Populate and show the modal
@@ -175,12 +176,11 @@ document.addEventListener("DOMContentLoaded", function () {
               projectList.appendChild(li);
             }
 
-            document.getElementById(
-              "projectListModalLabel"
-            ).textContent = `Projects: ${displayedStatus}`;
+            document.getElementById("projectListModalLabel").textContent =
+              `Projects: ${displayedStatus}`;
 
             const projectModal = new bootstrap.Modal(
-              document.getElementById("projectListModal")
+              document.getElementById("projectListModal"),
             );
             projectModal.show();
           }
@@ -190,7 +190,7 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
     createEmptyChart(
       document.getElementById("projectStatusChart"),
-      "No project data available"
+      "No project data available",
     );
   }
 
@@ -198,7 +198,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (phpData.opportunity && phpData.opportunity.length > 0) {
     const projects = phpData.opportunity.map((p) => p.project_name);
     const contractData = phpData.opportunity.map(
-      (p) => parseFloat(p.contract_amount) || 0
+      (p) => parseFloat(p.contract_amount) || 0,
     );
     const abcData = phpData.opportunity.map((p) => parseFloat(p.ABC) || 0);
 
@@ -288,7 +288,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     if (total > 0) {
                       const percentage = Math.round(
-                        (contractAmount / total) * 100
+                        (contractAmount / total) * 100,
                       );
 
                       ctx.fillStyle = "#fff";
@@ -298,7 +298,7 @@ document.addEventListener("DOMContentLoaded", function () {
                       ctx.fillText(
                         percentage + "%",
                         bar.x,
-                        bar.y + bar.height / 2
+                        bar.y + bar.height / 2,
                       );
                     }
                   }
@@ -312,7 +312,7 @@ document.addEventListener("DOMContentLoaded", function () {
   } else {
     createEmptyChart(
       document.getElementById("opportunityChart"),
-      "No project financial data available"
+      "No project financial data available",
     );
   }
 
@@ -320,10 +320,11 @@ document.addEventListener("DOMContentLoaded", function () {
   if (phpData.opportunity && phpData.opportunity.length > 0) {
     const projects = phpData.opportunity.map((p) => p.project_name);
     const contractData = phpData.opportunity.map(
-      (p) => parseFloat(p.contract_amount) || 0
+      (p) => parseFloat(p.contract_amount) || 0,
     );
 
-    new Chart(document.getElementById("contractVarianceChart"), { // Keep the same ID for existing HTML
+    new Chart(document.getElementById("contractVarianceChart"), {
+      // Keep the same ID for existing HTML
       type: "bar",
       data: {
         labels: projects,
@@ -369,16 +370,16 @@ document.addEventListener("DOMContentLoaded", function () {
               },
             },
           },
-           legend: {
-                display: true // Display legend
-            }
+          legend: {
+            display: true, // Display legend
+          },
         },
       },
     });
   } else {
     createEmptyChart(
       document.getElementById("contractVarianceChart"),
-      "No contract amount data available" // Updated message
+      "No contract amount data available", // Updated message
     );
   }
 });
