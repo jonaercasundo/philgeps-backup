@@ -809,12 +809,15 @@ document.addEventListener("DOMContentLoaded", function () {
   // Expected vs Actual Deliveries by Warehouse
   if (deliveriesByWarehouse && deliveriesByWarehouse.length > 0) {
     const warehouses = deliveriesByWarehouse.map((w) => w.warehouse_name);
-    const expectedData = deliveriesByWarehouse.map((w) =>
-      parseInt(w.expected_deliveries),
-    );
-    const actualData = deliveriesByWarehouse.map((w) =>
-      parseInt(w.actual_deliveries),
-    );
+    
+    const actualPercentageData = deliveriesByWarehouse.map((w) => {
+      const total = parseInt(w.expected_deliveries) || 1;
+      return Math.round((parseInt(w.actual_deliveries) / total) * 100);
+    });
+    const notActualPercentageData = deliveriesByWarehouse.map((w) => {
+      const total = parseInt(w.expected_deliveries) || 1;
+      return 100 - Math.round((parseInt(w.actual_deliveries) / total) * 100);
+    });
 
     new Chart(document.getElementById("deliveriesByWarehouseChart"), {
       type: "bar",
@@ -822,17 +825,17 @@ document.addEventListener("DOMContentLoaded", function () {
         labels: warehouses,
         datasets: [
           {
-            label: "Expected Deliveries",
-            data: expectedData,
-            backgroundColor: deliveryStatusColors.Pending, // #dc3545 - Red
-            borderColor: colorVariants.border.Pending, // #dc3545
+            label: "Actual Deliveries",
+            data: actualPercentageData,
+            backgroundColor: deliveryStatusColors.Delivered,
+            borderColor: colorVariants.border.Delivered,
             borderWidth: 1,
           },
           {
-            label: "Actual Deliveries",
-            data: actualData,
-            backgroundColor: deliveryStatusColors.Delivered, // #198754 - Green
-            borderColor: colorVariants.border.Delivered, // #198754
+            label: "Not Actual Deliveries",
+            data: notActualPercentageData,
+            backgroundColor: deliveryStatusColors.Pending,
+            borderColor: colorVariants.border.Pending,
             borderWidth: 1,
           },
         ],
@@ -842,16 +845,19 @@ document.addEventListener("DOMContentLoaded", function () {
         maintainAspectRatio: false,
         scales: {
           x: {
+            stacked: true,
             title: {
               display: true,
               text: "Warehouses",
             },
           },
           y: {
+            stacked: true,
             beginAtZero: true,
+            max: 100,
             title: {
               display: true,
-              text: "Number of Deliveries",
+              text: "Percentage (%)",
             },
           },
         },
@@ -860,22 +866,10 @@ document.addEventListener("DOMContentLoaded", function () {
             callbacks: {
               label: function (context) {
                 const warehouseData = deliveriesByWarehouse[context.dataIndex];
-                if (context.dataset.label === "Expected Deliveries") {
-                  return `Expected: ${context.parsed.y} deliveries`;
+                if (context.dataset.label === "Actual Deliveries") {
+                  return `Actual: ${warehouseData.actual_deliveries}/${warehouseData.expected_deliveries} (${context.parsed.y}%)`;
                 } else {
-                  const variance =
-                    warehouseData.expected_deliveries -
-                    warehouseData.actual_deliveries;
-                  const status = variance <= 0 ? "Met Target" : "Behind Target";
-                  const completionRate =
-                    warehouseData.expected_deliveries > 0
-                      ? Math.round(
-                          (warehouseData.actual_deliveries /
-                            warehouseData.expected_deliveries) *
-                            100,
-                        )
-                      : 0;
-                  return `Actual: ${context.parsed.y} deliveries | ${completionRate}% Complete | ${status}`;
+                  return `Not Actual: ${warehouseData.expected_deliveries - warehouseData.actual_deliveries}/${warehouseData.expected_deliveries} (${context.parsed.y}%)`;
                 }
               },
             },
@@ -895,10 +889,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 const data = dataset.data[index];
                 if (data > 0) {
                   ctx.fillStyle = "#fff";
-                  ctx.font = "bold 10px Arial";
+                  ctx.font = "bold 12px Arial";
                   ctx.textAlign = "center";
                   ctx.textBaseline = "middle";
-                  ctx.fillText(data, bar.x, bar.y - 10);
+                  ctx.fillText(data + "%", bar.x, bar.y + bar.height / 2);
                 }
               });
             });

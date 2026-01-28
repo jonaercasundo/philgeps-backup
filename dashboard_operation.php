@@ -146,19 +146,46 @@ try {
         SELECT 
             w.warehouse_id,
             w.warehouse_name,
-            
-            -- Expected: Deliveries all status
-            COUNT(DISTINCT CONCAT_WS('-', d.school_id, d.lot_id)) AS expected_deliveries,
-            
-            -- Actual: Deliveries with status delivered and accepted
-            COUNT(DISTINCT CASE WHEN d.status IN ('delivered', 'accepted') 
-                  THEN CONCAT_WS('-', d.school_id, d.lot_id) END) AS actual_deliveries
 
-        FROM warehouse w
-        LEFT JOIN logistics_location ll ON w.warehouse_id = ll.warehouse_id
-        LEFT JOIN deliveries d ON ll.logistics_location_id = d.logistics_location_id
-        " . ($selectedProject > 0 ? " WHERE d.project_id = $selectedProject" : "") . "
-        GROUP BY w.warehouse_id, w.warehouse_name;
+            -- Expected: all deliveries in warehouse region scope
+            COUNT(DISTINCT d.delivery_id) AS expected_deliveries,
+
+            -- Actual: delivered + accepted only
+            COUNT(DISTINCT CASE 
+                WHEN d.status IN ('delivered','accepted') 
+                THEN d.delivery_id 
+            END) AS actual_deliveries
+
+        FROM deliveries d
+        JOIN school s 
+            ON d.school_id = s.school_id
+
+        JOIN warehouse w 
+            ON (
+                -- LUZON → Pampanga
+                (w.warehouse_address = 'Pampanga' AND s.region IN (
+                    'Region I','Region II','Region III','Region IV-A','Region IV-B',
+                    'MIMAROPA','Region V','CAR','NCR'
+                )) OR
+
+                -- VISAYAS → Cebu
+                (w.warehouse_address = 'Cebu' AND s.region IN (
+                    'Region VI','Region VII','Region VIII'
+                )) OR
+
+                -- MINDANAO → Davao
+                (w.warehouse_address = 'Davao' AND s.region IN (
+                    'Region IX','Region X','Region XI','Region XII',
+                    'Region XIII','CARAGA','BARMM'
+                ))
+            )
+
+        " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
+
+        AND w.warehouse_name IN ('Pampanga','Cebu','Davao')
+
+        GROUP BY w.warehouse_id, w.warehouse_name
+        ORDER BY w.warehouse_name
     ";
 
     $stmt = $pdo->query($deliveriesByWarehouseQuery);
