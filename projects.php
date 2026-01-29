@@ -54,7 +54,7 @@ try {
     <thead class="table-dark">
         <tr>
             <th>Ref No</th><th>Agency</th><th>Project Name</th>
-            <th>Amount</th><th>Status</th><th>Actions</th>
+            <th>Amount</th><th>Start Date</th><th>End Date</th><th>Status</th><th>Actions</th>
         </tr>
     </thead>
     <tbody id="resultTable">
@@ -64,6 +64,8 @@ try {
             <td><?= htmlspecialchars($p['agency']) ?></td>
             <td><?= htmlspecialchars($p['project_name']) ?></td>
             <td>₱<?= number_format($p['contract_amount'], 2) ?></td>
+            <td><?= htmlspecialchars(date('M d, Y', strtotime($p['start_date']))) ?></td>
+            <td><?= htmlspecialchars(date('M d, Y', strtotime($p['end_date']))) ?></td>
             <td><?= htmlspecialchars($p['status']) ?></td>
             <td class="text-center"><a href="project_details.php?id=<?= $p['project_id'] ?>" class="btn btn-primary">
                 <i class="bi bi-eye fs-4"></i>
@@ -236,7 +238,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <td>${p.ref_no}</td>
                         <td>${p.agency}</td>
                         <td>${p.project_name}</td>
-                        <td>₱${p.contract_amount}</td>
+                        <td>₱${parseFloat(p.contract_amount).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+                        <td>${new Date(p.start_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}</td>
+                        <td>${new Date(p.end_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}</td>
                         <td>${p.status}</td>
                         <td><a href='project_details.php?id=${p.project_id}' class='btn btn-sm btn-info'>View</a></td>
                     </tr>
