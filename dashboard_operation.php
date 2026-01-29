@@ -99,6 +99,7 @@ try {
         ) all_items
         JOIN item i ON all_items.item_id = i.item_id
         JOIN warehouse w ON all_items.warehouse_id = w.warehouse_id
+        -- Actual Quantity
         LEFT JOIN (
             SELECT ih.warehouse_id, ih.item_id, ih.new_qty
             FROM inventory_history ih
@@ -111,6 +112,7 @@ try {
             )
             AND DATE(ih.changed_at) <= :selectedDate
         ) ih ON ih.warehouse_id = all_items.warehouse_id AND ih.item_id = all_items.item_id
+        -- Expected Quantity
         LEFT JOIN (
             SELECT 
                 w2.warehouse_id,
