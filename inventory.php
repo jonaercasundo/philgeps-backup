@@ -1,6 +1,6 @@
-<?php 
+<?php
     $is_warehouse_page = true;
-    require "template/header.php"; 
+    require "template/header.php";
     require "script/role_auth.php";
     require "config/db.php";
 
@@ -21,7 +21,7 @@
 
         <!-- Header: fixed height -->
         <div class="px-3 d-flex justify-content-between align-items-center py-2 border-bottom flex-shrink-0">
-            <h5 class="mb-0 text-dark opacity-75">Add Package Items</h5> 
+            <h5 class="mb-0 text-dark opacity-75">Add Package Items</h5>
         </div>
 
         <!-- QR Reader container: fixed height and center content -->
@@ -60,7 +60,7 @@
     <div>
         <?php endif;?>
     <!-- 2. RIGHT MAIN CONTENT AREA (9 Columns wide on medium/large screens) -->
-    
+
         <!-- Large Main Content/Display Area -->
         <div class="flex-grow-1">
             <div class="bg-white px-4 rounded shadow-sm h-100">
@@ -86,6 +86,7 @@
                             <th>Warehouse</th>
                             <th>Item</th>
                             <th>Quantity</th>
+                            <th>Expected Quantity</th>
                             <th>Status</th>
                             <?php if($_SESSION['role'] != "Warehouse Coordinator"){
                                 echo "<th>Action</th>";
@@ -112,7 +113,7 @@
         if (deleteInput) {
             deleteInput.value = inventoryId;
         }
-        
+
         const sourcePageInput = document.getElementById('delete_source_page');
         if (sourcePageInput) {
             sourcePageInput.value = `inventory.php?inventory_id=${inventoryId}`;
@@ -132,7 +133,7 @@
         // Reset remarks fields when opening modal
         document.getElementById("remarks_dropdown").value = "";
         document.getElementById("custom_remarks").value = "";
-        
+
         // Ensure custom remarks is hidden
         const customRemarksCollapse = new bootstrap.Collapse(document.getElementById('customRemarksCollapse'), {
             toggle: false
@@ -149,7 +150,7 @@
         // Get remarks value and add to form data
         const dropdown = document.getElementById('remarks_dropdown');
         let remarks = '';
-        
+
         if (dropdown.value === 'custom') {
             remarks = document.getElementById('custom_remarks').value.trim();
         } else {
@@ -160,15 +161,15 @@
         const quantityChanged = (originalQuantity !== newQuantity);
         if (quantityChanged && !remarks) {
             alert("You've changed the quantity. Please add remarks about this change before proceeding.");
-            
+
             // Focus on remarks dropdown and return to let user add remarks
             dropdown.focus();
             return;
         }
-            
+
         // Add remarks to form data
         formData.append('remarks', remarks);
-        
+
         fetch('script/update_inventory.php', {
             method: 'POST',
             body: formData
@@ -197,7 +198,7 @@
     // Delete inventory
     function deleteInventory() {
         const formData = new FormData(document.getElementById('deleteForm'));
-        
+
         fetch('script/delete.php', {
             method: 'POST',
             body: formData
@@ -227,7 +228,7 @@
         document.getElementById("accept_inventory_id").value = inventoryId;
     }
 
-    // Update Reject Modal  
+    // Update Reject Modal
     function updateRejectId(inventoryId) {
         document.getElementById("reject_inventory_id").value = inventoryId;
     }
@@ -235,7 +236,7 @@
     // Accept inventory
     function acceptInventory() {
         const formData = new FormData(document.getElementById('acceptForm'));
-        
+
         fetch('script/accept_inventory.php', {
             method: 'POST',
             body: formData
@@ -261,14 +262,14 @@
         });
     }
 
-    // Update Reject Modal  
+    // Update Reject Modal
     function updateRejectId(inventoryId) {
         document.getElementById("reject_inventory_id").value = inventoryId;
-        
+
         // Reset reject remarks fields when opening modal
         document.getElementById("reject_remarks_dropdown").value = "";
         document.getElementById("reject_custom_remarks").value = "";
-        
+
         // Ensure reject custom remarks is hidden
         const rejectCustomRemarksCollapse = new bootstrap.Collapse(document.getElementById('reject_customRemarksCollapse'), {
             toggle: false
@@ -279,21 +280,21 @@
     // Reject inventory
     function rejectInventory() {
         const formData = new FormData(document.getElementById('rejectForm'));
-        
+
         // Get reject remarks value
         const dropdown = document.getElementById('reject_remarks_dropdown');
         let remarks = '';
-        
+
         if (dropdown && dropdown.value === 'custom') {
             const customRemarks = document.getElementById('reject_custom_remarks');
             remarks = customRemarks ? customRemarks.value.trim() : '';
         } else if (dropdown) {
             remarks = dropdown.value;
         }
-        
+
         // Add remarks to form data
         formData.append('remarks', remarks);
-        
+
         fetch('script/reject_inventory.php', {
             method: 'POST',
             body: formData
@@ -306,7 +307,7 @@
                     // Close the reject modal
                     const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
                     rejectModal.hide();
-                    
+
                     window.location.href = 'inventory.php?toast=' + encodeURIComponent(data.message) + '&type=success';
                 } else {
                     // Redirect with error toast instead of alert
@@ -333,7 +334,7 @@
                 const bsCollapse = new bootstrap.Collapse(customRemarksCollapse, {
                     toggle: false
                 });
-                
+
                 if (this.value === 'custom') {
                     bsCollapse.show();
                 } else {
@@ -351,7 +352,7 @@
                 const bsCollapse = new bootstrap.Collapse(rejectCustomRemarksCollapse, {
                     toggle: false
                 });
-                
+
                 if (this.value === 'custom') {
                     bsCollapse.show();
                 } else {
@@ -376,32 +377,41 @@
             processing: true,
             serverSide: true,
             ajax: {
-                url: "script/get_inventory.php", 
+                url: "script/get_inventory.php",
                 type: "GET"
             },
             columns: [
-                { 
-                    data: "inventory_id", 
+                {
+                    data: "inventory_id",
                     className: "text-center",
                     orderable: true
                 },
-                { 
-                    data: "warehouse_name", 
+                {
+                    data: "warehouse_name",
                     className: "text-center",
                     orderable: true
                 },
-                { 
-                    data: "item_name", 
+                {
+                    data: "item_name",
                     className: "text-center",
                     orderable: true
                 },
-                { 
-                    data: "qty", 
+                {
+                    data: "qty",
                     className: "text-center",
                     orderable: true
                 },
-                { 
-                    data: "inventory_status", 
+                {
+                    data: "expected_qty",
+                    className: "text-center",
+                    orderable: true,
+                    render: function(data, type, row) {
+                        // Format the expected quantity with commas for thousands
+                        return data ? parseInt(data).toLocaleString() : '0';
+                    }
+                },
+                {
+                    data: "inventory_status",
                     className: "text-center",
                     orderable: true,
                     render: function(data, type, row) {
@@ -416,22 +426,22 @@
                     render: function(data, type, row) {
                         const itemName = row.item_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
                         const warehouseName = row.warehouse_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-                        
+
                         let actionButtons = '';
                     if('<?= $_SESSION['role']?>' != 'Warehouse Coordinator' && '<?= $_SESSION['role']?>' != 'Office Coordinator'){
                         if (row.inventory_status === 'For Approval') {
                             // Show Accept and Reject buttons for pending items
                             actionButtons = `
-                                <button class="btn btn-success btn-sm" 
+                                <button class="btn btn-success btn-sm"
                                         onclick="updateAcceptId(${row.inventory_id})"
-                                        data-bs-toggle="modal" 
+                                        data-bs-toggle="modal"
                                         data-bs-target="#acceptModal"
                                         title="Accept Item">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm" 
-                                        onclick="updateRejectId(${row.inventory_id})" 
-                                        data-bs-toggle="modal" 
+                                <button class="btn btn-danger btn-sm"
+                                        onclick="updateRejectId(${row.inventory_id})"
+                                        data-bs-toggle="modal"
                                         data-bs-target="#rejectModal"
                                         title="Reject Item">
                                     <i class="bi bi-x-lg"></i>
@@ -441,16 +451,16 @@
                             if('<?= $_SESSION['role']?>' == 'Super Admin' ||'<?= $_SESSION['role']?>' == 'Office Admin'){
                                 // Show Edit and Delete for approved items
                                 actionButtons = `
-                                    <button class="btn btn-warning btn-sm" 
-                                            onclick="updateEdit(${row.inventory_id}, '${itemName}', '${warehouseName}', ${row.qty})" 
-                                            data-bs-toggle="modal" 
+                                    <button class="btn btn-warning btn-sm"
+                                            onclick="updateEdit(${row.inventory_id}, '${itemName}', '${warehouseName}', ${row.qty})"
+                                            data-bs-toggle="modal"
                                             data-bs-target="#editModal"
                                             title="Edit Item">
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
-                                    <button class="btn btn-danger btn-sm" 
-                                            onclick="updateDeleteURL(${row.inventory_id})" 
-                                            data-bs-toggle="modal" 
+                                    <button class="btn btn-danger btn-sm"
+                                            onclick="updateDeleteURL(${row.inventory_id})"
+                                            data-bs-toggle="modal"
                                             data-bs-target="#deleteModal"
                                             title="Delete Item">
                                         <i class="bi bi-trash"></i>
@@ -590,7 +600,7 @@ function onScanSuccess(data) {
     function addForm(type, scriptUrl) {
         // Collect all scanned items from the table
         const items = [];
-        
+
         // Get all rows from the item table
         const rows = document.querySelectorAll('#itemBodytable tr');
         rows.forEach(row => {
@@ -598,7 +608,7 @@ function onScanSuccess(data) {
             if (cells.length === 2) {
                 const quantity = parseInt(cells[1].textContent.trim());
                 const itemId = row.getAttribute('data-item-id');
-                
+
                 if (itemId && !isNaN(quantity) && quantity > 0) {
                     items.push({
                         warehouse_id: 1,
@@ -648,7 +658,7 @@ function onScanSuccess(data) {
                 // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addModal'));
                 if (modal) modal.hide();
-                
+
                 // Use toast from response if available, otherwise use message
                 const toastMessage = data.toast || data.message;
                 const toastType = data.type || 'success';

@@ -39,19 +39,42 @@ if (isset($pdo) && $pdo !== null) {
         }
         $totalStmt->execute();
         $totalRecords = $totalStmt->fetch(PDO::FETCH_ASSOC)['total'];
-        
-        // Base query with joins
-        $sql = "SELECT 
+
+        // Base query with joins - including expected quantity calculation
+        $sql = "SELECT
                     i.inventory_id,
                     i.qty,
                     i.inventory_status,
                     it.item_name,
                     w.warehouse_name,
                     it.item_id,
-                    w.warehouse_id
+                    w.warehouse_id,
+                    COALESCE(expected.expected_qty, 0) AS expected_qty
                 FROM inventory i
                 JOIN item it ON i.item_id = it.item_id
-                JOIN warehouse w ON i.warehouse_id = w.warehouse_id";
+                JOIN warehouse w ON i.warehouse_id = w.warehouse_id
+                LEFT JOIN (
+                    -- Calculate expected quantities based on pending deliveries
+                    SELECT
+                        w2.warehouse_id,
+                        pc.item_id,
+                        SUM(pc.qty) AS expected_qty
+                    FROM (
+                        SELECT DISTINCT d.delivery_id, d.school_id, d.project_id, ps.package_id
+                        FROM deliveries d
+                        JOIN package_status ps ON d.delivery_id = ps.delivery_id
+                        WHERE d.status = 'pending'
+                          AND ps.status IN ('pending','for approval')
+                    ) d_packages
+                    JOIN school s ON d_packages.school_id = s.school_id
+                    JOIN package_content pc ON d_packages.package_id = pc.package_id
+                    JOIN warehouse w2 ON (
+                        (w2.warehouse_address = 'Pampanga' AND s.region IN ('Region I', 'Region II', 'Region III', 'Region IV-A', 'Region IV-B', 'MIMAROPA', 'Region V', 'CAR', 'NCR')) OR
+                        (w2.warehouse_address = 'Cebu' AND s.region IN ('Region VI', 'Region VII', 'Region VIII')) OR
+                        (w2.warehouse_address = 'Davao' AND s.region IN ('Region IX', 'Region X', 'Region XI', 'Region XII', 'Region XIII', 'CARAGA', 'BARMM'))
+                    )
+                    GROUP BY w2.warehouse_id, pc.item_id
+                ) expected ON expected.warehouse_id = i.warehouse_id AND expected.item_id = i.item_id";
                 // WHERE i.inventory_status = 'For Approval'";
                 
         
