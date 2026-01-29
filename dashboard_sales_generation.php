@@ -264,7 +264,7 @@ if ($selectedProject > 0) {
 </script>
 
 <script src="assets/js/sortable.js"></script>
-<script src="assets/js/dashboard_sales_generation.js"></script>
+<script src="assets/js/dashboard_sales_generation.js?v=1.0.0"></script>
 
 <!-- Project List Modal -->
 <div class="modal fade" id="projectListModal" tabindex="-1" aria-labelledby="projectListModalLabel" aria-hidden="true">
