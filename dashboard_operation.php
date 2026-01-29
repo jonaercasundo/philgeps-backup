@@ -55,87 +55,77 @@ try {
 
     // Get inventory by warehouse data
     $inventoryByWarehouseQuery = "
-        SELECT 
+        WITH latest_inventory AS (
+            -- Get the most recent inventory history for each warehouse-item combination up to selected date
+            SELECT
+                ih.warehouse_id,
+                ih.item_id,
+                ih.new_qty,
+                ROW_NUMBER() OVER (
+                    PARTITION BY ih.warehouse_id, ih.item_id
+                    ORDER BY ih.changed_at DESC
+                ) as rn
+            FROM inventory_history ih
+            JOIN item i ON ih.item_id = i.item_id
+            WHERE " . ($selectedProject > 0 ? "i.project_id = $selectedProject AND" : "") . "
+                  DATE(ih.changed_at) <= :selectedDate
+        ),
+        active_deliveries AS (
+            -- Get pending deliveries that affect expected inventory
+            SELECT DISTINCT
+                d.delivery_id,
+                d.school_id,
+                d.project_id,
+                ps.package_id
+            FROM deliveries d
+            JOIN package_status ps ON d.delivery_id = ps.delivery_id
+            WHERE d.status = 'pending'
+              AND ps.status IN ('pending','for approval')
+              " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
+        ),
+        expected_inventory AS (
+            -- Calculate expected quantities based on pending deliveries
+            SELECT
+                w.warehouse_id,
+                pc.item_id,
+                SUM(pc.qty) AS expected_qty
+            FROM active_deliveries ad
+            JOIN school s ON ad.school_id = s.school_id
+            JOIN package_content pc ON ad.package_id = pc.package_id
+            JOIN warehouse w ON (
+                (w.warehouse_address = 'Pampanga' AND s.region IN ('Region I', 'Region II', 'Region III', 'Region IV-A', 'Region IV-B', 'MIMAROPA', 'Region V', 'CAR', 'NCR')) OR
+                (w.warehouse_address = 'Cebu' AND s.region IN ('Region VI', 'Region VII', 'Region VIII')) OR
+                (w.warehouse_address = 'Davao' AND s.region IN ('Region IX', 'Region X', 'Region XI', 'Region XII', 'Region XIII', 'CARAGA', 'BARMM'))
+            )
+            GROUP BY w.warehouse_id, pc.item_id
+        ),
+        all_inventory_items AS (
+            -- Combine items that have actual inventory and/or expected inventory
+            SELECT DISTINCT warehouse_id, item_id
+            FROM latest_inventory
+            WHERE rn = 1
+
+            UNION
+
+            SELECT DISTINCT warehouse_id, item_id
+            FROM expected_inventory
+        )
+        SELECT
             w.warehouse_name,
             i.item_name,
             i.unit,
-            IFNULL(ih.new_qty, 0) AS actual_qty,
-            IFNULL(eq.expected_qty, 0) AS expected_qty,
-            (IFNULL(ih.new_qty, 0) - IFNULL(eq.expected_qty, 0)) AS variance
-        FROM (
-            SELECT warehouse_id, item_id FROM (
-                SELECT DISTINCT ih.warehouse_id, ih.item_id
-                FROM inventory_history ih
-                JOIN item i ON ih.item_id = i.item_id
-                WHERE " . ($selectedProject > 0 ? "i.project_id = $selectedProject AND" : "") . "
-                  ih.changed_at = (
-                      SELECT MAX(ih2.changed_at)
-                      FROM inventory_history ih2
-                      WHERE ih2.item_id = ih.item_id 
-                        AND ih2.warehouse_id = ih.warehouse_id
-                        AND DATE(ih2.changed_at) <= :selectedDate
-                  )
-                  AND DATE(ih.changed_at) <= :selectedDate
-                
-                UNION
-                
-                SELECT DISTINCT w2.warehouse_id, pc.item_id
-                FROM (
-                    SELECT DISTINCT d.delivery_id, d.school_id, d.project_id, ps.package_id
-                    FROM deliveries d
-                    JOIN package_status ps ON d.delivery_id = ps.delivery_id
-                    WHERE d.status = 'pending' 
-                      AND ps.status IN ('pending','for approval')
-                      " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-                ) d_packages
-                JOIN school s ON d_packages.school_id = s.school_id
-                JOIN package_content pc ON d_packages.package_id = pc.package_id
-                JOIN warehouse w2 ON (
-                    (w2.warehouse_address = 'Pampanga' AND s.region IN ('Region I', 'Region II', 'Region III', 'Region IV-A', 'Region IV-B', 'MIMAROPA', 'Region V', 'CAR', 'NCR')) OR
-                    (w2.warehouse_address = 'Cebu' AND s.region IN ('Region VI', 'Region VII', 'Region VIII')) OR
-                    (w2.warehouse_address = 'Davao' AND s.region IN ('Region IX', 'Region X', 'Region XI', 'Region XII', 'Region XIII', 'CARAGA', 'BARMM'))
-                )
-            ) combined
-        ) all_items
-        JOIN item i ON all_items.item_id = i.item_id
-        JOIN warehouse w ON all_items.warehouse_id = w.warehouse_id
-        -- Actual Quantity
-        LEFT JOIN (
-            SELECT ih.warehouse_id, ih.item_id, ih.new_qty
-            FROM inventory_history ih
-            WHERE ih.changed_at = (
-                SELECT MAX(ih2.changed_at)
-                FROM inventory_history ih2
-                WHERE ih2.item_id = ih.item_id 
-                  AND ih2.warehouse_id = ih.warehouse_id
-                  AND DATE(ih2.changed_at) <= :selectedDate
-            )
-            AND DATE(ih.changed_at) <= :selectedDate
-        ) ih ON ih.warehouse_id = all_items.warehouse_id AND ih.item_id = all_items.item_id
-        -- Expected Quantity
-        LEFT JOIN (
-            SELECT 
-                w2.warehouse_id,
-                pc.item_id,
-                SUM(pc.qty) AS expected_qty
-            FROM (
-                SELECT DISTINCT d.delivery_id, d.school_id, d.project_id, ps.package_id
-                FROM deliveries d
-                JOIN package_status ps ON d.delivery_id = ps.delivery_id
-                WHERE d.status = 'pending' 
-                  AND ps.status IN ('pending','for approval')
-                  " . ($selectedProject > 0 ? "AND d.project_id = $selectedProject" : "") . "
-            ) d_packages
-            JOIN school s ON d_packages.school_id = s.school_id
-            JOIN package_content pc ON d_packages.package_id = pc.package_id
-            JOIN warehouse w2 ON (
-                (w2.warehouse_address = 'Pampanga' AND s.region IN ('Region I', 'Region II', 'Region III', 'Region IV-A', 'Region IV-B', 'MIMAROPA', 'Region V', 'CAR', 'NCR')) OR
-                (w2.warehouse_address = 'Cebu' AND s.region IN ('Region VI', 'Region VII', 'Region VIII')) OR
-                (w2.warehouse_address = 'Davao' AND s.region IN ('Region IX', 'Region X', 'Region XI', 'Region XII', 'Region XIII', 'CARAGA', 'BARMM'))
-            )
-            GROUP BY w2.warehouse_id, pc.item_id
-        ) eq ON eq.warehouse_id = all_items.warehouse_id AND eq.item_id = all_items.item_id
-        WHERE (IFNULL(ih.new_qty, 0) > 0 OR IFNULL(eq.expected_qty, 0) > 0)
+            COALESCE(latest_inv.new_qty, 0) AS actual_qty,
+            COALESCE(exp_inv.expected_qty, 0) AS expected_qty,
+            (COALESCE(latest_inv.new_qty, 0) - COALESCE(exp_inv.expected_qty, 0)) AS variance
+        FROM all_inventory_items aii
+        JOIN item i ON aii.item_id = i.item_id
+        JOIN warehouse w ON aii.warehouse_id = w.warehouse_id
+        LEFT JOIN latest_inventory latest_inv ON latest_inv.warehouse_id = aii.warehouse_id
+                                             AND latest_inv.item_id = aii.item_id
+                                             AND latest_inv.rn = 1
+        LEFT JOIN expected_inventory exp_inv ON exp_inv.warehouse_id = aii.warehouse_id
+                                            AND exp_inv.item_id = aii.item_id
+        WHERE (COALESCE(latest_inv.new_qty, 0) > 0 OR COALESCE(exp_inv.expected_qty, 0) > 0)
         ORDER BY w.warehouse_name, i.item_name
     ";
 
