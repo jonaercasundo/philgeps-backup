@@ -75,7 +75,6 @@ try {
                             '<?= addslashes(htmlspecialchars($p['project_name'])) ?>',
                             <?= floatval($p['contract_amount']) ?>,
                             <?= floatval($p['ABC']) ?>,
-                            '<?= addslashes(htmlspecialchars($p['agency'])) ?>',
                             '<?= $p['start_date'] ?>',
                             '<?= $p['end_date'] ?>',
                             '<?= addslashes(htmlspecialchars($p['status'])) ?>'
@@ -406,7 +405,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                         '\${p.project_name.replace(/'/g, "\\'")}',
                                         \${parseFloat(p.contract_amount)},
                                         \${parseFloat(p.ABC)},
-                                        '\${p.agency.replace(/'/g, "\\'")}',
                                         '\${p.start_date}',
                                         '\${p.end_date}',
                                         '\${p.status.replace(/'/g, "\\'")}'
