@@ -208,18 +208,6 @@ try {
                     <?php endforeach; ?>
                     <input type="hidden" name="edit_rawNumber" id="edit_rawNumber">
                     <input type="hidden" name="edit_rawNumber2" id="edit_rawNumber2">
-                    <div class="mb-3">
-                        <label for="edit_agency">Agency</label>
-                        <select name="agency" id="edit_agency" class="form-control" onchange="changeEditAgency(this.value)" required>
-                            <option value="">Select Agency</option>
-                            <option value="Deped">Deped</option>
-                            <option value="Dpwh">Dpwh</option>
-                        </select>
-                    </div>
-                    <div class="mb-3 visually-hidden" id="edit_includeKeystage">
-                        <label>Include Keystage</label>
-                        <input type="checkbox" name="keystage" id="edit_keystage" class="checkbox" value="1"><br><br>
-                    </div>
                     <div class="mb-3 row">
                         <div class="col">
                             <label>Start Date</label>

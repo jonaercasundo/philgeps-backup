@@ -9,14 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $projectName = trim($_POST['project_name'] ?? '');
         $contractAmount = filter_var($_POST['rawNumber'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
         $abc = filter_var($_POST['rawNumber2'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
-        $agency = trim($_POST['agency'] ?? '');
         $startDate = trim($_POST['start_date'] ?? '');
         $endDate = trim($_POST['end_date'] ?? '');
         $status = trim($_POST['status'] ?? '');
-        $keystage = isset($_POST['keystage']) ? 1 : 0; // Checkbox value
 
         // Validate required fields
-        if (!$projectId || !$refNo || !$projectName || !$agency || !$startDate || !$endDate || !$status) {
+        if (!$projectId || !$refNo || !$projectName || !$startDate || !$endDate || !$status) {
             throw new Exception('All required fields must be filled out.');
         }
 
@@ -36,11 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     project_name = :project_name,
                     contract_amount = :contract_amount,
                     ABC = :abc,
-                    agency = :agency,
                     start_date = :start_date,
                     end_date = :end_date,
-                    status = :status,
-                    keystage = :keystage
+                    status = :status
                 WHERE project_id = :project_id";
 
         $stmt = $pdo->prepare($sql);
@@ -49,11 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bindParam(':project_name', $projectName, PDO::PARAM_STR);
         $stmt->bindParam(':contract_amount', $contractAmount, PDO::PARAM_STR); // Using STR to preserve decimal precision
         $stmt->bindParam(':abc', $abc, PDO::PARAM_STR); // Using STR to preserve decimal precision
-        $stmt->bindParam(':agency', $agency, PDO::PARAM_STR);
         $stmt->bindParam(':start_date', $startDate, PDO::PARAM_STR);
         $stmt->bindParam(':end_date', $endDate, PDO::PARAM_STR);
         $stmt->bindParam(':status', $status, PDO::PARAM_STR);
-        $stmt->bindParam(':keystage', $keystage, PDO::PARAM_INT);
         $stmt->bindParam(':project_id', $projectId, PDO::PARAM_INT);
 
         $result = $stmt->execute();
