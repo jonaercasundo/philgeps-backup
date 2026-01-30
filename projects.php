@@ -78,7 +78,7 @@ try {
                             '<?= addslashes(htmlspecialchars($p['agency'])) ?>',
                             '<?= $p['start_date'] ?>',
                             '<?= $p['end_date'] ?>',
-                            <?= addslashes(htmlspecialchars($p['status'])) ?>
+                            '<?= addslashes(htmlspecialchars($p['status'])) ?>'
                         )"
                         data-bs-toggle="modal"
                         data-bs-target="#editProjectModal"
@@ -409,7 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                         '\${p.agency.replace(/'/g, "\\'")}',
                                         '\${p.start_date}',
                                         '\${p.end_date}',
-                                        \${p.status.replace(/'/g, "\\'")}
+                                        '\${p.status.replace(/'/g, "\\'")}'
                                     )"
                                     data-bs-toggle="modal"
                                     data-bs-target="#editProjectModal"
