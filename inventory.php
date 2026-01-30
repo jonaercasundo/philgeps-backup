@@ -85,8 +85,9 @@
                             <th>Inventory ID</th>
                             <th>Warehouse</th>
                             <th>Item</th>
+                            <th>Percentage</th>
                             <th>Quantity</th>
-                            <th>Expected Quantity</th>
+                            <th>Order Quantity</th>
                             <th>Status</th>
                             <?php if($_SESSION['role'] != "Warehouse Coordinator"){
                                 echo "<th>Action</th>";
@@ -395,6 +396,20 @@
                     data: "item_name",
                     className: "text-center",
                     orderable: true
+                },
+                {
+                    data: null,
+                    className: "text-center",
+                    orderable: true,
+                    render: function(data, type, row) {
+                        const qty = parseInt(row.qty) || 0;
+                        const expectedQty = parseInt(row.expected_qty) || 0;
+                        if (expectedQty === 0) {
+                            return '0%';
+                        }
+                        const percentage = (qty / expectedQty) * 100;
+                        return percentage.toFixed(2) + '%';
+                    }
                 },
                 {
                     data: "qty",
