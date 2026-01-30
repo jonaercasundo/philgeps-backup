@@ -78,8 +78,7 @@ try {
                             '<?= addslashes(htmlspecialchars($p['agency'])) ?>',
                             '<?= $p['start_date'] ?>',
                             '<?= $p['end_date'] ?>',
-                            '<?= addslashes(htmlspecialchars($p['status'])) ?>',
-                            <?= intval($p['keystage'] ?? 0) ?>
+                            <?= addslashes(htmlspecialchars($p['status'])) ?>
                         )"
                         data-bs-toggle="modal"
                         data-bs-target="#editProjectModal"
@@ -296,7 +295,7 @@ function changeEditAgency(agency) {
 }
 
 // Function to update the edit modal with project data
-function updateEdit(projectId, refNo, projectName, contractAmount, abc, agency, startDate, endDate, status, keystage) {
+function updateEdit(projectId, refNo, projectName, contractAmount, abc, startDate, endDate, status) {
     document.getElementById("edit_project_id").value = projectId;
     document.getElementById("edit_ref_no").value = refNo;
     document.getElementById("edit_project_name").value = projectName;
@@ -311,21 +310,9 @@ function updateEdit(projectId, refNo, projectName, contractAmount, abc, agency, 
     document.getElementById("edit_ABC_formatter").value = formattedABC;
     document.getElementById("edit_rawNumber2").value = abc;
 
-    document.getElementById("edit_agency").value = agency;
     document.getElementById("edit_start_date").value = startDate;
     document.getElementById("edit_end_date").value = endDate;
     document.getElementById("edit_status").value = status;
-
-    // Set keystage checkbox
-    const keystageCheckbox = document.getElementById("edit_keystage");
-    keystageCheckbox.checked = (keystage == 1);
-
-    // Show/hide keystage field based on agency
-    if(agency === "Deped") {
-        document.getElementById("edit_includeKeystage").classList.remove("visually-hidden");
-    } else {
-        document.getElementById("edit_includeKeystage").classList.add("visually-hidden");
-    }
 }
 
 // Update project function
@@ -422,8 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                         '\${p.agency.replace(/'/g, "\\'")}',
                                         '\${p.start_date}',
                                         '\${p.end_date}',
-                                        '\${p.status.replace(/'/g, "\\'")}',
-                                        \${p.keystage || 0}
+                                        \${p.status.replace(/'/g, "\\'")}
                                     )"
                                     data-bs-toggle="modal"
                                     data-bs-target="#editProjectModal"
