@@ -14,7 +14,7 @@ try {
     $allProjectsWithStatus = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $allProjects = $allProjectsWithStatus; // For compatibility
 
-    $projectFilter = $selectedProject > 0 ? "WHERE p.project_id = $selectedProject" : "";
+    $projectFilter = "";
     $deliveryProjectFilter = $selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "";
     $selectedDate = $_GET['selectedDate'] ?? date('Y-m-d');
 
@@ -68,14 +68,13 @@ try {
     $opportunity = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // BUDGET VARIANCE QUERY END
 
-    // PROJECT SALES QUERY //
+     // PROJECT SALES QUERY //
     $projectSalesQuery = "
-        SELECT 
+        SELECT
             sg.sales_gen_id,
-            p.project_id,
-            p.project_name,
-            p.ABC as abc,
-            p.contract_amount,
+            sg.project_name,
+            sg.abc,
+            sg.contract_amount,
             sg.net_sales,
             sg.cogs,
             sg.total_cost_of_sales,
@@ -85,9 +84,7 @@ try {
             sg.ppl,
             sg.npm
         FROM sales_generation sg
-        INNER JOIN projects p ON sg.project_id = p.project_id
-        $projectFilter
-        ORDER BY p.ABC DESC
+        ORDER BY sg.sales_gen_id DESC
     ";
 
     $stmt = $pdo->query($projectSalesQuery);
@@ -111,7 +108,7 @@ if ($selectedProject > 0) {
 <link rel="stylesheet" href="./assets/css/dashboard.css">
 
 <!-- Dashboard Header with Controls -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
   <h2>Sales Generation Dashboard</h2>
   <div class="btn-group">
     <button class="btn btn-outline-primary btn-sm" id="resetLayout">
@@ -119,6 +116,9 @@ if ($selectedProject > 0) {
     </button>
     <button class="btn btn-outline-primary btn-sm" id="toggleDrag">
       Toggle Drag
+    </button>
+    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+      Import Excel
     </button>
     <a href="dashboard.php" class="btn btn-outline-primary btn-sm" role="button">
       Back
@@ -265,6 +265,31 @@ if ($selectedProject > 0) {
 
 <script src="assets/js/sortable.js"></script>
 <script src="assets/js/dashboard_sales_generation.js?v=1.0.0"></script>
+
+<!-- Import Sales Generation Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Import Sales Generation Data</h5></div>
+      <div class="modal-body">
+        <form id="importForm" method="POST" action="script/import_sales_generation.php" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label>Upload Excel/CSV File</label>
+            <input type="file" name="file" id="importFile" class="form-control" accept=".csv,.xlsx,.xls" required><br>
+            <a href="assets/uploads/sales_generation.template.csv" download="sales_generation.template.csv">Download Template CSV</a>
+          </div>
+          <small class="text-muted">
+            Format: Project Title, ABC, Contract Amount, Net Sales, COGS, Total Cost of Sales, PGP, GPM, OPEX, PPL, NPM
+          </small>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="importBtn" onclick="document.getElementById('importForm').submit();">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Project List Modal -->
 <div class="modal fade" id="projectListModal" tabindex="-1" aria-labelledby="projectListModalLabel" aria-hidden="true">

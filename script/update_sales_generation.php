@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("
             SELECT p.project_name, p.project_id
             FROM sales_generation sg
-            JOIN projects p ON p.project_id = sg.project_id
+            JOIN projects p ON TRIM(UPPER(p.project_name)) = TRIM(UPPER(sg.project_name))
             WHERE sg.sales_gen_id = ?
         ");
         $stmt->execute([$sales_gen_id]);
