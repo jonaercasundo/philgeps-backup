@@ -182,6 +182,9 @@ if ($selectedProject > 0) {
             <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
               Import Excel
             </button>
+            <button class="btn btn-outline-success btn-sm" id="saveAllBtn">
+              Save Changes
+            </button>
             <span class="drag-handle text-muted" style="cursor: grab;" title="Drag to reorder">⋮⋮</span>
           </div>
         </div>
@@ -201,17 +204,16 @@ if ($selectedProject > 0) {
                   <th>OPEX</th>
                   <th>PPL</th>
                   <th>NPM</th>
-                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 <?php foreach ($projectSales as $item): ?>
                 <tr data-sales-gen-id="<?= $item['sales_gen_id'] ?>">
-                  <td class="text-truncate" style="max-width: 250px;">
+                  <td class="text-truncate" style="max-width: 250px;" contenteditable="true" data-field="project_name">
                     <?= htmlspecialchars($item['project_name']) ?>
                   </td>
-                  <td>₱<?= number_format($item['abc'], 2) ?></td>
-                  <td>₱<?= number_format($item['contract_amount'], 2) ?></td>
+                  <td contenteditable="true" data-field="abc">₱<?= number_format($item['abc'], 2) ?></td>
+                  <td contenteditable="true" data-field="contract_amount">₱<?= number_format($item['contract_amount'], 2) ?></td>
                   <td contenteditable="true" data-field="net_sales"><?= number_format($item['net_sales'], 2) ?>%</td>
                   <td contenteditable="true" data-field="cogs">₱<?= number_format($item['cogs'], 2) ?></td>
                   <td contenteditable="true" data-field="total_cost_of_sales">₱<?= number_format($item['total_cost_of_sales'], 2) ?></td>
@@ -220,16 +222,12 @@ if ($selectedProject > 0) {
                   <td contenteditable="true" data-field="opex">₱<?= number_format($item['opex'], 2) ?></td>
                   <td contenteditable="true" data-field="ppl">₱<?= number_format($item['ppl'], 2) ?></td>
                   <td contenteditable="true" data-field="npm"><?= number_format($item['npm'], 2) ?>%</td>
-                  <td>
-                    <button class="btn btn-sm btn-primary save-btn">Save</button>
-                  </td>
                 </tr>
                 <?php endforeach; ?>
               </tbody>
               <tfoot>
                 <tr>
                   <th>TOTAL</th>
-                  <th></th>
                   <th></th>
                   <th></th>
                   <th></th>
@@ -319,14 +317,10 @@ if ($selectedProject > 0) {
 $(document).ready(function() {
   var table = $('#projectSalesTable').DataTable({
     processing: true,
-    scrollX: true,
-    scrollY: "60vh",
+    scrollY: "400px",
     scrollCollapse: true,
     paging: true,
-    responsive: false,
-    fixedColumns: {
-      rightColumns: 1
-    },
+    responsive: true,
     order: [[1, 'desc']],
     pageLength: 25,
     language: {
@@ -341,15 +335,15 @@ $(document).ready(function() {
     
     footerCallback: function(row, data, start, end, display) {
       var api = this.api();
-      
+
       var intVal = function(i) {
         return typeof i === 'string' ?
           parseFloat(i.replace(/[₱,%]/g, '')) || 0 :
           typeof i === 'number' ? i : 0;
       };
 
-      var columnsToTotal = [1, 2, 4, 5, 6, 8, 9];
-      
+      var columnsToTotal = [1, 2, 4, 5, 6, 8, 9]; // ABC, Contract Amount, COGS, Total Cost of Sales, PGP, OPEX, PPL
+
       columnsToTotal.forEach(function(colIdx) {
         var total = api
           .column(colIdx, {page: 'current'})
@@ -357,11 +351,11 @@ $(document).ready(function() {
           .reduce(function(a, b) {
             return intVal(a) + intVal(b);
           }, 0);
-        
+
         $(api.column(colIdx).footer()).html('₱' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
       });
-      
-      var percentColumns = [3, 7, 10];
+
+      var percentColumns = [3, 7, 10]; // Net Sales, GPM, NPM
       percentColumns.forEach(function(colIdx) {
         var values = api
           .column(colIdx, {page: 'current'})
@@ -370,65 +364,85 @@ $(document).ready(function() {
           .map(function(val) {
             return parseFloat(String(val).replace('%', '')) || 0;
           });
-        
+
         var avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
         $(api.column(colIdx).footer()).html(avg.toFixed(2) + '%');
       });
     }
   });
 
-  // Save button click handler
-  $('#projectSalesTable').on('click', '.save-btn', function() {
+  // Save Changes button click handler
+  $('#saveAllBtn').on('click', function() {
     var $btn = $(this);
-    var $row = $btn.closest('tr');
-    var salesGenId = $row.data('sales-gen-id');
-    
-    console.log('Sales Gen ID:', salesGenId);
-    
-    if (!salesGenId) {
-      alert('Error: Missing sales generation ID');
+    var allUpdateData = [];
+
+    // Collect data from all rows
+    $('#projectSalesTable tbody tr').each(function() {
+      var $row = $(this);
+      var salesGenId = $row.data('sales-gen-id');
+
+      if (salesGenId) {
+        var rowData = {
+          sales_gen_id: salesGenId
+        };
+
+        $row.find('td[data-field]').each(function() {
+          var $td = $(this);
+          var field = $td.data('field');
+          var value = $td.text().trim();
+
+          // Handle different field types appropriately
+          if (field === 'project_name') {
+            // For project_name, just trim whitespace
+            rowData[field] = value;
+          } else if (field === 'abc' || field === 'contract_amount') {
+            // For ABC and Contract Amount, remove currency symbols and parse as float
+            var numericValue = value.replace(/[₱,]/g, '');
+            rowData[field] = parseFloat(numericValue) || 0;
+          } else {
+            // For other numeric fields (with percentages), remove currency symbols and percentage signs
+            var numericValue = value.replace(/[₱,%]/g, '');
+            rowData[field] = parseFloat(numericValue) || 0;
+          }
+        });
+
+        allUpdateData.push(rowData);
+      }
+    });
+
+    if (allUpdateData.length === 0) {
+      alert('No data to save');
       return;
     }
-    
-    // Collect all editable fields with data-field attribute
-    var updateData = {
-      sales_gen_id: salesGenId
-    };
-    
-    $row.find('td[data-field]').each(function() {
-      var $td = $(this);
-      var field = $td.data('field');
-      var value = $td.text().trim().replace(/[₱,%]/g, '');
-      updateData[field] = parseFloat(value) || 0;
-    });
-    
-    console.log('Update Data:', updateData);
-    
+
+    console.log('All Update Data:', allUpdateData);
+
     // Disable button and show loading
     $btn.prop('disabled', true).text('Saving...');
-    
-    // Send AJAX request
+
+    // Send AJAX request to Save Changes data
     $.ajax({
-      url: 'script/update_sales_generation.php',
+      url: 'script/update_multiple_sales_generation.php',
       method: 'POST',
-      data: updateData,
+      data: JSON.stringify({ updates: allUpdateData }),
+      contentType: 'application/json',
       dataType: 'json',
       success: function(response) {
         if (response.success) {
-          $btn.removeClass('btn-primary').addClass('btn-success').text('Saved!');
+          $btn.removeClass('btn-outline-success').addClass('btn-success').text('Saved!');
           setTimeout(function() {
-            $btn.removeClass('btn-success').addClass('btn-primary').text('Save').prop('disabled', false);
+            $btn.removeClass('btn-success').addClass('btn-outline-success').text('Save Changes').prop('disabled', false);
           }, 2000);
           table.draw(false);
         } else {
           alert('Error: ' + response.message);
-          $btn.prop('disabled', false).text('Save');
+          $btn.prop('disabled', false).text('Save Changes');
         }
       },
       error: function(xhr, status, error) {
         console.log('AJAX Error:', xhr.responseText);
         alert('Error saving data: ' + error);
-        $btn.prop('disabled', false).text('Save');
+        $btn.prop('disabled', false).text('Save Changes');
       }
     });
   });
