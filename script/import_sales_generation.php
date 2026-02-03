@@ -9,6 +9,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $fileTmpPath = $_FILES['file']['tmp_name'];
 
+    try {
+        // Truncate the sales_generation table to remove all existing records
+        $pdo->exec("TRUNCATE TABLE sales_generation");
+    } catch (PDOException $e) {
+        error_log("Error truncating sales_generation table: " . $e->getMessage());
+        die("Error preparing for import: " . $e->getMessage());
+    }
+
     // Open file and process
     if (($handle = fopen($fileTmpPath, "r")) !== false) {
         $row = 0;
@@ -66,45 +74,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ppl = (float)$ppl;
                 $npm = (float)$npm;
 
-                // Check if record exists in sales_generation - using trimmed and uppercased names for comparison
-                $stmt = $pdo->prepare("SELECT sales_gen_id FROM sales_generation WHERE TRIM(UPPER(project_name)) = ?");
-                $stmt->execute([strtoupper(trim($projectTitle))]);
-                $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if ($existing) {
-                    // Update existing record
-                    $stmt = $pdo->prepare("UPDATE sales_generation SET
-                        abc = ?,
-                        contract_amount = ?,
-                        net_sales = ?,
-                        cogs = ?,
-                        total_cost_of_sales = ?,
-                        pgp = ?,
-                        gpm = ?,
-                        opex = ?,
-                        ppl = ?,
-                        npm = ?,
-                        updated_at = CURRENT_TIMESTAMP
-                        WHERE TRIM(UPPER(project_name)) = ?
-                    ");
-                    $stmt->execute([$abc, $contractAmount, $netSales, $cogs, $totalCostOfSales, $pgp, $gpm, $opex, $ppl, $npm, strtoupper(trim($projectTitle))]);
-                } else {
-                    // Insert new record - store the original project title to maintain consistency
-                    $stmt = $pdo->prepare("INSERT INTO sales_generation (
-                        project_name,
-                        abc,
-                        contract_amount,
-                        net_sales,
-                        cogs,
-                        total_cost_of_sales,
-                        pgp,
-                        gpm,
-                        opex,
-                        ppl,
-                        npm
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmt->execute([$projectTitle, $abc, $contractAmount, $netSales, $cogs, $totalCostOfSales, $pgp, $gpm, $opex, $ppl, $npm]);
-                }
+                // Since we truncated the table, we only need to insert new records
+                $stmt = $pdo->prepare("INSERT INTO sales_generation (
+                    project_name,
+                    abc,
+                    contract_amount,
+                    net_sales,
+                    cogs,
+                    total_cost_of_sales,
+                    pgp,
+                    gpm,
+                    opex,
+                    ppl,
+                    npm
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$projectTitle, $abc, $contractAmount, $netSales, $cogs, $totalCostOfSales, $pgp, $gpm, $opex, $ppl, $npm]);
 
                 $successCount++;
 

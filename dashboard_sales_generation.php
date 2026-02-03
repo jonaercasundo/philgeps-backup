@@ -117,9 +117,6 @@ if ($selectedProject > 0) {
     <button class="btn btn-outline-primary btn-sm" id="toggleDrag">
       Toggle Drag
     </button>
-    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
-      Import Excel
-    </button>
     <a href="dashboard.php" class="btn btn-outline-primary btn-sm" role="button">
       Back
     </a>
@@ -181,7 +178,12 @@ if ($selectedProject > 0) {
       <div class="card shadow-sm">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-bold">Project Details Table</h6>
-          <span class="drag-handle text-muted" style="cursor: grab;" title="Drag to reorder">⋮⋮</span>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+              Import Excel
+            </button>
+            <span class="drag-handle text-muted" style="cursor: grab;" title="Drag to reorder">⋮⋮</span>
+          </div>
         </div>
         <div class="card-body">
           <div class="table-wrapper">
