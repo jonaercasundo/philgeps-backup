@@ -415,7 +415,7 @@ $(document).ready(function() {
       return;
     }
 
-    console.log('All Update Data:', allUpdateData);
+    // console.log('All Update Data:', allUpdateData);
 
     // Disable button and show loading
     $btn.prop('disabled', true).text('Saving...');
@@ -440,7 +440,7 @@ $(document).ready(function() {
         }
       },
       error: function(xhr, status, error) {
-        console.log('AJAX Error:', xhr.responseText);
+        // console.log('AJAX Error:', xhr.responseText);
         alert('Error saving data: ' + error);
         $btn.prop('disabled', false).text('Save Changes');
       }
