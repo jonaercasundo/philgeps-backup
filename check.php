@@ -39,8 +39,7 @@ try {
     $current_status = $package_status['status'];
     $status_map = [
         'pending' => 'accepted',
-        'accepted' => 'for approval',
-        'for approval' => 'delivered',
+        'accepted' => 'delivered',
         'delivered' => 'delivered'
     ];
     $next_status = $status_map[$current_status] ?? $current_status;
