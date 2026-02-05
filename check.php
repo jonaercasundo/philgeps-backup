@@ -218,7 +218,15 @@ try {
     exit;
 
 } catch (Exception $e) {
-    exit;
+    // Log the error for debugging
+    error_log("Error in check.php: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
 
+    // Return error message to the client
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'message' => 'An error occurred while processing your request: ' . $e->getMessage()
+    ]);
+    exit;
 }
 ?>
