@@ -145,19 +145,22 @@ if (isset($is_warehouse_page) && $is_warehouse_page === true):
     $warehouseNav = [
       // 'warehouse.php' => 'Overview',
       'warehouse_details.php' => 'Warehouse',
-      'inventory.php' => 'Inventory',
+      'inventory.php' => 'Inventory In',
+      'inventory_out.php' => 'Inventory Out',
       'warehouse_reports.php' => 'Reports'
   ];
   if($_SESSION['role'] == 'Warehouse Admin'){
     $warehouseNav = [
       // 'warehouse.php' => 'Overview',
-      'inventory.php' => 'Inventory',
+      'inventory.php' => 'Inventory In',
+      'inventory_out.php' => 'Inventory Out',
       'warehouse_reports.php' => 'Reports'
   ];
   }elseif($_SESSION['role'] == 'Warehouse Coordinator'){
     $warehouseNav = [
       // 'warehouse.php' => 'Overview',
-      'inventory.php' => 'Inventory'
+      'inventory.php' => 'Inventory In',
+      'inventory_out.php' => 'Inventory Out'
   ];
   }
 ?>

@@ -127,6 +127,29 @@
     </div>
 </div>
 
+<!-- Subtract Inventory Modal -->
+<div class="modal fade" id="subtractModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5>Subtract Inventory</h5>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="subtractForm">
+                    <input type="hidden" name="items_json" id="items_json">
+                    <div class="mb-3">
+                        <label>Enter Password to Proceed</label>
+                        <input type="password" class="form-control" name="password" min="0" required>
+                    </div>
+                </form>
+            </div>
+           <div class="modal-footer">
+                <button class="btn btn-primary" onclick="subtractForm('inventory','subtract_inventory.php')">Subtract</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Reject Inventory Modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog modal-md">
@@ -137,7 +160,7 @@
             <div class="modal-body">
                 <form method="POST" id="rejectForm">
                     <input type="hidden" id="reject_inventory_id" name="reject_inventory_id">
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Input Password to Continue *</label>
                         <input type="password" class="form-control" name="reject_password" required>
@@ -151,7 +174,7 @@
                             <option value="Damaged during handling">Damaged during handling</option>
                             <option value="custom">Add custom remark...</option>
                         </select>
-                        
+
                         <!-- Custom remarks input -->
                         <div class="collapse" id="reject_customRemarksCollapse">
                             <div class="mt-2">
