@@ -87,7 +87,8 @@ switch($_SESSION['role']){
   break;
   case "Warehouse Coordinator":
     $mainNav = [
-      
+      "deliveries.php" => "Deliveries",
+      "inventory.php" => "Warehouse"
     ];
     
   break;
