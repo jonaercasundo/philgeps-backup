@@ -213,7 +213,7 @@ try {
     // Redirect to success page (absolute URL)
     $protocol = $secure ? "https" : "http";
     $host = $_SERVER['HTTP_HOST'];
-    header("Location: $protocol://$host/philgeps/success.php?status=$next_status");
+    header("Location: $protocol://$host/success.php?status=$next_status");
     exit;
 
 } catch (Exception $e) {
