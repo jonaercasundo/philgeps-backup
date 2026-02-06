@@ -58,7 +58,6 @@ try {
     $stmt = $pdo->prepare("
     SELECT 
         d.delivery_id,
-        d.project_id,
         p.project_name,
         s.school_id,
         s.school_name,
@@ -145,7 +144,6 @@ try {
             $grouped_deliveries[$dr] = [
                 'dr_no' => $dr,
                 'project_name' => $row['project_name'],
-                'project_id' => $row['project_id'],
                 'school_name' => $row['school_name'],
                 'delivery_date' => $row['delivery_date'],
                 'deliveries' => []
