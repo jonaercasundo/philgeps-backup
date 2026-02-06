@@ -42,9 +42,9 @@ try {
 
         $warehouse_id = $_SESSION['warehouse_id'] ?? 1;
         $item_id = intval($item['item_id']);
-        $quantity = intval($item['quantity']);
+        $quantity_to_subtract = intval($item['quantity']);
 
-        if ($quantity <= 0) {
+        if ($quantity_to_subtract <= 0) {
             $errors[] = "Invalid quantity for item $item_id";
             continue;
         }
@@ -55,51 +55,94 @@ try {
         $item_data = $item_stmt->fetch(PDO::FETCH_ASSOC);
         $item_name = $item_data ? $item_data['item_name'] : "Item ID: $item_id";
 
-        // Check current inventory level for this item
-        $current_inv_stmt = $pdo->prepare("SELECT inventory_id, qty FROM inventory WHERE item_id = ? AND warehouse_id = ? AND inventory_status = 'Approved'");
-        $current_inv_stmt->execute([$item_id, $warehouse_id]);
-        $current_inventory = $current_inv_stmt->fetch(PDO::FETCH_ASSOC);
+        // Get available approved inventory for this item in current warehouse
+        $stmt_inventory = $pdo->prepare("
+            SELECT inventory_id, qty
+            FROM inventory
+            WHERE item_id = :item_id
+            AND warehouse_id = :warehouse_id
+            AND inventory_status = 'Approved'
+            ORDER BY inventory_id
+        ");
+        $stmt_inventory->execute([
+            ':item_id' => $item_id,
+            ':warehouse_id' => $warehouse_id
+        ]);
+        $inventory_records = $stmt_inventory->fetchAll(PDO::FETCH_ASSOC);
 
-        if (!$current_inventory) {
+        if (empty($inventory_records)) {
             $errors[] = "Item $item_name not found in approved inventory";
             continue;
         }
 
-        $current_qty = $current_inventory['qty'];
-        if ($current_qty < $quantity) {
-            $errors[] = "Insufficient quantity for item $item_name. Requested: $quantity, Available: $current_qty";
+        // Calculate total available quantity
+        $total_available = array_sum(array_column($inventory_records, 'qty'));
+        if ($total_available < $quantity_to_subtract) {
+            $errors[] = "Insufficient quantity for item $item_name. Requested: $quantity_to_subtract, Available: $total_available";
             continue;
         }
 
-        // Perform the subtraction directly
-        $new_qty = $current_qty - $quantity;
-        
-        if ($new_qty == 0) {
-            // If the new quantity is 0, we can delete the record
-            $delete_stmt = $pdo->prepare("DELETE FROM inventory WHERE inventory_id = ?");
-            if ($delete_stmt->execute([$current_inventory['inventory_id']])) {
-                $successful_subtractions++;
-                $processed_items[] = "$item_name (-$quantity)";
+        $remaining_to_subtract = $quantity_to_subtract;
+        $total_subtracted = 0;
+
+        // Subtract from inventory records until we've deducted the full quantity
+        foreach ($inventory_records as $inv_record) {
+            if ($remaining_to_subtract <= 0) break;
+
+            $available_qty = $inv_record['qty'];
+            $inventory_id = $inv_record['inventory_id'];
+            $subtracted_from_this_record = 0;
+
+            if ($available_qty >= $remaining_to_subtract) {
+                // This record has enough quantity to cover the remainder
+                $new_qty = $available_qty - $remaining_to_subtract;
+                $subtracted_from_this_record = $remaining_to_subtract;
+                $stmt_update = $pdo->prepare("UPDATE inventory SET qty = :new_qty WHERE inventory_id = :inventory_id");
+                $stmt_update->execute([
+                    ':new_qty' => $new_qty,
+                    ':inventory_id' => $inventory_id
+                ]);
+                $remaining_to_subtract = 0;
                 
-                // Log inventory history
-                $history_stmt = $pdo->prepare("INSERT INTO inventory_history (inventory_id, item_id, warehouse_id, old_qty, new_qty, changed_by, change_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $history_stmt->execute([$current_inventory['inventory_id'], $item_id, $warehouse_id, $current_qty, 0, $username, 'update']);
+                // If the new quantity is 0, we can delete the record
+                if ($new_qty == 0) {
+                    $delete_stmt = $pdo->prepare("DELETE FROM inventory WHERE inventory_id = :inventory_id");
+                    $delete_stmt->execute([':inventory_id' => $inventory_id]);
+                }
             } else {
-                $errors[] = "Failed to delete inventory record for item $item_id";
-            }
-        } else {
-            // Update the existing record with the new quantity
-            $update_stmt = $pdo->prepare("UPDATE inventory SET qty = ? WHERE inventory_id = ?");
-            if ($update_stmt->execute([$new_qty, $current_inventory['inventory_id']])) {
-                $successful_subtractions++;
-                $processed_items[] = "$item_name (-$quantity)";
+                // This record doesn't have enough, take all of it and move to next record
+                $subtracted_from_this_record = $available_qty;
+
+                $stmt_update = $pdo->prepare("UPDATE inventory SET qty = 0 WHERE inventory_id = :inventory_id");
+                $stmt_update->execute([':inventory_id' => $inventory_id]);
+                $remaining_to_subtract -= $available_qty;
                 
-                // Log inventory history
-                $history_stmt = $pdo->prepare("INSERT INTO inventory_history (inventory_id, item_id, warehouse_id, old_qty, new_qty, changed_by, change_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $history_stmt->execute([$current_inventory['inventory_id'], $item_id, $warehouse_id, $current_qty, $new_qty, $username, 'update']);
-            } else {
-                $errors[] = "Failed to update inventory for item $item_id";
+                // Delete the record since it's now 0
+                $delete_stmt = $pdo->prepare("DELETE FROM inventory WHERE inventory_id = :inventory_id");
+                $delete_stmt->execute([':inventory_id' => $inventory_id]);
             }
+            $total_subtracted += $subtracted_from_this_record;
+
+            $stmt_history = $pdo->prepare("
+                INSERT INTO inventory_history
+                (inventory_id, item_id, warehouse_id, old_qty, new_qty, changed_by, change_type, remarks)
+                VALUES
+                (:inventory_id, :item_id, :warehouse_id, :old_qty, :new_qty, :changed_by, 'update', :remarks)
+            ");
+            $stmt_history->execute([
+                ':inventory_id' => $inventory_id,
+                ':item_id' => $item_id,
+                ':warehouse_id' => $warehouse_id,
+                ':old_qty' => $available_qty,
+                ':new_qty' => $available_qty - $subtracted_from_this_record,
+                ':changed_by' => $username,
+                ':remarks' => "{$subtracted_from_this_record} pulled out"
+            ]);
+        }
+
+        if ($total_subtracted > 0) {
+            $successful_subtractions++;
+            $processed_items[] = "$item_name (-$total_subtracted)";
         }
     }
 
