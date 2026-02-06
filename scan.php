@@ -177,15 +177,14 @@ if($deliveries['package_status'] == 'pending' && isset($warehouse_id) == false &
       <input type="hidden" name="delivery_id" value="<?=$_GET['delivery_id']?>">
 
       <div class="mb-3">
-          <label for="photo_upload" class="form-label">Upload Photos</label>
-          <input 
-              type="file" 
-              class="form-control" 
-              id="photo_upload" 
-              name="photo_upload[]" 
+          <label for="photo_upload" class="form-label">Upload Photos (Optional)</label>
+          <input
+              type="file"
+              class="form-control"
+              id="photo_upload"
+              name="photo_upload[]"
               accept="image/*"
               multiple
-              required
           >
       </div>
 
