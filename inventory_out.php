@@ -678,8 +678,30 @@ function onScanSuccess(data) {
                 const toastType = data.type || 'success';
                 window.location.href = 'inventory_out.php?toast=' + encodeURIComponent(toastMessage) + '&type=' + toastType;
             } else {
-                // If there's a toast in response, redirect to show toast
-                if (data.toast) {
+                // Check if there are insufficient items to show in modal
+                if (data.insufficient_items && data.insufficient_items.length > 0) {
+                    // Populate the insufficient items table
+                    const tbody = document.getElementById('insufficientItemBody');
+                    tbody.innerHTML = ''; // Clear previous entries
+                    
+                    data.insufficient_items.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${item.item_name}</td>
+                            <td class="text-center">${item.requested_qty}</td>
+                            <td class="text-center">${item.available_qty}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    
+                    // Close the subtract modal and show insufficient inventory modal
+                    const subtractModal = bootstrap.Modal.getInstance(document.getElementById('subtractModal'));
+                    if (subtractModal) subtractModal.hide();
+                    
+                    const insufficientModal = new bootstrap.Modal(document.getElementById('insufficientInventoryModal'));
+                    insufficientModal.show();
+                } else if (data.toast) {
+                    // If there's a toast in response, redirect to show toast
                     const modal = bootstrap.Modal.getInstance(document.getElementById('subtractModal'));
                     if (modal) modal.hide();
                     window.location.href = 'inventory_out.php?toast=' + encodeURIComponent(data.toast) + '&type=' + (data.type || 'danger');

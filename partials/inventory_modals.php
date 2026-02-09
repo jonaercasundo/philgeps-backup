@@ -150,6 +150,36 @@
     </div>
 </div>
 
+<!-- Insufficient Inventory Modal -->
+<div class="modal fade" id="insufficientInventoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Insufficient Inventory</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>The following items have insufficient quantities in inventory:</p>
+                <table id="insufficientItemTable" class="table table-bordered table-striped">
+                    <thead class="table-dark text-center">
+                        <tr>
+                            <th>Item</th>
+                            <th>Requested Quantity</th>
+                            <th>Available Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="insufficientItemBody">
+                        <!-- Rows will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Reject Inventory Modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog modal-md">

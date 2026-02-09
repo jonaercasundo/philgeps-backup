@@ -36,10 +36,6 @@ try {
         exit;
     }
 
-    $successful_subtractions = 0;
-    $errors = [];
-    $processed_items = [];
-
     // Determine warehouse_id from session or default to user's assigned warehouse
     $warehouse_id = $_SESSION['warehouse_id'] ?? $user['warehouse_id'] ?? 1;
 
@@ -57,21 +53,23 @@ try {
         exit;
     }
 
+    // First, validate all items before processing any
+    $insufficient_items = [];
+    $valid_items = [];
+
     foreach ($items as $item) {
         if (empty($item['item_id']) || empty($item['quantity'])) {
-            $errors[] = "Missing item_id or quantity";
-            continue;
+            continue; // Skip invalid items
         }
 
         $item_id = intval($item['item_id']);
         $quantity_to_subtract = intval($item['quantity']);
 
         if ($quantity_to_subtract <= 0) {
-            $errors[] = "Invalid quantity for item $item_id";
-            continue;
+            continue; // Skip invalid quantities
         }
 
-        // Get item name for activity log
+        // Get item name for display
         $item_stmt = $pdo->prepare("SELECT item_name FROM item WHERE item_id = ?");
         $item_stmt->execute([$item_id]);
         $item_data = $item_stmt->fetch(PDO::FETCH_ASSOC);
@@ -93,16 +91,60 @@ try {
         $inventory_records = $stmt_inventory->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($inventory_records)) {
-            $errors[] = "Item '$item_name' not found in approved inventory for warehouse ID: $warehouse_id";
+            // Item not found in inventory
+            $insufficient_items[] = [
+                'item_id' => $item_id,
+                'item_name' => $item_name,
+                'requested_qty' => $quantity_to_subtract,
+                'available_qty' => 0
+            ];
             continue;
         }
 
         // Calculate total available quantity
         $total_available = array_sum(array_column($inventory_records, 'qty'));
         if ($total_available < $quantity_to_subtract) {
-            $errors[] = "Insufficient quantity for item '$item_name'. Requested: $quantity_to_subtract, Available: $total_available in warehouse ID: $warehouse_id";
+            // Insufficient quantity for this item
+            $insufficient_items[] = [
+                'item_id' => $item_id,
+                'item_name' => $item_name,
+                'requested_qty' => $quantity_to_subtract,
+                'available_qty' => $total_available
+            ];
             continue;
         }
+
+        // Item is valid, add to valid items list
+        $valid_items[] = [
+            'item' => $item,
+            'item_name' => $item_name,
+            'inventory_records' => $inventory_records,
+            'total_available' => $total_available
+        ];
+    }
+
+    // If there are insufficient items, return error with details
+    if (!empty($insufficient_items)) {
+        echo json_encode([
+            "success" => false, 
+            "message" => "Some items have insufficient quantities in inventory", 
+            "toast" => "Insufficient inventory for some items", 
+            "type" => "danger",
+            "insufficient_items" => $insufficient_items
+        ]);
+        exit;
+    }
+
+    // All items are valid, proceed with subtraction
+    $successful_subtractions = 0;
+    $processed_items = [];
+
+    foreach ($valid_items as $valid_item) {
+        $item = $valid_item['item'];
+        $item_name = $valid_item['item_name'];
+        $inventory_records = $valid_item['inventory_records'];
+        $item_id = intval($item['item_id']);
+        $quantity_to_subtract = intval($item['quantity']);
 
         $remaining_to_subtract = $quantity_to_subtract;
         $total_subtracted = 0;
@@ -125,7 +167,7 @@ try {
                     ':inventory_id' => $inventory_id
                 ]);
                 $remaining_to_subtract = 0;
-                
+
                 // If the new quantity is 0, we can delete the record
                 if ($new_qty == 0) {
                     $delete_stmt = $pdo->prepare("DELETE FROM inventory WHERE inventory_id = :inventory_id");
@@ -138,7 +180,7 @@ try {
                 $stmt_update = $pdo->prepare("UPDATE inventory SET qty = 0 WHERE inventory_id = :inventory_id");
                 $stmt_update->execute([':inventory_id' => $inventory_id]);
                 $remaining_to_subtract -= $available_qty;
-                
+
                 // Delete the record since it's now 0
                 $delete_stmt = $pdo->prepare("DELETE FROM inventory WHERE inventory_id = :inventory_id");
                 $delete_stmt->execute([':inventory_id' => $inventory_id]);
@@ -171,19 +213,11 @@ try {
     // Build success message based on what was processed
     if ($successful_subtractions > 0) {
         $msg = "Successfully subtracted $successful_subtractions item(s) from inventory";
-        if (!empty($errors)) {
-            $msg .= ". Some errors occurred.";
-        }
         $action_message = $username . " subtracted " . count($processed_items) . " items from inventory";
 
         $details = "Subtracted Items:\n";
         foreach ($processed_items as $item) {
             $details .= "- " . $item . "\n";
-        }
-
-        // Add errors to details if any
-        if (!empty($errors)) {
-            $details .= "\nErrors:\n• " . implode("\n• ", array_slice($errors, 0, 3));
         }
 
         // Insert into activity logs
@@ -192,7 +226,7 @@ try {
 
         echo json_encode(["success" => true, "message" => $msg, "toast" => $msg, "type" => "success"]);
     } else {
-        echo json_encode(["success" => false, "message" => "Failed to subtract items: " . implode(', ', $errors), "toast" => "Failed to subtract items", "type" => "danger"]);
+        echo json_encode(["success" => false, "message" => "No items were processed", "toast" => "No items processed", "type" => "danger"]);
     }
 
 } catch (PDOException $e) {
