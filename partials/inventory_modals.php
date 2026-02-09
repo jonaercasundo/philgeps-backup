@@ -174,6 +174,7 @@
                 </table>
             </div>
             <div class="modal-footer">
+                <button class="btn btn-danger" onclick="removePackagesWithInsufficientItems()">Remove Packages with Insufficient Items</button>
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>

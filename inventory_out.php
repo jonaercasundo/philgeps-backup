@@ -680,6 +680,9 @@ function onScanSuccess(data) {
             } else {
                 // Check if there are insufficient items to show in modal
                 if (data.insufficient_items && data.insufficient_items.length > 0) {
+                    // Store the insufficient items data globally for later use
+                    window.insufficientItemsData = data.insufficient_items;
+                    
                     // Populate the insufficient items table
                     const tbody = document.getElementById('insufficientItemBody');
                     tbody.innerHTML = ''; // Clear previous entries
@@ -717,6 +720,73 @@ function onScanSuccess(data) {
             console.error('Network error:', error);
             alert('Error subtracting items: ' + error.message);
         });
+    }
+
+    // Function to remove packages with insufficient items
+    function removePackagesWithInsufficientItems() {
+        if (!window.insufficientItemsData || window.insufficientItemsData.length === 0) {
+            return; // No insufficient items to process
+        }
+
+        // Get all item IDs that have insufficient quantities
+        const insufficientItemIds = window.insufficientItemsData.map(item => item.item_id);
+
+        // Find all packages that contain these items
+        const packagesToRemove = [];
+        
+        // Get all package headers and their associated items
+        const rows = document.querySelectorAll('#itemBodytable tr');
+        
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            
+            // Check if this is a package header row (the first cell contains "Package:")
+            const firstCell = row.cells[0];
+            if (firstCell && firstCell.textContent && firstCell.textContent.includes('Package:')) {
+                // Extract package ID from the data attribute in the quantity cell
+                const qtyCell = row.querySelector('td[data-package-id]');
+                if (qtyCell) {
+                    const packageId = qtyCell.getAttribute('data-package-id');
+                    
+                    // Look for items in this package that have insufficient quantities
+                    // Check the following rows until we reach the next package header
+                    for (let j = i + 1; j < rows.length; j++) {
+                        const nextRow = rows[j];
+                        
+                        // Check if this is the next package header
+                        const nextFirstCell = nextRow.cells[0];
+                        if (nextFirstCell && nextFirstCell.textContent && nextFirstCell.textContent.includes('Package:')) {
+                            break; // Reached next package, stop checking
+                        }
+                        
+                        // Check if this is an item row that contains an insufficient item
+                        const itemId = nextRow.getAttribute('data-item-id');
+                        if (itemId && insufficientItemIds.includes(parseInt(itemId))) {
+                            // This package contains an insufficient item, add to removal list
+                            if (!packagesToRemove.includes(packageId)) {
+                                packagesToRemove.push(packageId);
+                            }
+                            break; // Found at least one insufficient item in this package, no need to check others
+                        }
+                    }
+                }
+            }
+        }
+
+        // Remove the packages from the global array
+        packagesToRemove.forEach(pkgId => {
+            const index = subtractedPackages.indexOf(pkgId.toString()); // Convert to string to match
+            if (index > -1) {
+                subtractedPackages.splice(index, 1);
+            }
+        });
+
+        // Refresh the items view to reflect the removed packages
+        loadItemsView();
+
+        // Close the insufficient inventory modal
+        const insufficientModal = bootstrap.Modal.getInstance(document.getElementById('insufficientInventoryModal'));
+        if (insufficientModal) insufficientModal.hide();
     }
 
     // Start scanner
