@@ -114,12 +114,22 @@ if (isset($pdo) && $pdo !== null) {
         $filteredRecords = $filteredStmt->fetch(PDO::FETCH_ASSOC)['total'];
         
         // FIX: Handle ordering based on DataTables parameters
+        // Column mapping based on inventory.php DataTables configuration:
+        // 0: Inventory ID
+        // 1: Warehouse
+        // 2: Item
+        // 3: Percentage (calculated client-side from qty and expected_qty)
+        // 4: Quantity
+        // 5: Order Quantity (expected_qty)
+        // 6: Status (inventory_status)
         $orderColumns = [
             0 => 'i.inventory_id',      // Inventory ID
             1 => 'w.warehouse_name',    // Warehouse
             2 => 'it.item_name',        // Item
-            3 => 'i.qty',               // Quantity
-            4 => 'i.inventory_status'
+            3 => '(i.qty / NULLIF(expected.expected_qty, 0))', // Percentage (ratio of qty to expected_qty)
+            4 => 'i.qty',               // Quantity
+            5 => 'expected.expected_qty', // Order Quantity
+            6 => 'i.inventory_status'   // Status
         ];
         
         if (isset($orderColumns[$orderColumnIndex])) {
