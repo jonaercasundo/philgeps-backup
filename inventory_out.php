@@ -88,9 +88,6 @@
                             <th>Quantity</th>
                             <th>Order Quantity</th>
                             <th>Status</th>
-                            <?php if($_SESSION['role'] != "Warehouse Coordinator"){
-                                echo "<th>Action</th>";
-                            } ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -377,7 +374,7 @@
             processing: true,
             serverSide: true,
             ajax: {
-                url: "script/get_inventory.php",
+                url: "script/get_inventory_subtract.php",
                 type: "GET"
             },
             columns: [
@@ -431,66 +428,6 @@
                     render: function(data, type, row) {
                         const statusClass = data === 'Approved' ? 'badge bg-success' : 'badge bg-warning text-dark';
                         return `<span class="${statusClass}">${data}</span>`;
-                    }
-                },
-                {
-                    data: null,
-                    className: "text-center",
-                    orderable: false,
-                    render: function(data, type, row) {
-                        const itemName = row.item_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-                        const warehouseName = row.warehouse_name.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-
-                        let actionButtons = '';
-                    if('<?= $_SESSION['role']?>' != 'Warehouse Coordinator' && '<?= $_SESSION['role']?>' != 'Office Coordinator'){
-                        if (row.inventory_status === 'For Approval') {
-                            // Show Accept and Reject buttons for pending items
-                            actionButtons = `
-                                <button class="btn btn-success btn-sm"
-                                        onclick="updateAcceptId(${row.inventory_id})"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#acceptModal"
-                                        title="Accept Item">
-                                    <i class="bi bi-check-lg"></i>
-                                </button>
-                                <button class="btn btn-danger btn-sm"
-                                        onclick="updateRejectId(${row.inventory_id})"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#rejectModal"
-                                        title="Reject Item">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            `;
-                        } else {
-                            if('<?= $_SESSION['role']?>' == 'Super Admin' ||'<?= $_SESSION['role']?>' == 'Office Admin'){
-                                // Show Edit and Delete for approved items
-                                actionButtons = `
-                                    <button class="btn btn-warning btn-sm"
-                                            onclick="updateEdit(${row.inventory_id}, '${itemName}', '${warehouseName}', ${row.qty})"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editModal"
-                                            title="Edit Item">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm"
-                                            onclick="updateDeleteURL(${row.inventory_id})"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteModal"
-                                            title="Delete Item">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                `;
-                            }
-                        }
-                    }
-                        return `
-                            <span style="display:none;" id="item${row.inventory_id}">${itemName}</span>
-                            <span style="display:none;" id="warehouse${row.inventory_id}">${warehouseName}</span>
-                            <span style="display:none;" id="quantity${row.inventory_id}">${row.qty}</span>
-                            <div class="text-center align-middle" role="group">
-                                ${actionButtons}
-                            </div>
-                        `;
                     }
                 }
             ],
