@@ -76,7 +76,6 @@
     </div>
 
     <!-- Right button -->
-    <a href="inventory-items.php" class="btn btn-primary">Add Specific Item</a>
 </div>
 
                 <table id="inventoryTable" class="table table-bordered table-striped">
