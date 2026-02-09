@@ -9,14 +9,20 @@ try {
         exit;
     }
 
-    $user_id = $_SESSION['user_id'];
-    $username = $_SESSION['username'];
+    $user_id = $_SESSION['user_id'] ?? null;
+    $username = $_SESSION['username'] ?? null;
     $password = $_POST['password'];
     $items = json_decode($_POST['items_json'], true);
 
+    // Validate session
+    if (!$user_id || !$username) {
+        echo json_encode(["success" => false, "message" => "User session not found", "toast" => "Session expired", "type" => "danger"]);
+        exit;
+    }
+
     // Verify password first
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->execute([$username]);
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE user_id = ?");
+    $stmt->execute([$user_id]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user || !password_verify($password, $user['password'])) {
@@ -34,13 +40,29 @@ try {
     $errors = [];
     $processed_items = [];
 
+    // Determine warehouse_id from session or default to user's assigned warehouse
+    $warehouse_id = $_SESSION['warehouse_id'] ?? $user['warehouse_id'] ?? 1;
+
+    // Validate warehouse_id
+    if (!$warehouse_id) {
+        echo json_encode(["success" => false, "message" => "No warehouse assigned to user", "toast" => "No warehouse assigned", "type" => "danger"]);
+        exit;
+    }
+
+    // Validate warehouse exists
+    $warehouse_check = $pdo->prepare("SELECT warehouse_id FROM warehouse WHERE warehouse_id = ?");
+    $warehouse_check->execute([$warehouse_id]);
+    if (!$warehouse_check->fetch(PDO::FETCH_ASSOC)) {
+        echo json_encode(["success" => false, "message" => "Invalid warehouse ID: $warehouse_id", "toast" => "Invalid warehouse", "type" => "danger"]);
+        exit;
+    }
+
     foreach ($items as $item) {
         if (empty($item['item_id']) || empty($item['quantity'])) {
             $errors[] = "Missing item_id or quantity";
             continue;
         }
 
-        $warehouse_id = $_SESSION['warehouse_id'] ?? 1;
         $item_id = intval($item['item_id']);
         $quantity_to_subtract = intval($item['quantity']);
 
@@ -71,14 +93,14 @@ try {
         $inventory_records = $stmt_inventory->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($inventory_records)) {
-            $errors[] = "Item $item_name not found in approved inventory";
+            $errors[] = "Item '$item_name' not found in approved inventory for warehouse ID: $warehouse_id";
             continue;
         }
 
         // Calculate total available quantity
         $total_available = array_sum(array_column($inventory_records, 'qty'));
         if ($total_available < $quantity_to_subtract) {
-            $errors[] = "Insufficient quantity for item $item_name. Requested: $quantity_to_subtract, Available: $total_available";
+            $errors[] = "Insufficient quantity for item '$item_name'. Requested: $quantity_to_subtract, Available: $total_available in warehouse ID: $warehouse_id";
             continue;
         }
 
@@ -174,13 +196,15 @@ try {
     }
 
 } catch (PDOException $e) {
+    error_log("Subtract inventory error: " . $e->getMessage());
     echo json_encode([
-    "success" => false,
-    "message" => "SQL Error: " . $e->getMessage(),
-    "toast" => $e->getMessage(),
-    "type" => "danger"
-]);
+        "success" => false,
+        "message" => "SQL Error: " . $e->getMessage(),
+        "toast" => "Database error occurred",
+        "type" => "danger"
+    ]);
 } catch (Exception $e) {
+    error_log("Subtract inventory error: " . $e->getMessage());
     echo json_encode([
         "success" => false,
         "message" => "Error: " . $e->getMessage(),

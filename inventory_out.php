@@ -626,7 +626,6 @@ function onScanSuccess(data) {
 
                 if (itemId && !isNaN(quantity) && quantity > 0) {
                     items.push({
-                        warehouse_id: 1,
                         item_id: parseInt(itemId),
                         quantity: quantity
                     });
