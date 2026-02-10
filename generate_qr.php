@@ -229,7 +229,7 @@ $html .= "
         The undersigned hereby acknowledges the receipt of goods pursuant to Contract No. {$first['contract_no']} 
         (LOT {$first['lot_name']}) between METRO MOBILIA CORPORATION and DEPARTMENT OF EDUCATION-BUREAU OF LEARNING RESOURCES-CEBU (BLR-CEBU).<br><br>
         School Name: {$first['school_name']}<br>
-        School Name: {$first['address']}<br>
+        School Address: {$first['address']}<br>
         School ID: {$first['school_id']}
     </p>
     
