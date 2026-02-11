@@ -429,7 +429,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addToGroupModalLabel">Add to Billing Group</h5>
+                <h5 class="modal-title" id="addToGroupModalLabel">Add to New Billing Group</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -593,6 +593,13 @@ $grouped_summary = getBillingGroupSummary($pdo);
             return;
         }
         
+        // Reset to ADD mode (not edit mode)
+        document.getElementById('isEditMode').value = '0';
+        document.getElementById('groupIdInput').value = ''; // Clear group ID
+        document.getElementById('groupNameInput').value = ''; // Clear group name
+        document.getElementById('addToGroupModalLabel').textContent = 'Add to New Billing Group';
+        document.getElementById('confirmAddToGroup').textContent = 'Confirm Add to Group';
+        
         // Populate the list in modal
         const drList = document.getElementById('drList');
         drList.innerHTML = '';
@@ -621,12 +628,12 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 return;
             }
             
-            // Set to EDIT mode
-            document.getElementById('isEditMode').value = '1';
-            document.getElementById('groupIdInput').value = groupId;
-            document.getElementById('groupNameInput').value = groupName;
-            document.getElementById('addToGroupModalLabel').textContent = 'Edit Billing Group';
-            document.getElementById('confirmAddToGroup').textContent = 'Confirm Edit Group';
+            // Set to ADD TO EXISTING GROUP mode (not edit mode)
+            document.getElementById('isEditMode').value = '0'; // Not in edit mode
+            document.getElementById('groupIdInput').value = groupId; // But specify the target group
+            document.getElementById('groupNameInput').value = groupName; // Pre-fill the group name
+            document.getElementById('addToGroupModalLabel').textContent = `Add to Billing Group: ${groupName}`;
+            document.getElementById('confirmAddToGroup').textContent = 'Confirm Add to Group';
             
             // Populate the list in modal
             const drList = document.getElementById('drList');
@@ -647,8 +654,13 @@ $grouped_summary = getBillingGroupSummary($pdo);
     document.getElementById('confirmAddToGroup').addEventListener('click', function() {
         const selectedDRs = getSelectedDRs();
         const groupName = document.getElementById('groupNameInput').value.trim();
+        const groupId = document.getElementById('groupIdInput').value; // Get the group ID if adding to existing group
+        const isEditMode = document.getElementById('isEditMode').value; // Check if in edit mode
         
-        if (selectedDRs.length === 0) {
+        // Check if we're in the context of the modal (might be different from checkboxes in main table)
+        // Get selected DRs from the modal list
+        const drListItems = document.querySelectorAll('#drList li');
+        if (drListItems.length === 0 && selectedDRs.length === 0) {
             window.location.href = '?toast=No deliveries selected&type=danger';
             return;
         }
@@ -661,9 +673,22 @@ $grouped_summary = getBillingGroupSummary($pdo);
         // Create form data
         const formData = new FormData();
         formData.append('group_name', groupName);
-        selectedDRs.forEach(dr => {
-            formData.append('selected_dr[]', dr);
-        });
+        formData.append('target_group_id', groupId); // Add target group ID if adding to existing group
+        formData.append('is_add_to_existing', isEditMode === '0' && groupId ? '1' : '0'); // Flag if adding to existing group
+        
+        // Use selected DRs from modal list if available, otherwise from main table
+        if (drListItems.length > 0) {
+            // Use DRs from modal list
+            Array.from(drListItems).forEach(li => {
+                const drNo = li.textContent.replace('DR No: ', '').trim();
+                formData.append('selected_dr[]', drNo);
+            });
+        } else {
+            // Use DRs from main table checkboxes
+            selectedDRs.forEach(dr => {
+                formData.append('selected_dr[]', dr);
+            });
+        }
         
         // Disable button during request
         const confirmBtn = this;
@@ -682,8 +707,16 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 bootstrap.Modal.getInstance(document.getElementById('addToGroupModal')).hide();
                 // Clear group name input
                 document.getElementById('groupNameInput').value = '';
-                // Uncheck all checkboxes
-                document.querySelectorAll('.dr-checkbox:checked').forEach(cb => cb.checked = false);
+                // Clear group ID input
+                document.getElementById('groupIdInput').value = '';
+                // Clear isEditMode
+                document.getElementById('isEditMode').value = '0';
+                // Clear DR list in modal
+                document.getElementById('drList').innerHTML = '';
+                // Uncheck all checkboxes in main table if not adding to existing group
+                if (!(isEditMode === '0' && groupId)) {
+                    document.querySelectorAll('.dr-checkbox:checked').forEach(cb => cb.checked = false);
+                }
                 // Redirect with success message
                 window.location.href = `?toast=${encodeURIComponent(data.toast)}&type=${data.type}`;
             } else {
@@ -691,7 +724,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
             }
         })
         .catch(error => {
-            console.error('', error);
+            console.error('Error:', error);
             window.location.href = '?toast=An error occurred while processing your request&type=danger';
         })
         .finally(() => {
