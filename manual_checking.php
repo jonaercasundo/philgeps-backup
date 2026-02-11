@@ -228,6 +228,12 @@ $grouped_summary = getBillingGroupSummary($pdo);
                                             title="Edit Group">
                                     <i class="bi bi-pencil-square"></i>
                                     </button>
+                                    <button class="btn btn-sm btn-outline-info ms-2 qr-scan-btn"
+                                            data-group-name="<?= $groupName ?>"
+                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
+                                            title="Scan QR Code to Add Delivery">
+                                    <i class="bi bi-qr-code"></i>
+                                    </button>
                                 </div>
                             </h2>
 
@@ -515,9 +521,42 @@ $grouped_summary = getBillingGroupSummary($pdo);
     </div>
 </div>
 
+<!-- QR Scan Modal -->
+<div class="modal fade" id="qrScanModal" tabindex="-1" aria-labelledby="qrScanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="qrScanModalLabel">QR Scanner</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <!-- QR Reader container: fixed height and center content -->
+                    <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
+                        <div id="qrReader" style="width: 100%; height: 100%; max-width: 300px; max-height: 200px;"></div>
+                    </div>
+
+                    <!-- USB Scanner Input -->
+                    <div class="mt-3">
+                        <input type="text" id="usbScannerInput" class="form-control" placeholder="Scan QR code here" autofocus>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div id="qrResult" class="alert alert-info" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php require "template/footer.php"; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
 <script>
     // Get selected DR numbers
@@ -833,4 +872,219 @@ $grouped_summary = getBillingGroupSummary($pdo);
         });
     }
 
+</script>
+
+<!-- QR script -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+    /* Constrain the video element created by HTML5-QRCode library */
+    #qrReader video {
+        max-width: 100% !important;
+        max-height: 200px !important;
+        width: auto !important;
+        height: auto !important;
+    }
+</style>
+
+<script>
+    let html5QrCode = null;
+    let currentGroupId = null;
+    
+    // Handle QR scan button click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.qr-scan-btn')) {
+            const btn = e.target.closest('.qr-scan-btn');
+            currentGroupId = btn.dataset.groupId;
+            
+            // Show the QR scan modal
+            const modal = new bootstrap.Modal(document.getElementById('qrScanModal'));
+            modal.show();
+            
+            // Start the QR scanner after a short delay to ensure modal is fully displayed
+            setTimeout(startQrScanner, 500);
+        }
+    });
+    
+    function startQrScanner() {
+        const readerElement = document.getElementById('qrReader');
+        
+        // Clear any previous scanner
+        if (html5QrCode) {
+            html5QrCode.stop().catch(err => console.log("Scanner already stopped", err));
+        }
+        
+        // Create new scanner instance
+        html5QrCode = new Html5Qrcode("qrReader");
+        
+        // Configuration for the scanner - similar to logistics_package.php
+        const config = { fps: 10, qrbox: 250 };
+        
+        // Start the camera scan
+        html5QrCode.start(
+            { facingMode: "environment" }, // Use rear camera if available
+            config,
+            onScanSuccess
+        ).catch(err => {
+            console.error("Error starting camera:", err);
+            // Fallback to front camera if rear is not available
+            html5QrCode.start(
+                { facingMode: "user" },
+                config,
+                onScanSuccess
+            ).catch(err => {
+                console.error("Error starting front camera:", err);
+                document.getElementById('qrResult').textContent = "Camera could not be accessed. Please allow camera permissions.";
+                document.getElementById('qrResult').style.display = 'block';
+            });
+        });
+    }
+    
+    function onScanSuccess(decodedText, decodedResult) {
+        // Process the scanned data
+        try {
+            // Check if the decoded text is a URL containing delivery_id
+            if (typeof decodedText === 'string' && decodedText.includes('delivery_id=')) {
+                // Parse the URL to extract the delivery_id
+                const url = new URL(decodedText);
+                const deliveryId = url.searchParams.get('delivery_id');
+                
+                if (deliveryId) {
+                    // Get the DR number for this delivery_id
+                    getDrNumberByDeliveryId(deliveryId, currentGroupId);
+                } else {
+                    document.getElementById('qrResult').textContent = "No delivery_id found in QR code";
+                    document.getElementById('qrResult').className = 'alert alert-danger';
+                    document.getElementById('qrResult').style.display = 'block';
+                }
+            } else {
+                // If it's not a URL, try to parse as JSON
+                const deliveryInfo = JSON.parse(decodedText);
+                const deliveryId = deliveryInfo.delivery_id || deliveryInfo.dr_no;
+                
+                if (deliveryId) {
+                    // Add the delivery to the selected group
+                    addDeliveryToGroup(deliveryId, currentGroupId);
+                } else {
+                    document.getElementById('qrResult').textContent = "Invalid QR code format";
+                    document.getElementById('qrResult').className = 'alert alert-danger';
+                    document.getElementById('qrResult').style.display = 'block';
+                }
+            }
+        } catch (e) {
+            // If not JSON and not a URL, treat as plain text (DR number)
+            // But first check if it's a URL without proper protocol
+            if (decodedText.includes('delivery_id=')) {
+                try {
+                    // Add a dummy protocol to parse the URL
+                    const url = new URL('http://' + decodedText.replace(/^https?:\/\//, ''));
+                    const deliveryId = url.searchParams.get('delivery_id');
+                    
+                    if (deliveryId) {
+                        // Get the DR number for this delivery_id
+                        getDrNumberByDeliveryId(deliveryId, currentGroupId);
+                    } else {
+                        document.getElementById('qrResult').textContent = "No delivery_id found in QR code";
+                        document.getElementById('qrResult').className = 'alert alert-danger';
+                        document.getElementById('qrResult').style.display = 'block';
+                    }
+                } catch (urlError) {
+                    document.getElementById('qrResult').textContent = "Invalid QR code format: " + e.message;
+                    document.getElementById('qrResult').className = 'alert alert-danger';
+                    document.getElementById('qrResult').style.display = 'block';
+                }
+            } else {
+                addDeliveryToGroup(decodedText, currentGroupId);
+            }
+        }
+    }
+    
+    // Function to get DR number by delivery ID
+    function getDrNumberByDeliveryId(deliveryId, groupId) {
+        // Show processing message
+        document.getElementById('qrResult').innerHTML = `Fetching delivery information for ID: <strong>${deliveryId}</strong>...`;
+        document.getElementById('qrResult').className = 'alert alert-info';
+        document.getElementById('qrResult').style.display = 'block';
+        
+        // Make AJAX request to get the DR number for this delivery ID
+        fetch(`script/get_delivery_info.php?delivery_id=${encodeURIComponent(deliveryId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.dr_no) {
+                // Successfully got the DR number, now add to group
+                addDeliveryToGroup(data.dr_no, groupId);
+            } else {
+                document.getElementById('qrResult').innerHTML = `Error: ${data.message || 'Could not find delivery information'}`;
+                document.getElementById('qrResult').className = 'alert alert-danger';
+                document.getElementById('qrResult').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching delivery info:', error);
+            document.getElementById('qrResult').innerHTML = `Error fetching delivery information: ${error.message}`;
+            document.getElementById('qrResult').className = 'alert alert-danger';
+            document.getElementById('qrResult').style.display = 'block';
+        });
+    }
+    
+    // Handle USB scanner input
+    document.getElementById('usbScannerInput').addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            const scannedCode = this.value.trim();
+            this.value = ""; // clear input
+            if (!scannedCode) return;
+            onScanSuccess(scannedCode, null); // Pass string to onScanSuccess
+        }
+    });
+    
+    function addDeliveryToGroup(deliveryId, groupId) {
+        // Show processing message
+        document.getElementById('qrResult').innerHTML = `Adding delivery <strong>${deliveryId}</strong> to group...`;
+        document.getElementById('qrResult').className = 'alert alert-info';
+        document.getElementById('qrResult').style.display = 'block';
+        
+        // Create form data to send to the server
+        const formData = new FormData();
+        formData.append('selected_dr[]', deliveryId);
+        formData.append('group_name', document.querySelector(`.qr-scan-btn[data-group-id="${groupId}"]`).dataset.groupName);
+        
+        // Send AJAX request to add the delivery to the group
+        fetch('script/add_billing_grouped.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('qrResult').innerHTML = `Successfully added delivery <strong>${deliveryId}</strong> to group!`;
+                document.getElementById('qrResult').className = 'alert alert-success';
+                
+                // Stop the scanner after successful scan
+                if (html5QrCode) {
+                    html5QrCode.stop().catch(err => console.log("Error stopping scanner", err));
+                }
+                
+                // Refresh the page after a short delay to show the updated groups
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                document.getElementById('qrResult').innerHTML = `Error: ${data.message}`;
+                document.getElementById('qrResult').className = 'alert alert-danger';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('qrResult').innerHTML = `Error adding delivery: ${error.message}`;
+            document.getElementById('qrResult').className = 'alert alert-danger';
+        });
+    }
+    
+    // Clean up the scanner when modal is closed
+    document.getElementById('qrScanModal').addEventListener('hidden.bs.modal', function () {
+        if (html5QrCode) {
+            html5QrCode.stop().catch(err => console.log("Error stopping scanner", err));
+        }
+    });
 </script>
