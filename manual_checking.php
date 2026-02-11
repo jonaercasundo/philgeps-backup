@@ -216,24 +216,43 @@ $grouped_summary = getBillingGroupSummary($pdo);
                                     </div>
                                     </button>
 
-                                    <button class="btn btn-sm btn-outline-success ms-2 add-group-btn"
-                                            data-group-name="<?= $groupName ?>"
-                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                            title="Add more to Group">
-                                    <i class="bi bi-plus-lg"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-primary ms-2 edit-group-btn"
-                                            data-group-name="<?= $groupName ?>"
-                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                            title="Edit Group">
-                                    <i class="bi bi-pencil-square"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-info ms-2 qr-scan-btn"
-                                            data-group-name="<?= $groupName ?>"
-                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                            title="Scan QR Code to Add Delivery">
-                                    <i class="bi bi-qr-code"></i>
-                                    </button>
+                                    <!-- Dropdown menu for group actions -->
+                                    <div class="dropdown ms-2">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="groupActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="groupActionsDropdown">
+                                            <li>
+                                                <button class="dropdown-item add-group-btn" 
+                                                        data-group-name="<?= $groupName ?>"
+                                                        data-group-id="<?= htmlspecialchars($group['group_id']) ?>">
+                                                    <i class="bi bi-plus-lg me-2"></i>Add more to Group
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item edit-group-btn"
+                                                        data-group-name="<?= $groupName ?>"
+                                                        data-group-id="<?= htmlspecialchars($group['group_id']) ?>">
+                                                    <i class="bi bi-pencil-square me-2"></i>Edit Group
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item qr-scan-btn"
+                                                        data-group-name="<?= $groupName ?>"
+                                                        data-group-id="<?= htmlspecialchars($group['group_id']) ?>">
+                                                    <i class="bi bi-qr-code me-2"></i>Scan QR Code
+                                                </button>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button class="dropdown-item text-danger delete-group-btn-all"
+                                                        data-group-name="<?= $groupName ?>"
+                                                        data-group-id="<?= htmlspecialchars($group['group_id']) ?>">
+                                                    <i class="bi bi-trash me-2"></i>Delete Group
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </h2>
 
@@ -457,16 +476,17 @@ $grouped_summary = getBillingGroupSummary($pdo);
   <div class="modal-dialog modal-md">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Delete DR from Billing Group</h5>
+        <h5 class="modal-title">Delete Confirmation</h5>
       </div>
       <div class="modal-body">
         <form id="deleteForm" method="POST" action="script/delete.php">
           <input type="hidden" name="source_page" value="<?= basename($_SERVER['PHP_SELF']) . '?' . http_build_query($_GET) ?>">
-          <input type="hidden" id="delete_dr_no" name="id">
-          <input type="hidden" name="table" value="billing_grouped">
-          <input type="hidden" name="condition" value="dr_no">
+          <input type="hidden" id="delete_id" name="id">
+          <input type="hidden" id="delete_table" name="table" value="billing_grouped">
+          <input type="hidden" id="delete_condition" name="condition" value="dr_no">
+          <input type="hidden" id="delete_type" value="dr">
           <div class="mb-3">
-            <label>Are you sure you want to remove <strong id="drToDeleteText"></strong> from the billing group?</label>
+            <label id="delete_message">Are you sure you want to remove <strong id="drToDeleteText"></strong> from the billing group?</label>
           </div>
           <div class="mb-3">
             <label>Input password to Continue</label>
@@ -476,7 +496,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-danger" onclick="document.getElementById('deleteForm').submit();">Delete</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
       </div>
     </div>
   </div>
@@ -741,8 +761,34 @@ $grouped_summary = getBillingGroupSummary($pdo);
             const drNo = removeBtn.dataset.dr;
             
             // Set DR number in modal
-            document.getElementById('delete_dr_no').value = drNo;
+            document.getElementById('delete_id').value = drNo;
+            document.getElementById('delete_table').value = 'billing_grouped';
+            document.getElementById('delete_condition').value = 'dr_no';
+            document.getElementById('delete_type').value = 'dr';
             document.getElementById('drToDeleteText').textContent = `DR ${drNo}`;
+            document.getElementById('delete_message').textContent = 'Are you sure you want to remove ';
+            document.getElementById('delete_message').innerHTML += `<strong id="drToDeleteText">DR ${drNo}</strong> from the billing group?`;
+            
+            // Show delete modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            deleteModal.show();
+        }
+    });
+    
+    // Handle delete group button click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-group-btn-all')) {
+            const btn = e.target.closest('.delete-group-btn-all');
+            const groupName = btn.dataset.groupName;
+            const groupId = btn.dataset.groupId;
+            
+            // Set group details in modal
+            document.getElementById('delete_id').value = groupId;
+            document.getElementById('delete_table').value = 'grouping';
+            document.getElementById('delete_condition').value = 'group_id';
+            document.getElementById('delete_type').value = 'group';
+            document.getElementById('drToDeleteText').textContent = groupName;
+            document.getElementById('delete_message').innerHTML = `Are you sure you want to delete the entire group <strong>"${groupName}"</strong> and all its DR numbers?`;
             
             // Show delete modal
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
@@ -750,6 +796,15 @@ $grouped_summary = getBillingGroupSummary($pdo);
         }
     });
 
+    // Handle delete confirmation button click
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        const deleteType = document.getElementById('delete_type').value;
+        const deleteForm = document.getElementById('deleteForm');
+        
+        // Submit the form
+        deleteForm.submit();
+    });
+    
     // Billing Groups Search Functionality
     const groupSearchInput = document.getElementById('groupSearchInput');
     const clearGroupSearchBtn = document.getElementById('clearGroupSearch');
