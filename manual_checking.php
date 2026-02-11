@@ -1145,7 +1145,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
         }
         
         // Show processing message
-        document.getElementById('qrResult').innerHTML = `Adding ${scannedDeliveries.length} deliveries to group...`;
+        document.getElementById('qrResult').innerHTML = `Validating and adding ${scannedDeliveries.length} deliveries to group...`;
         document.getElementById('qrResult').className = 'alert alert-info';
         document.getElementById('qrResult').style.display = 'block';
         
@@ -1184,12 +1184,12 @@ $grouped_summary = getBillingGroupSummary($pdo);
                     window.location.reload();
                 }, 1500);
             } else {
-                document.getElementById('qrResult').innerHTML = ` ${data.message}`;
+                document.getElementById('qrResult').innerHTML = `Error: ${data.message}`;
                 document.getElementById('qrResult').className = 'alert alert-danger';
             }
         })
         .catch(error => {
-            console.error('', error);
+            console.error('Error:', error);
             document.getElementById('qrResult').innerHTML = `Error adding deliveries: ${error.message}`;
             document.getElementById('qrResult').className = 'alert alert-danger';
         });

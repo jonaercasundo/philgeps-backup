@@ -20,11 +20,24 @@ try {
     
     if ($result) {
         if ($result['status'] === 'delivered') {
-            echo json_encode([
-                'success' => true,
-                'dr_no' => $result['dr_no'],
-                'status' => $result['status']
-            ]);
+            // Check if this DR number is already in any billing group
+            $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM billing_grouped WHERE dr_no = :dr_no");
+            $checkStmt->bindParam(':dr_no', $result['dr_no']);
+            $checkStmt->execute();
+            $count = $checkStmt->fetchColumn();
+            
+            if ($count > 0) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'DR number ' . $result['dr_no'] . ' is already in a billing group'
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => true,
+                    'dr_no' => $result['dr_no'],
+                    'status' => $result['status']
+                ]);
+            }
         } else {
             echo json_encode([
                 'success' => false,
