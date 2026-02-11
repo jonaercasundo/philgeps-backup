@@ -153,7 +153,7 @@ try {
     }
 
 } catch (PDOException $e) {
-    die("DB Error: " . $e->getMessage());
+    die("DB  " . $e->getMessage());
 }
 
 // After your existing try-catch block for deliveries
@@ -691,7 +691,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('', error);
             window.location.href = '?toast=An error occurred while processing your request&type=danger';
         })
         .finally(() => {
@@ -805,7 +805,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('', error);
                     alert('Error loading group details');
                 });
         }
@@ -869,20 +869,20 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 if (data.success) {
                     window.location.href = `?toast=${encodeURIComponent(data.message)}&type=success`;
                 } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
+                    alert(' ' + (data.message || 'Unknown error'));
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save Changes';
                 }
             } catch (e) {
                 console.error('Response:', text);
-                alert('Error: Invalid response from server');
+                alert(' Invalid response from server');
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save Changes';
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error: ' + error);
+            console.error('', error);
+            alert(' ' + error);
             saveBtn.disabled = false;
             saveBtn.textContent = 'Save Changes';
         });
@@ -1035,7 +1035,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 // Successfully got the DR number, add to scanned list
                 addToScannedList(data.dr_no, groupId);
             } else {
-                document.getElementById('qrResult').innerHTML = `Error: ${data.message || 'Could not find delivery information'}`;
+                document.getElementById('qrResult').innerHTML = ` ${data.message || 'Could not find delivery information'}`;
                 document.getElementById('qrResult').className = 'alert alert-danger';
                 document.getElementById('qrResult').style.display = 'block';
             }
@@ -1184,12 +1184,12 @@ $grouped_summary = getBillingGroupSummary($pdo);
                     window.location.reload();
                 }, 1500);
             } else {
-                document.getElementById('qrResult').innerHTML = `Error: ${data.message}`;
+                document.getElementById('qrResult').innerHTML = ` ${data.message}`;
                 document.getElementById('qrResult').className = 'alert alert-danger';
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('', error);
             document.getElementById('qrResult').innerHTML = `Error adding deliveries: ${error.message}`;
             document.getElementById('qrResult').className = 'alert alert-danger';
         });
