@@ -153,7 +153,7 @@ try {
     }
 
 } catch (PDOException $e) {
-    die("DB Error: " . $e->getMessage());
+    die("DB  " . $e->getMessage());
 }
 
 // After your existing try-catch block for deliveries
@@ -216,18 +216,43 @@ $grouped_summary = getBillingGroupSummary($pdo);
                                     </div>
                                     </button>
 
-                                    <button class="btn btn-sm btn-outline-success ms-2 add-group-btn"
-                                            data-group-name="<?= $groupName ?>"
-                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                            title="Add more to Group">
-                                    <i class="bi bi-plus-lg"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-primary ms-2 edit-group-btn"
-                                            data-group-name="<?= $groupName ?>"
-                                            data-group-id="<?= htmlspecialchars($group['group_id']) ?>"
-                                            title="Edit Group">
-                                    <i class="bi bi-pencil-square"></i>
-                                    </button>
+                                    <!-- Dropdown menu for group actions -->
+                                    <div class="dropdown ms-2">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="groupActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="groupActionsDropdown">
+                                            <li>
+                                                <button class="dropdown-item add-group-btn" 
+                                                        data-group-name="<?= $groupName ?>"
+                                                        data-group-id="<?= htmlspecialchars($group['group_id']) ?>">
+                                                    <i class="bi bi-plus-lg me-2"></i>Add more to Group
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item edit-group-btn"
+                                                        data-group-name="<?= $groupName ?>"
+                                                        data-group-id="<?= htmlspecialchars($group['group_id']) ?>">
+                                                    <i class="bi bi-pencil-square me-2"></i>Edit Group
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item qr-scan-btn"
+                                                        data-group-name="<?= $groupName ?>"
+                                                        data-group-id="<?= htmlspecialchars($group['group_id']) ?>">
+                                                    <i class="bi bi-qr-code me-2"></i>Scan QR Code
+                                                </button>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button class="dropdown-item text-danger delete-group-btn-all"
+                                                        data-group-name="<?= $groupName ?>"
+                                                        data-group-id="<?= htmlspecialchars($group['group_id']) ?>">
+                                                    <i class="bi bi-trash me-2"></i>Delete Group
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </h2>
 
@@ -423,7 +448,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addToGroupModalLabel">Add to Billing Group</h5>
+                <h5 class="modal-title" id="addToGroupModalLabel">Add to New Billing Group</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -451,16 +476,17 @@ $grouped_summary = getBillingGroupSummary($pdo);
   <div class="modal-dialog modal-md">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Delete DR from Billing Group</h5>
+        <h5 class="modal-title">Delete Confirmation</h5>
       </div>
       <div class="modal-body">
         <form id="deleteForm" method="POST" action="script/delete.php">
           <input type="hidden" name="source_page" value="<?= basename($_SERVER['PHP_SELF']) . '?' . http_build_query($_GET) ?>">
-          <input type="hidden" id="delete_dr_no" name="id">
-          <input type="hidden" name="table" value="billing_grouped">
-          <input type="hidden" name="condition" value="dr_no">
+          <input type="hidden" id="delete_id" name="id">
+          <input type="hidden" id="delete_table" name="table" value="billing_grouped">
+          <input type="hidden" id="delete_condition" name="condition" value="dr_no">
+          <input type="hidden" id="delete_type" value="dr">
           <div class="mb-3">
-            <label>Are you sure you want to remove <strong id="drToDeleteText"></strong> from the billing group?</label>
+            <label id="delete_message">Are you sure you want to remove <strong id="drToDeleteText"></strong> from the billing group?</label>
           </div>
           <div class="mb-3">
             <label>Input password to Continue</label>
@@ -470,7 +496,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-danger" onclick="document.getElementById('deleteForm').submit();">Delete</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
       </div>
     </div>
   </div>
@@ -515,9 +541,58 @@ $grouped_summary = getBillingGroupSummary($pdo);
     </div>
 </div>
 
+<!-- QR Scan Modal -->
+<div class="modal fade" id="qrScanModal" tabindex="-1" aria-labelledby="qrScanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="qrScanModalLabel">QR Scanner</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <!-- QR Reader container: fixed height and center content -->
+                    <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
+                        <div id="qrReader" style="width: 100%; height: 100%; max-width: 300px; max-height: 200px;"></div>
+                    </div>
+
+                    <!-- USB Scanner Input -->
+                    <div class="mt-3">
+                        <input type="text" id="usbScannerInput" class="form-control" placeholder="Scan QR code here" autofocus>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div id="qrResult" class="alert alert-info" style="display: none;"></div>
+                    </div>
+                    
+                    <!-- Scanned Deliveries List -->
+                    <div class="mt-3">
+                        <h6>Scanned Deliveries (<span id="scannedCount">0</span>)</h6>
+                        <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">
+                            <ul id="scannedDeliveriesList" class="list-group list-group-flush mb-0">
+                                <li class="list-group-item d-flex justify-content-between align-items-center text-muted">
+                                    No deliveries scanned yet
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="mt-2 d-flex justify-content-between">
+                            <button id="clearScannedBtn" class="btn btn-sm btn-outline-danger" style="display: none;">Clear All</button>
+                            <button id="finishScanningBtn" class="btn btn-sm btn-success" style="display: none;">Finish Scanning & Add to Group</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php require "template/footer.php"; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
 <script>
     // Get selected DR numbers
@@ -537,6 +612,13 @@ $grouped_summary = getBillingGroupSummary($pdo);
             window.location.href = '?toast=Please select at least one delivery to add to the billing group&type=danger';
             return;
         }
+        
+        // Reset to ADD mode (not edit mode)
+        document.getElementById('isEditMode').value = '0';
+        document.getElementById('groupIdInput').value = ''; // Clear group ID
+        document.getElementById('groupNameInput').value = ''; // Clear group name
+        document.getElementById('addToGroupModalLabel').textContent = 'Add to New Billing Group';
+        document.getElementById('confirmAddToGroup').textContent = 'Confirm Add to Group';
         
         // Populate the list in modal
         const drList = document.getElementById('drList');
@@ -566,12 +648,12 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 return;
             }
             
-            // Set to EDIT mode
-            document.getElementById('isEditMode').value = '1';
-            document.getElementById('groupIdInput').value = groupId;
-            document.getElementById('groupNameInput').value = groupName;
-            document.getElementById('addToGroupModalLabel').textContent = 'Edit Billing Group';
-            document.getElementById('confirmAddToGroup').textContent = 'Confirm Edit Group';
+            // Set to ADD TO EXISTING GROUP mode (not edit mode)
+            document.getElementById('isEditMode').value = '0'; // Not in edit mode
+            document.getElementById('groupIdInput').value = groupId; // But specify the target group
+            document.getElementById('groupNameInput').value = groupName; // Pre-fill the group name
+            document.getElementById('addToGroupModalLabel').textContent = `Add to Billing Group: ${groupName}`;
+            document.getElementById('confirmAddToGroup').textContent = 'Confirm Add to Group';
             
             // Populate the list in modal
             const drList = document.getElementById('drList');
@@ -592,8 +674,13 @@ $grouped_summary = getBillingGroupSummary($pdo);
     document.getElementById('confirmAddToGroup').addEventListener('click', function() {
         const selectedDRs = getSelectedDRs();
         const groupName = document.getElementById('groupNameInput').value.trim();
+        const groupId = document.getElementById('groupIdInput').value; // Get the group ID if adding to existing group
+        const isEditMode = document.getElementById('isEditMode').value; // Check if in edit mode
         
-        if (selectedDRs.length === 0) {
+        // Check if we're in the context of the modal (might be different from checkboxes in main table)
+        // Get selected DRs from the modal list
+        const drListItems = document.querySelectorAll('#drList li');
+        if (drListItems.length === 0 && selectedDRs.length === 0) {
             window.location.href = '?toast=No deliveries selected&type=danger';
             return;
         }
@@ -606,9 +693,22 @@ $grouped_summary = getBillingGroupSummary($pdo);
         // Create form data
         const formData = new FormData();
         formData.append('group_name', groupName);
-        selectedDRs.forEach(dr => {
-            formData.append('selected_dr[]', dr);
-        });
+        formData.append('target_group_id', groupId); // Add target group ID if adding to existing group
+        formData.append('is_add_to_existing', isEditMode === '0' && groupId ? '1' : '0'); // Flag if adding to existing group
+        
+        // Use selected DRs from modal list if available, otherwise from main table
+        if (drListItems.length > 0) {
+            // Use DRs from modal list
+            Array.from(drListItems).forEach(li => {
+                const drNo = li.textContent.replace('DR No: ', '').trim();
+                formData.append('selected_dr[]', drNo);
+            });
+        } else {
+            // Use DRs from main table checkboxes
+            selectedDRs.forEach(dr => {
+                formData.append('selected_dr[]', dr);
+            });
+        }
         
         // Disable button during request
         const confirmBtn = this;
@@ -627,8 +727,16 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 bootstrap.Modal.getInstance(document.getElementById('addToGroupModal')).hide();
                 // Clear group name input
                 document.getElementById('groupNameInput').value = '';
-                // Uncheck all checkboxes
-                document.querySelectorAll('.dr-checkbox:checked').forEach(cb => cb.checked = false);
+                // Clear group ID input
+                document.getElementById('groupIdInput').value = '';
+                // Clear isEditMode
+                document.getElementById('isEditMode').value = '0';
+                // Clear DR list in modal
+                document.getElementById('drList').innerHTML = '';
+                // Uncheck all checkboxes in main table if not adding to existing group
+                if (!(isEditMode === '0' && groupId)) {
+                    document.querySelectorAll('.dr-checkbox:checked').forEach(cb => cb.checked = false);
+                }
                 // Redirect with success message
                 window.location.href = `?toast=${encodeURIComponent(data.toast)}&type=${data.type}`;
             } else {
@@ -653,8 +761,34 @@ $grouped_summary = getBillingGroupSummary($pdo);
             const drNo = removeBtn.dataset.dr;
             
             // Set DR number in modal
-            document.getElementById('delete_dr_no').value = drNo;
+            document.getElementById('delete_id').value = drNo;
+            document.getElementById('delete_table').value = 'billing_grouped';
+            document.getElementById('delete_condition').value = 'dr_no';
+            document.getElementById('delete_type').value = 'dr';
             document.getElementById('drToDeleteText').textContent = `DR ${drNo}`;
+            document.getElementById('delete_message').textContent = 'Are you sure you want to remove ';
+            document.getElementById('delete_message').innerHTML += `<strong id="drToDeleteText">DR ${drNo}</strong> from the billing group?`;
+            
+            // Show delete modal
+            const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            deleteModal.show();
+        }
+    });
+    
+    // Handle delete group button click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-group-btn-all')) {
+            const btn = e.target.closest('.delete-group-btn-all');
+            const groupName = btn.dataset.groupName;
+            const groupId = btn.dataset.groupId;
+            
+            // Set group details in modal
+            document.getElementById('delete_id').value = groupId;
+            document.getElementById('delete_table').value = 'grouping';
+            document.getElementById('delete_condition').value = 'group_id';
+            document.getElementById('delete_type').value = 'group';
+            document.getElementById('drToDeleteText').textContent = groupName;
+            document.getElementById('delete_message').innerHTML = `Are you sure you want to delete the entire group <strong>"${groupName}"</strong> and all its DR numbers?`;
             
             // Show delete modal
             const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
@@ -662,6 +796,15 @@ $grouped_summary = getBillingGroupSummary($pdo);
         }
     });
 
+    // Handle delete confirmation button click
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        const deleteType = document.getElementById('delete_type').value;
+        const deleteForm = document.getElementById('deleteForm');
+        
+        // Submit the form
+        deleteForm.submit();
+    });
+    
     // Billing Groups Search Functionality
     const groupSearchInput = document.getElementById('groupSearchInput');
     const clearGroupSearchBtn = document.getElementById('clearGroupSearch');
@@ -750,7 +893,7 @@ $grouped_summary = getBillingGroupSummary($pdo);
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('', error);
                     alert('Error loading group details');
                 });
         }
@@ -814,23 +957,373 @@ $grouped_summary = getBillingGroupSummary($pdo);
                 if (data.success) {
                     window.location.href = `?toast=${encodeURIComponent(data.message)}&type=success`;
                 } else {
-                    alert('Error: ' + (data.message || 'Unknown error'));
+                    alert(' ' + (data.message || 'Unknown error'));
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save Changes';
                 }
             } catch (e) {
                 console.error('Response:', text);
-                alert('Error: Invalid response from server');
+                alert(' Invalid response from server');
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save Changes';
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error: ' + error);
+            console.error('', error);
+            alert(' ' + error);
             saveBtn.disabled = false;
             saveBtn.textContent = 'Save Changes';
         });
     }
 
+</script>
+
+<!-- QR script -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+    /* Constrain the video element created by HTML5-QRCode library */
+    #qrReader video {
+        max-width: 100% !important;
+        max-height: 200px !important;
+        width: auto !important;
+        height: auto !important;
+    }
+</style>
+
+<script>
+    let html5QrCode = null;
+    let currentGroupId = null;
+    let scannedDeliveries = []; // Array to store scanned delivery IDs
+    
+    // Handle QR scan button click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.qr-scan-btn')) {
+            const btn = e.target.closest('.qr-scan-btn');
+            currentGroupId = btn.dataset.groupId;
+            
+            // Show the QR scan modal
+            const modal = new bootstrap.Modal(document.getElementById('qrScanModal'));
+            modal.show();
+            
+            // Start the QR scanner after a short delay to ensure modal is fully displayed
+            setTimeout(startQrScanner, 500);
+        }
+    });
+    
+    function startQrScanner() {
+        const readerElement = document.getElementById('qrReader');
+        
+        // Clear any previous scanner
+        if (html5QrCode) {
+            html5QrCode.stop().catch(err => console.log("Scanner already stopped", err));
+        }
+        
+        // Initialize the scanned list when starting the scanner
+        scannedDeliveries = [];
+        updateScannedListUI();
+        
+        // Create new scanner instance
+        html5QrCode = new Html5Qrcode("qrReader");
+        
+        // Configuration for the scanner - similar to logistics_package.php
+        const config = { fps: 10, qrbox: 250 };
+        
+        // Start the camera scan
+        html5QrCode.start(
+            { facingMode: "environment" }, // Use rear camera if available
+            config,
+            onScanSuccess
+        ).catch(err => {
+            console.error("Error starting camera:", err);
+            // Fallback to front camera if rear is not available
+            html5QrCode.start(
+                { facingMode: "user" },
+                config,
+                onScanSuccess
+            ).catch(err => {
+                console.error("Error starting front camera:", err);
+                document.getElementById('qrResult').textContent = "Camera could not be accessed. Please allow camera permissions.";
+                document.getElementById('qrResult').style.display = 'block';
+            });
+        });
+    }
+    
+    function onScanSuccess(decodedText, decodedResult) {
+        // Process the scanned data
+        try {
+            // Check if the decoded text is a URL containing delivery_id
+            if (typeof decodedText === 'string' && decodedText.includes('delivery_id=')) {
+                // Parse the URL to extract the delivery_id
+                const url = new URL(decodedText);
+                const deliveryId = url.searchParams.get('delivery_id');
+                
+                if (deliveryId) {
+                    // Get the DR number for this delivery_id
+                    getDrNumberByDeliveryId(deliveryId, currentGroupId);
+                } else {
+                    document.getElementById('qrResult').textContent = "No delivery_id found in QR code";
+                    document.getElementById('qrResult').className = 'alert alert-danger';
+                    document.getElementById('qrResult').style.display = 'block';
+                }
+            } else {
+                // If it's not a URL, try to parse as JSON
+                const deliveryInfo = JSON.parse(decodedText);
+                const deliveryId = deliveryInfo.delivery_id || deliveryInfo.dr_no;
+                
+                if (deliveryId) {
+                    // Add the delivery to the selected group
+                    addDeliveryToGroup(deliveryId, currentGroupId);
+                } else {
+                    document.getElementById('qrResult').textContent = "Invalid QR code format";
+                    document.getElementById('qrResult').className = 'alert alert-danger';
+                    document.getElementById('qrResult').style.display = 'block';
+                }
+            }
+        } catch (e) {
+            // If not JSON and not a URL, treat as plain text (DR number)
+            // But first check if it's a URL without proper protocol
+            if (decodedText.includes('delivery_id=')) {
+                try {
+                    // Add a dummy protocol to parse the URL
+                    const url = new URL('http://' + decodedText.replace(/^https?:\/\//, ''));
+                    const deliveryId = url.searchParams.get('delivery_id');
+                    
+                    if (deliveryId) {
+                        // Get the DR number for this delivery_id
+                        getDrNumberByDeliveryId(deliveryId, currentGroupId);
+                    } else {
+                        document.getElementById('qrResult').textContent = "No delivery_id found in QR code";
+                        document.getElementById('qrResult').className = 'alert alert-danger';
+                        document.getElementById('qrResult').style.display = 'block';
+                    }
+                } catch (urlError) {
+                    document.getElementById('qrResult').textContent = "Invalid QR code format: " + e.message;
+                    document.getElementById('qrResult').className = 'alert alert-danger';
+                    document.getElementById('qrResult').style.display = 'block';
+                }
+            } else {
+                addDeliveryToGroup(decodedText, currentGroupId);
+            }
+        }
+    }
+    
+    // Function to get DR number by delivery ID
+    function getDrNumberByDeliveryId(deliveryId, groupId) {
+        // Show processing message
+        document.getElementById('qrResult').innerHTML = `Fetching delivery information for ID: <strong>${deliveryId}</strong>...`;
+        document.getElementById('qrResult').className = 'alert alert-info';
+        document.getElementById('qrResult').style.display = 'block';
+        
+        // Make AJAX request to get the DR number for this delivery ID
+        fetch(`script/get_delivery_info.php?delivery_id=${encodeURIComponent(deliveryId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.dr_no) {
+                // Successfully got the DR number, add to scanned list
+                addToScannedList(data.dr_no, groupId);
+            } else {
+                document.getElementById('qrResult').innerHTML = ` ${data.message || 'Could not find delivery information'}`;
+                document.getElementById('qrResult').className = 'alert alert-danger';
+                document.getElementById('qrResult').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching delivery info:', error);
+            document.getElementById('qrResult').innerHTML = `Error fetching delivery information: ${error.message}`;
+            document.getElementById('qrResult').className = 'alert alert-danger';
+            document.getElementById('qrResult').style.display = 'block';
+        });
+    }
+    
+    // Function to add a delivery to the scanned list
+    function addToScannedList(drNo, groupId) {
+        // Check if the delivery is already in the list
+        if (!scannedDeliveries.includes(drNo)) {
+            scannedDeliveries.push(drNo);
+            updateScannedListUI();
+            
+            document.getElementById('qrResult').innerHTML = `Delivery <strong>${drNo}</strong> added to scan list. Total: <strong>${scannedDeliveries.length}</strong>`;
+            document.getElementById('qrResult').className = 'alert alert-success';
+            document.getElementById('qrResult').style.display = 'block';
+        } else {
+            document.getElementById('qrResult').innerHTML = `Delivery <strong>${drNo}</strong> is already in the scan list.`;
+            document.getElementById('qrResult').className = 'alert alert-warning';
+            document.getElementById('qrResult').style.display = 'block';
+        }
+    }
+    
+    // Function to update the UI showing scanned deliveries
+    function updateScannedListUI() {
+        const listElement = document.getElementById('scannedDeliveriesList');
+        const countElement = document.getElementById('scannedCount');
+        
+        if (scannedDeliveries.length === 0) {
+            listElement.innerHTML = '<li class="list-group-item d-flex justify-content-between align-items-center text-muted">No deliveries scanned yet</li>';
+            document.getElementById('clearScannedBtn').style.display = 'none';
+            document.getElementById('finishScanningBtn').style.display = 'none';
+        } else {
+            let listHTML = '';
+            scannedDeliveries.forEach((drNo, index) => {
+                listHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>DR: ${drNo}</span>
+                        <button class="btn btn-sm btn-outline-danger remove-delivery-btn" data-index="${index}">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </li>
+                `;
+            });
+            listElement.innerHTML = listHTML;
+            
+            // Show the clear and finish buttons
+            document.getElementById('clearScannedBtn').style.display = 'inline-block';
+            document.getElementById('finishScanningBtn').style.display = 'inline-block';
+        }
+        
+        // Update count
+        countElement.textContent = scannedDeliveries.length;
+        
+        // Add event listeners to remove buttons
+        document.querySelectorAll('.remove-delivery-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                removeFromScannedList(index);
+            });
+        });
+    }
+    
+    // Function to remove a delivery from the scanned list
+    function removeFromScannedList(index) {
+        if (index >= 0 && index < scannedDeliveries.length) {
+            const removedDrNo = scannedDeliveries.splice(index, 1)[0];
+            document.getElementById('qrResult').innerHTML = `Delivery <strong>${removedDrNo}</strong> removed from scan list.`;
+            document.getElementById('qrResult').className = 'alert alert-info';
+            document.getElementById('qrResult').style.display = 'block';
+            
+            updateScannedListUI();
+        }
+    }
+    
+    // Function to clear all scanned deliveries
+    function clearScannedList() {
+        if (scannedDeliveries.length > 0) {
+            if (confirm(`Are you sure you want to clear all ${scannedDeliveries.length} scanned deliveries?`)) {
+                scannedDeliveries = [];
+                updateScannedListUI();
+                
+                document.getElementById('qrResult').innerHTML = 'All scanned deliveries cleared.';
+                document.getElementById('qrResult').className = 'alert alert-info';
+                document.getElementById('qrResult').style.display = 'block';
+            }
+        }
+    }
+    
+    // Function to add all scanned deliveries to the group
+    function addAllToGroup() {
+        if (scannedDeliveries.length === 0) {
+            document.getElementById('qrResult').innerHTML = 'No deliveries to add. Please scan some deliveries first.';
+            document.getElementById('qrResult').className = 'alert alert-warning';
+            document.getElementById('qrResult').style.display = 'block';
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to add all ${scannedDeliveries.length} deliveries to the group?`)) {
+            return;
+        }
+        
+        // Show processing message
+        document.getElementById('qrResult').innerHTML = `Validating and adding ${scannedDeliveries.length} deliveries to group...`;
+        document.getElementById('qrResult').className = 'alert alert-info';
+        document.getElementById('qrResult').style.display = 'block';
+        
+        // Create form data to send to the server
+        const formData = new FormData();
+        scannedDeliveries.forEach(drNo => {
+            formData.append('selected_dr[]', drNo);
+        });
+        
+        // Get the group name from the button that opened the modal
+        const groupName = document.querySelector(`.qr-scan-btn[data-group-id="${currentGroupId}"]`).dataset.groupName;
+        formData.append('group_name', groupName);
+        
+        // Send AJAX request to add all deliveries to the group
+        fetch('script/add_billing_grouped.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('qrResult').innerHTML = `Successfully added ${scannedDeliveries.length} deliveries to group!`;
+                document.getElementById('qrResult').className = 'alert alert-success';
+                
+                // Clear the scanned list
+                scannedDeliveries = [];
+                updateScannedListUI();
+                
+                // Stop the scanner after successful scan
+                if (html5QrCode) {
+                    html5QrCode.stop().catch(err => console.log("Error stopping scanner", err));
+                }
+                
+                // Refresh the page after a short delay to show the updated groups
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                document.getElementById('qrResult').innerHTML = `Error: ${data.message}`;
+                document.getElementById('qrResult').className = 'alert alert-danger';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('qrResult').innerHTML = `Error adding deliveries: ${error.message}`;
+            document.getElementById('qrResult').className = 'alert alert-danger';
+        });
+    }
+    
+    // Handle USB scanner input
+    document.getElementById('usbScannerInput').addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            const scannedCode = this.value.trim();
+            this.value = ""; // clear input
+            if (!scannedCode) return;
+            onScanSuccess(scannedCode, null); // Pass string to onScanSuccess
+        }
+    });
+    
+    // Add event listener for clear scanned button
+    document.getElementById('clearScannedBtn').addEventListener('click', function() {
+        clearScannedList();
+    });
+    
+    // Add event listener for finish scanning button
+    document.getElementById('finishScanningBtn').addEventListener('click', function() {
+        addAllToGroup();
+    });
+    
+    // Add event listener for modal close to stop scanner and reset scanned list
+    document.getElementById('qrScanModal').addEventListener('hidden.bs.modal', function () {
+        if (html5QrCode) {
+            html5QrCode.stop().catch(err => console.log("Error stopping scanner", err));
+        }
+        // Reset scanned list when modal closes
+        scannedDeliveries = [];
+        updateScannedListUI();
+    });
+    
+    // This function is kept for backward compatibility if needed elsewhere
+    function addDeliveryToGroup(deliveryId, groupId) {
+        // Add to scanned list instead of directly to group
+        addToScannedList(deliveryId, groupId);
+    }
+    
+    // Clean up the scanner when modal is closed
+    document.getElementById('qrScanModal').addEventListener('hidden.bs.modal', function () {
+        if (html5QrCode) {
+            html5QrCode.stop().catch(err => console.log("Error stopping scanner", err));
+        }
+    });
 </script>
