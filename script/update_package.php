@@ -1,3 +1,5 @@
+
+
 <?php
 session_start();
 require "../config/db.php";
@@ -93,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'message' => 'Edited Package',
             'redirect' => '/philgeps/packages.php?id=' . $projectInfo['project_id'] . '&toast=Edited Package&type=success'
         ]);
+        var_dump($projectInfo);
         exit;
 
 
