@@ -8,6 +8,9 @@ function getFilters() {
     division: "filterDivision",
     municipality: "filterMunicipality",
     search: "searchInput",
+    date_type: "dateType",
+    start_date: "startDate",
+    end_date: "endDate"
   };
 
   const params = new URLSearchParams();
@@ -342,10 +345,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Search & filter buttons
   const applyFilters = () => updateTable(1);
-  ["searchButton"].forEach((id) =>
+  ["searchButton", "applyDateFilter"].forEach((id) =>
     document.getElementById(id).addEventListener("click", applyFilters)
   );
   document.getElementById("searchInput").addEventListener("keypress", (e) => {
     if (e.key === "Enter") applyFilters();
   });
+  
+  // Only apply date filter when the Apply Filter button is clicked
+  // Remove change event listeners that were triggering filter automatically
 });

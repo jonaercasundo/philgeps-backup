@@ -70,6 +70,18 @@ if (!empty($_POST['search'])) {
     $params[':search'] = "%" . $_POST['search'] . "%";
 }
 
+// Date range filtering
+if (!empty($_POST['date_type']) && !empty($_POST['start_date']) && !empty($_POST['end_date'])) {
+    $dateType = $_POST['date_type'];
+    if ($dateType === 'accepted') {
+        $where[] = "d.accepted_date BETWEEN :start_date AND :end_date";
+    } elseif ($dateType === 'delivered') {
+        $where[] = "d.delivered_date BETWEEN :start_date AND :end_date";
+    }
+    $params[':start_date'] = $_POST['start_date'];
+    $params[':end_date'] = $_POST['end_date'];
+}
+
 
 // Pagination
 $page = isset($_POST['page']) ? (int)$_POST['page'] : 1;

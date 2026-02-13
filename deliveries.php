@@ -165,6 +165,30 @@ LIMIT :limit OFFSET :offset;
     <div class="col-md-4"><label>Division</label><select class="form-select filter" id="filterDivision" disabled></select></div>
     <div class="col-md-4"><label>Municipality</label><select class="form-select filter" id="filterMunicipality" disabled></select></div>
 </div>
+
+<!-- Date Range Filter -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <label>Date Type</label>
+        <select class="form-select filter" id="dateType">
+            <option value="">Select Date Type</option>
+            <option value="accepted">Accepted Date</option>
+            <option value="delivered">Delivered Date</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label>Start Date</label>
+        <input type="date" class="form-control filter" id="startDate">
+    </div>
+    <div class="col-md-3">
+        <label>End Date</label>
+        <input type="date" class="form-control filter" id="endDate">
+    </div>
+    <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-outline-secondary w-100" id="applyDateFilter">Apply Filter</button>
+    </div>
+</div>
+
 <!-- Search -->
 <div class="d-flex mb-3">
     <input id="searchInput" class="form-control me-2" placeholder="Search items...">
