@@ -77,7 +77,7 @@ $limit = isset($_POST['limit']) ? (int)$_POST['limit'] : 10;
 $offset = ($page - 1) * $limit;
 
 $sql = "
-SELECT 
+SELECT
     d.delivery_id,
     p.project_name,
     s.school_id,
@@ -87,6 +87,8 @@ SELECT
     d.dr_no,
     d.delivery_date,
     d.status,
+    d.accepted_date,
+    d.delivered_date,
     k.keystage_num,
     k.description,
     l.lot_name,

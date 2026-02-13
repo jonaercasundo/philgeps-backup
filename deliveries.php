@@ -20,7 +20,7 @@ try {
 
     // Fetch deliveries with project name
     $stmt = $pdo->prepare("
-SELECT 
+SELECT
     d.delivery_id,
     p.project_name,
     s.school_id,
@@ -30,6 +30,8 @@ SELECT
     d.dr_no,
     d.delivery_date,
     d.status,
+    d.accepted_date,
+    d.delivered_date,
     k.keystage_num,
     k.description,
     l.lot_name,
@@ -45,25 +47,25 @@ SELECT
         LEFT JOIN warehouse w ON ll.warehouse_id = w.warehouse_id
 
 LEFT JOIN (
-    SELECT 
+    SELECT
         x.delivery_id,
         GROUP_CONCAT(
             CONCAT(
-                'Package ', x.rn, ' out of ', x.total_packages, 
-                ' — ', x.colored_pkg_status, '<br>', 
+                'Package ', x.rn, ' out of ', x.total_packages,
+                ' — ', x.colored_pkg_status, '<br>',
                 x.items
             )
             SEPARATOR '<br><br>'
         ) AS items_contents
     FROM (
-        SELECT 
+        SELECT
             d.delivery_id,
             p.package_id,
             ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
             COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
             GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items,
-            
-           CASE 
+
+           CASE
                 WHEN COALESCE(MAX(dp.status), 'PENDING') = 'DELIVERED' THEN
                     CONCAT('<span class=\"text-success font-weight-bold\">DELIVERED</span>')
                 WHEN COALESCE(MAX(dp.status), 'PENDING') = 'ACCEPTED' THEN
@@ -75,15 +77,15 @@ LEFT JOIN (
             END AS colored_pkg_status
 
         FROM deliveries d
-        LEFT JOIN package p 
+        LEFT JOIN package p
             ON (
                 (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
                 OR (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
             )
         JOIN package_content pc ON pc.package_id = p.package_id
         JOIN item i ON pc.item_id = i.item_id
-        LEFT JOIN package_status dp 
-            ON dp.delivery_id = d.delivery_id 
+        LEFT JOIN package_status dp
+            ON dp.delivery_id = d.delivery_id
            AND dp.package_id = p.package_id
         GROUP BY d.delivery_id, p.package_id
     ) x
@@ -176,7 +178,9 @@ LIMIT :limit OFFSET :offset;
             <th></th>
             <th>Delivery Details</th>
             <th>Items</th>
-            <th>Date</th>
+            <th>Delivery Date</th>
+            <th>Accepted Date</th>
+            <th>Delivered Date</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -191,9 +195,9 @@ LIMIT :limit OFFSET :offset;
         data-school-id="<?= htmlspecialchars($dr_group['school_id']) ?>"
         >
         </td>
-        <td class="align-middle"colspan="3">
-            DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> — 
-            Project: <?= htmlspecialchars($dr_group['project_name']) ?> — 
+        <td class="align-middle"colspan="5">
+            DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> —
+            Project: <?= htmlspecialchars($dr_group['project_name']) ?> —
             School: <?= htmlspecialchars($dr_group['school_name']) ?>
         </td>
         <td colspan ="1">
@@ -219,6 +223,8 @@ LIMIT :limit OFFSET :offset;
             <td>LOT <?= htmlspecialchars($d['lot_name'])?> <?= !empty($d['keystage_num']) ? "Keystage ".$d['keystage_num']." ".$d['description'] : ' ' ?></td>
             <td><?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
+            <td><?= htmlspecialchars($d['accepted_date'] ?? '') ?></td>
+            <td><?= htmlspecialchars($d['delivered_date'] ?? '') ?></td>
             <td>
                  <?php if($_SESSION['role'] == "Super Admin" || $_SESSION['role'] == "Office Admin" || $_SESSION['role'] == "Office Coordinator"):?>
                 <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
@@ -230,6 +236,8 @@ LIMIT :limit OFFSET :offset;
                         data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
+                        data-accepted-date="<?= htmlspecialchars($d['accepted_date'] ?? '') ?>"
+                        data-delivered-date="<?= htmlspecialchars($d['delivered_date'] ?? '') ?>"
                         data-warehouse-id="' . ($delivery['warehouse_id'] ?? '') . '"
                         data-warehouse-name="' . htmlspecialchars($delivery['warehouse_name'] ?? '') . '">
                 <i class="bi bi-pencil-square fs-4"></i></button>
