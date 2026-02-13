@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rows'])) {
         $pdo->beginTransaction();
 
         foreach ($rows as $r) {
-            if (empty($r['keystage_id']) && empty($r['lot_id'])) {
+            if (empty($r['lot_id'])) {
                 $skipped++;
                 continue;
             }

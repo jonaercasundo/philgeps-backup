@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
                     $foundKs = $stmt->fetchColumn();
 
                     // Skip if either keystage or lot not found yet
-                    if (!$lot_id || !$foundKs) {
+                    if (!$lot_id) {
                         // Still add to table for manual selection later
                         $rows[] = [
                             'school_id'     => $school_id,
