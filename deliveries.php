@@ -202,9 +202,7 @@ LIMIT :limit OFFSET :offset;
             <th></th>
             <th>Delivery Details</th>
             <th>Items</th>
-            <th>Delivery Date</th>
-            <th>Accepted Date</th>
-            <th>Delivered Date</th>
+            <th>Date</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -219,7 +217,7 @@ LIMIT :limit OFFSET :offset;
         data-school-id="<?= htmlspecialchars($dr_group['school_id']) ?>"
         >
         </td>
-        <td class="align-middle"colspan="5">
+        <td class="align-middle"colspan="3">
             DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> —
             Project: <?= htmlspecialchars($dr_group['project_name']) ?> —
             School: <?= htmlspecialchars($dr_group['school_name']) ?>
@@ -247,8 +245,6 @@ LIMIT :limit OFFSET :offset;
             <td>LOT <?= htmlspecialchars($d['lot_name'])?> <?= !empty($d['keystage_num']) ? "Keystage ".$d['keystage_num']." ".$d['description'] : ' ' ?></td>
             <td><?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?></td>
             <td><?= htmlspecialchars($d['delivery_date']) ?></td>
-            <td><?= htmlspecialchars($d['accepted_date'] ?? '') ?></td>
-            <td><?= htmlspecialchars($d['delivered_date'] ?? '') ?></td>
             <td>
                  <?php if($_SESSION['role'] == "Super Admin" || $_SESSION['role'] == "Office Admin" || $_SESSION['role'] == "Office Coordinator"):?>
                 <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
@@ -260,8 +256,6 @@ LIMIT :limit OFFSET :offset;
                         data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
                         data-date="<?= htmlspecialchars($d['delivery_date']) ?>"
                         data-status="<?= htmlspecialchars($d['status']) ?>"
-                        data-accepted-date="<?= htmlspecialchars($d['accepted_date'] ?? '') ?>"
-                        data-delivered-date="<?= htmlspecialchars($d['delivered_date'] ?? '') ?>"
                         data-warehouse-id="' . ($delivery['warehouse_id'] ?? '') . '"
                         data-warehouse-name="' . htmlspecialchars($delivery['warehouse_name'] ?? '') . '">
                 <i class="bi bi-pencil-square fs-4"></i></button>

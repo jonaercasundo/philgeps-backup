@@ -43,9 +43,7 @@ async function updateTable(page = 1) {
                             <th></th>
                             <th>Delivery Details</th>
                             <th>Items</th>
-                            <th>Delivery Date</th>
-                            <th>Accepted Date</th>
-                            <th>Delivered Date</th>
+                            <th>Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -62,7 +60,7 @@ async function updateTable(page = 1) {
             group.school_id
           }">
                     </td>
-                    <td class="align-middle" colspan="5">
+                    <td class="align-middle" colspan="3">
                         DR No: ${group.dr_no} —
                         Project: ${group.project_name} —
                         School: ${group.school_name}
@@ -88,8 +86,6 @@ async function updateTable(page = 1) {
                     }</td>
                         <td>${d.items_contents}</td>
                         <td>${d.delivery_date}</td>
-                        <td>${d.accepted_date || ''}</td>
-                        <td>${d.delivered_date || ''}</td>
                         <td>
                             <button class="btn btn-warning mb-1"
                                 data-bs-toggle="modal"
@@ -101,9 +97,7 @@ async function updateTable(page = 1) {
                                 data-remarks='${d.items_contents}'
                                 data-drno="${d.dr_no}"
                                 data-date="${d.delivery_date}"
-                                data-status="${d.status}"
-                                data-accepted-date="${d.accepted_date || ''}"
-                                data-delivered-date="${d.delivered_date || ''}">
+                                data-status="${d.status}">
                                 <i class="bi bi-pencil-square fs-4"></i>
                             </button>
                             ${
