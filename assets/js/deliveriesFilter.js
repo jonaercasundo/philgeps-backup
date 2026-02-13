@@ -8,7 +8,6 @@ function getFilters() {
     division: "filterDivision",
     municipality: "filterMunicipality",
     search: "searchInput",
-    date_type: "dateType",
     start_date: "startDate",
     end_date: "endDate"
   };
@@ -43,7 +42,6 @@ async function updateTable(page = 1) {
                             <th></th>
                             <th>Delivery Details</th>
                             <th>Items</th>
-                            <th>Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -60,7 +58,7 @@ async function updateTable(page = 1) {
             group.school_id
           }">
                     </td>
-                    <td class="align-middle" colspan="3">
+                    <td class="align-middle" colspan="2">
                         DR No: ${group.dr_no} —
                         Project: ${group.project_name} —
                         School: ${group.school_name}
@@ -85,7 +83,6 @@ async function updateTable(page = 1) {
                       d.description
                     }</td>
                         <td>${d.items_contents}</td>
-                        <td>${d.delivery_date}</td>
                         <td>
                             <button class="btn btn-warning mb-1"
                                 data-bs-toggle="modal"
@@ -96,7 +93,6 @@ async function updateTable(page = 1) {
                                 data-address="${d.address}"
                                 data-remarks='${d.items_contents}'
                                 data-drno="${d.dr_no}"
-                                data-date="${d.delivery_date}"
                                 data-status="${d.status}">
                                 <i class="bi bi-pencil-square fs-4"></i>
                             </button>
@@ -230,8 +226,35 @@ document.addEventListener("DOMContentLoaded", () => {
       handleProjectChange(project_id);
     } else {
       statusSelect.innerHTML = "";
+      // Hide date range filter when project is cleared
+      document.getElementById("dateRangeFilter").classList.add("visually-hidden");
     }
   });
+
+  // Show/hide date range filter based on status selection
+  document.getElementById("filterStatus").addEventListener("change", (e) => {
+    const statusValue = e.target.value.toLowerCase();
+    const dateRangeFilter = document.getElementById("dateRangeFilter");
+    
+    if (statusValue === "accepted" || statusValue === "delivered") {
+      dateRangeFilter.classList.remove("visually-hidden");
+    } else {
+      dateRangeFilter.classList.add("visually-hidden");
+    }
+  });
+  
+  // Check initial status value on page load
+  setTimeout(() => {
+    const statusSelect = document.getElementById("filterStatus");
+    if (statusSelect && statusSelect.value) {
+      const statusValue = statusSelect.value.toLowerCase();
+      const dateRangeFilter = document.getElementById("dateRangeFilter");
+      
+      if (statusValue === "accepted" || statusValue === "delivered") {
+        dateRangeFilter.classList.remove("visually-hidden");
+      }
+    }
+  }, 100); // Small delay to ensure DOM is fully loaded
 
   async function handleProjectChange(projectId) {
     const depedDeliveriesDiv = document.getElementById("depedDeliveries");
