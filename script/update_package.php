@@ -77,14 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $keystageNum = $projectInfo['keystage_num'] ?? 'N/A';
         $projectName = $projectInfo['project_name'] ?? 'Unknown Project';
 
-        $action = sprintf(
+        $action = substr(sprintf(
             "%s edited package #%s in Lot %s (Keystage %s) on project %s",
             $_SESSION['name'],
             $package_num,
             $lotName,
             $keystageNum,
             $projectName
-        );
+        ), 0, 255);
 
         $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action) VALUES (?, ?)");
         $stmt->execute([$_SESSION['user_id'], $action]);
