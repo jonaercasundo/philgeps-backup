@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode([
             'success' => true,
             'message' => 'Edited Package',
-            'redirect' => '/philgeps/packages.php?id=' . $projectInfo['project_id'] . '&toast=Edited Package&type=success'
+            'redirect' => '/packages.php?id=' . $projectInfo['project_id'] . '&toast=Edited Package&type=success'
         ]);
         exit;
 
