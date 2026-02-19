@@ -32,7 +32,7 @@ try {
 
         // Get data with limit
         $stmt = $pdo->prepare("
-            SELECT i.item_id, i.item_name, i.unit
+            SELECT i.item_id, i.item_name, i.unit, i.price
             FROM item i
             INNER JOIN package_content pc ON i.item_id = pc.item_id
             WHERE pc.package_id = ?
@@ -44,8 +44,8 @@ try {
     } elseif ($project_id) {
         // Count total rows
         $countStmt = $pdo->prepare("
-            SELECT COUNT(*) 
-            FROM item 
+            SELECT COUNT(*)
+            FROM item
             WHERE project_id = ?
         ");
         $countStmt->execute([$project_id]);
@@ -53,11 +53,12 @@ try {
 
         // Get data with limit
         $stmt = $pdo->prepare("
-            SELECT 
-                item_id, 
-                item_name, 
-                unit
-            FROM item 
+            SELECT
+                item_id,
+                item_name,
+                unit,
+                price
+            FROM item
             WHERE project_id = ?
             LIMIT $limit OFFSET $offset
         ");
@@ -96,6 +97,7 @@ try {
                 <tr>
                     <th>Item Name</th>
                     <th>Unit</th>
+                    <th>Price</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -104,6 +106,7 @@ try {
                     <tr>
                         <td id="name<?= $item['item_id'] ?>"><?= htmlspecialchars($item['item_name']) ?></td>
                         <td id="unit<?= $item['item_id'] ?>"><?= htmlspecialchars($item['unit']) ?></td>
+                        <td id="price<?= $item['item_id'] ?>"><?= htmlspecialchars(number_format($item['price'], 2)) ?></td>
                         <td>
                             <button data-bs-toggle="modal" data-bs-target="#editModal" onclick="updateEdit(<?= $item['item_id'] ?>)" class="btn btn-warning"><i class="bi bi-pencil-square fs-4"></i></button>
                         <button data-bs-toggle="modal" data-bs-target="#deleteModal" onclick="document.getElementById('delete_item').value = <?= htmlspecialchars($item['item_id']) ?>;" class="btn btn-danger"><i class="bi bi-trash fs-4"></i></button>
@@ -147,10 +150,12 @@ function updateEdit(itemId){
     const id = itemId;
     const itemName = document.getElementById("name"+itemId).innerHTML;
     const unit = document.getElementById("unit"+itemId).innerHTML;
+    const price = document.getElementById("price"+itemId).innerHTML;
 
     document.getElementById("edititem_id").value = id;
     document.getElementById("editname").value = itemName;
     document.getElementById("editunit").value = unit;
+    document.getElementById("editprice").value = price.replace(/,/g, '');
 }
 
 // JavaScript for Add Item Form submission

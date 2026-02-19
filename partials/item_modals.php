@@ -34,6 +34,7 @@
           <input type="hidden" value="<?$item['item_id']?>" name="item_id" id="edititem_id" class="form-control">
           <div class="mb-3"><label>Item name</label><input id="editname" name="itemName" type="text" class="form-control"></div>
           <div class="mb-3"><label>Unit</label><input id="editunit" name="unit" type="text" class="form-control"></div>
+          <div class="mb-3"><label>Price</label><input id="editprice" name="price" type="number" step="0.01" class="form-control"></div>
         </form>
       </div>
       <div class="modal-footer">

@@ -4,14 +4,16 @@ header('Content-Type: application/json');
 require "../config/db.php";
 
 try {
-    $stmt = $pdo->prepare("UPDATE `item` 
-        SET `item_name` = ?, 
-             `unit` = ?
+    $stmt = $pdo->prepare("UPDATE `item`
+        SET `item_name` = ?,
+             `unit` = ?,
+             `price` = ?
         WHERE `item_id` = ?");
 
     $stmt->execute([
         $_POST['itemName'],
         $_POST['unit'],
+        $_POST['price'],
         $_POST['item_id']
     ]);
 
