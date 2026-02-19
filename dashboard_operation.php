@@ -135,7 +135,7 @@ try {
 
     // Get expected vs actual deliveries by warehouse
     $deliveriesByWarehouseQuery = "
-        SELECT 
+        SELECT
             w.warehouse_id,
             w.warehouse_name,
 
@@ -143,16 +143,34 @@ try {
             COUNT(DISTINCT d.delivery_id) AS expected_deliveries,
 
             -- Actual: delivered + accepted only
-            COUNT(DISTINCT CASE 
-                WHEN d.status IN ('delivered','accepted') 
-                THEN d.delivery_id 
-            END) AS actual_deliveries
+            COUNT(DISTINCT CASE
+                WHEN d.status IN ('delivered','accepted')
+                THEN d.delivery_id
+            END) AS actual_deliveries,
+
+            -- Expected Total Item Price: SUM of (qty × price) for all deliveries
+            COALESCE(SUM(
+                CASE 
+                    WHEN ps.package_status_id IS NOT NULL 
+                    THEN pc.qty * i.price 
+                    ELSE 0 
+                END
+            ), 0) AS expected_total_price,
+
+            -- Actual Total Item Price: SUM of (qty × price) for delivered/accepted only
+            COALESCE(SUM(
+                CASE 
+                    WHEN d.status IN ('delivered','accepted') AND ps.package_status_id IS NOT NULL
+                    THEN pc.qty * i.price 
+                    ELSE 0 
+                END
+            ), 0) AS actual_total_price
 
         FROM deliveries d
-        JOIN school s 
+        JOIN school s
             ON d.school_id = s.school_id
 
-        JOIN warehouse w 
+        JOIN warehouse w
             ON (
                 -- LUZON → Pampanga
                 (w.warehouse_address = 'Pampanga' AND s.region IN (
@@ -171,6 +189,17 @@ try {
                     'Region XIII','CARAGA','BARMM'
                 ))
             )
+
+        -- Join to get package contents and item prices
+        LEFT JOIN package_status ps 
+            ON d.delivery_id = ps.delivery_id
+            AND ps.status IN ('pending', 'delivered', 'accepted')
+            
+        LEFT JOIN package_content pc 
+            ON ps.package_id = pc.package_id
+            
+        LEFT JOIN item i 
+            ON pc.item_id = i.item_id
 
         " . ($selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "") . "
 

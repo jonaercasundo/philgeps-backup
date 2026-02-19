@@ -832,7 +832,7 @@ document.addEventListener("DOMContentLoaded", function () {
             borderWidth: 1,
           },
           {
-            label: "Not Actual Deliveries",
+            label: "Expected Deliveries",
             data: notActualPercentageData,
             backgroundColor: deliveryStatusColors.Pending,
             borderColor: colorVariants.border.Pending,
@@ -866,10 +866,23 @@ document.addEventListener("DOMContentLoaded", function () {
             callbacks: {
               label: function (context) {
                 const warehouseData = deliveriesByWarehouse[context.dataIndex];
+                const expectedPrice = parseFloat(warehouseData.expected_total_price || 0);
+                const actualPrice = parseFloat(warehouseData.actual_total_price || 0);
+                const expectedCount = parseInt(warehouseData.expected_deliveries || 0);
+                const actualCount = parseInt(warehouseData.actual_deliveries || 0);
+                
                 if (context.dataset.label === "Actual Deliveries") {
-                  return `Actual: ${warehouseData.actual_deliveries}/${warehouseData.expected_deliveries} (${context.parsed.y}%)`;
+                  return [
+                    `Actual Deliveries: ${actualCount}`,
+                    `Total Item Value: ₱${actualPrice.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                  ];
                 } else {
-                  return `Not Actual: ${warehouseData.expected_deliveries - warehouseData.actual_deliveries}/${warehouseData.expected_deliveries} (${context.parsed.y}%)`;
+                  const notActualCount = expectedCount - actualCount;
+                  const notActualPrice = expectedPrice - actualPrice;
+                  return [
+                    `Expected Deliveries: ${notActualCount}`,
+                    `Total Item Value: ₱${notActualPrice.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                  ];
                 }
               },
             },
