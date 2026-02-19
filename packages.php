@@ -221,8 +221,8 @@ document.addEventListener("DOMContentLoaded", function() {
           // Fill form fields
           document.getElementById("edit_package_id").value = resp.package.package_id;
           document.getElementById("edit_package_num").value = resp.package.package_num;
-          document.getElementById("edit_lot_num").value = "Lot "+resp.package.lot_name;
-          document.getElementById("edit_key_num").value = "Keystage "+resp.package.keystage_name+" "+resp.package.description;
+          document.getElementById("edit_lot_num").value = resp.package.lot_name ? "Lot "+resp.package.lot_name : "N/A";
+          document.getElementById("edit_key_num").value = resp.package.keystage_name ? "Keystage "+resp.package.keystage_name+" "+resp.package.description : "No Keystage Assigned";
           document.getElementById("edit_width").value = resp.package.width;
           document.getElementById("edit_height").value = resp.package.height;
           document.getElementById("edit_length").value = resp.package.length;

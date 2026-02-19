@@ -10,20 +10,20 @@ if (!$package_id) {
 try {
     // Get package details
     $stmt = $pdo->prepare("
-            SELECT 
-            p.package_id, 
-            p.package_num, 
-            p.width, 
-            p.height, 
-            p.length, 
-            p.keystage_id, 
+            SELECT
+            p.package_id,
+            p.package_num,
+            p.width,
+            p.height,
+            p.length,
+            p.keystage_id,
             k.keystage_num AS keystage_name,
             k.description,
-            l.lot_id, 
+            l.lot_id,
             l.lot_name
         FROM package p
-        JOIN keystage k ON k.keystage_id = p.keystage_id
-        JOIN lot l ON l.lot_id = k.lot_id
+        LEFT JOIN keystage k ON k.keystage_id = p.keystage_id
+        LEFT JOIN lot l ON l.lot_id = k.lot_id
         WHERE p.package_id = ?;
     ");
     $stmt->execute([$package_id]);
