@@ -1,5 +1,4 @@
 <?php
-header('Content-Type: application/json');
 require "../config/db.php"; // PDO $pdo
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rows'])) {
@@ -77,14 +76,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rows'])) {
 
                 $inserted++;
             } catch (Exception $e) {
-                error_log("Row insert failed: " . $e->getMessage());
-                exit;
+                throw $e; // Re-throw to outer catch for proper rollback
             }
         }
 
         $pdo->commit();
 
-        header("Location: ../deliveries.php?toast=$inserted inserted, $skipped skipped&type=warning");
+        $toastMsg = "$inserted inserted, $skipped skipped";
+        $toastType = "success";
+        if ($skipped > 0) {
+            $toastType = "warning";
+        }
+
+        header("Location: ../deliveries.php?toast=" . urlencode($toastMsg) . "&type=$toastType");
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -92,5 +96,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['rows'])) {
         exit;
     }
 } else {
-    echo "No data received.";
+    header("Location: ../deliveries.php?toast=" . urlencode("No data received.") . "&type=danger");
+    exit;
 }
