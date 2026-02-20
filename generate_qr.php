@@ -76,13 +76,13 @@ foreach ($ids as $id) {
 
     // Fetch deliveries for this DR
     $stmt = $pdo->prepare("
-        SELECT d.*, p.project_name, k.keystage_num, k.description, 
+        SELECT d.*, p.project_name, k.keystage_num, k.description,
                s.school_name, s.address, l.contract_no, l.lot_name
-        FROM deliveries d 
-        JOIN school s ON s.school_id = d.school_id 
-        JOIN keystage k ON k.keystage_id = d.keystage_id 
-        JOIN lot l ON l.lot_id = k.lot_id
-        JOIN projects p ON p.project_id = d.project_id 
+        FROM deliveries d
+        JOIN school s ON s.school_id = d.school_id
+        LEFT JOIN keystage k ON k.keystage_id = d.keystage_id
+        LEFT JOIN lot l ON l.lot_id = COALESCE(k.lot_id, d.lot_id)
+        JOIN projects p ON p.project_id = d.project_id
         WHERE d.dr_no = :id
     ");
     $stmt->execute([':id' => $id]);
@@ -123,7 +123,9 @@ foreach ($ids as $id) {
         $package_count = $stmt->fetch(PDO::FETCH_ASSOC)['package_count'];
 
         $group = [
-            'keystage' => $delivery['keystage_num'] . ' ' . $delivery['package_type'] . ' ' . $delivery['description'],
+            'keystage' => $delivery['keystage_num']
+                ? $delivery['keystage_num'] . ' ' . $delivery['package_type'] . ' ' . ($delivery['description'] ?? '')
+                : '',
             'packages' => []
         ];
 
@@ -168,7 +170,9 @@ foreach ($ids as $id) {
             $allQrs[] = [
                 'orderId' => $orderId,
                 'qr' => 'data:image/png;base64,' . base64_encode($qr->getString()),
-                'keystage' => 'Keystage ' . $delivery['keystage_num'] . " " . strtok($delivery['description'], ' ')
+                'keystage' => $delivery['keystage_num']
+                    ? 'Keystage ' . $delivery['keystage_num'] . " " . strtok($delivery['description'] ?? '', ' ')
+                    : ''
             ];
 
             $int++;
@@ -180,7 +184,10 @@ foreach ($ids as $id) {
     // Build packing list
     $itemHolder = "";
     foreach ($allGroups as $group) {
-        $itemHolder .= "<br>Keystage {$group['keystage']}
+        if (!empty($group['keystage'])) {
+            $itemHolder .= "<br>" . $group['keystage'];
+        }
+        $itemHolder .= "
                             <div class='packing-list'>
                                 <table class='packing-list'>";
         foreach ($group['packages'] as $pkg) {
@@ -226,8 +233,7 @@ $html .= "
     </table>
     <h3 style='border-top:2px solid #000; padding-top:10px; text-align:center;'>ACKNOWLEDGEMENT OF RECEIPT OF GOODS</h3>
     <p>
-        The undersigned hereby acknowledges the receipt of goods pursuant to Contract No. {$first['contract_no']} 
-        (LOT {$first['lot_name']}) between METRO MOBILIA CORPORATION and DEPARTMENT OF EDUCATION-BUREAU OF LEARNING RESOURCES-CEBU (BLR-CEBU).<br><br>
+        The undersigned hereby acknowledges the receipt of goods pursuant to Contract No. {$first['contract_no']} between METRO MOBILIA CORPORATION and DEPARTMENT OF EDUCATION-BUREAU OF LEARNING RESOURCES-CEBU (BLR-CEBU).<br><br>
         School Name: {$first['school_name']}<br>
         School Address: {$first['address']}<br>
         School ID: {$first['school_id']}
@@ -262,8 +268,11 @@ $html .= "
 
             <td align='center' style='border:1px solid #000; padding:10px;'>
                 <img src='{$q['qr']}'><br>
-                <small>{$q['orderId']}</small><br>
-                <small>{$q['keystage']}</small>
+                <small>{$q['orderId']}</small>";
+        if (!empty($q['keystage'])) {
+            $html .= "<br><small>{$q['keystage']}</small>";
+        }
+        $html .= "
             </td>";
         if ($col % 2 == 1) $html .= "</tr>";
         $col++;
