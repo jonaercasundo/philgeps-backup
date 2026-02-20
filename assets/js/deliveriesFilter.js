@@ -79,9 +79,7 @@ async function updateTable(page = 1) {
                     (d) => `
                     <tr>
                         <td></td>
-                        <td>LOT ${d.lot_name} Keystage ${d.keystage_num} ${
-                      d.description
-                    }</td>
+                        <td>LOT ${d.lot_name}${d.keystage_num ? ` Keystage ${d.keystage_num} ${d.description || ''}` : ''}</td>
                         <td>${d.items_contents}</td>
                         <td>
                             <button class="btn btn-warning mb-1"

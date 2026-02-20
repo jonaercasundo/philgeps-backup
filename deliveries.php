@@ -233,7 +233,7 @@ LIMIT :limit OFFSET :offset;
         ?>
         <tr>
             <td></td>
-            <td>LOT <?= htmlspecialchars($d['lot_name'])?> <?= !empty($d['keystage_num']) ? "Keystage ".$d['keystage_num']." ".$d['description'] : ' ' ?></td>
+            <td>LOT <?= htmlspecialchars($d['lot_name'])?> <?= !empty($d['keystage_num']) ? "Keystage ".$d['keystage_num']." ".$d['description'] : '' ?></td>
             <td><?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?></td>
             <td>
                  <?php if($_SESSION['role'] == "Super Admin" || $_SESSION['role'] == "Office Admin" || $_SESSION['role'] == "Office Coordinator"):?>
