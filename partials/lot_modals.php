@@ -6,7 +6,7 @@
       <div class="modal-body">
         <form method="POST" id="addForm">
           <input type="hidden" value="<?=$_GET['id']?>" name="project_id" class="form-control">
-          <div class="mb-3"><label>Lot Number</label><input type="text" name="lot_no" class="form-control"></div>
+          <div class="mb-3"><label>Lot Number</label><input type="number" name="lot_no" class="form-control"></div>
           <div class="mb-3"><label>Contract Number</label><input type="text" name="contract_no" class="form-control"></div>
         </form>
       </div>
@@ -58,7 +58,7 @@
           <!-- lot_name -->
           <div class="mb-3">
             <label>Lot Name</label>
-            <input type="text" id="editlotname" name="lot_name" class="form-control">
+            <input type="number" id="editlotname" name="lot_name" class="form-control">
           </div>
 
           <!-- project_id -->
