@@ -17,7 +17,6 @@ if (empty($raw_ids)) die("No School IDs provided.");
 $ids = is_string($raw_ids)
     ? array_filter(array_map('trim', explode(',', $raw_ids)))
     : array_filter($raw_ids);
-$ids = array_filter($ids, 'is_numeric');
 if (empty($ids)) die("Invalid School IDs.");
 
 $project_id = trim($_GET['project_id'] ?? $_POST['project_id'] ?? '');
