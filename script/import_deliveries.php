@@ -195,7 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
     $foundKs = $stmt->fetchColumn();
 
     $needsKeystage = !$foundKs;
-    $needsAction = $needsLot || $needsKeystage;
+    // Only flag as needing action if Lot is missing
+    // Empty Keystage is valid (some deliveries don't have keystage)
+    $needsAction = $needsLot;
   ?>
   <tr class="<?= $needsAction ? 'needs-action' : '' ?>">
     <td><?= htmlspecialchars($r['school_id']) ?>
