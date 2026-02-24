@@ -16,9 +16,11 @@ try {
         SELECT 
             ps.package_status_id,
             ps.status,
-            p.package_num
+            p.package_num,
+            d.package_qty
         FROM package_status ps
         JOIN package p ON p.package_id = ps.package_id
+        JOIN deliveries d ON d.delivery_id = ps.delivery_id
         WHERE ps.delivery_id = ?
         ORDER BY p.package_num
     ");
@@ -28,14 +30,14 @@ try {
     // Get items for each package
     foreach ($packages as &$package) {
         $stmt = $pdo->prepare("
-            SELECT 
-                i.item_id,
-                i.item_name,
-                pc.qty
-            FROM package_status ps
-            JOIN package_content pc ON pc.package_id = ps.package_id
-            JOIN item i ON i.item_id = pc.item_id
-            WHERE ps.package_status_id = ?
+             SELECT 
+            i.item_id,
+            i.item_name,
+            pc.qty
+        FROM package_status ps
+        JOIN package_content pc ON pc.package_id = ps.package_id
+        JOIN item i ON i.item_id = pc.item_id
+        WHERE ps.package_status_id = ?
         ");
         $stmt->execute([$package['package_status_id']]);
         $package['items_detail'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
