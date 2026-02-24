@@ -19,6 +19,13 @@ try {
     $stmt->execute();
     $deliveries = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Extract numeric part from package_type
+$multiplier = 1;
+if (!empty($deliveries['package_type'])) {
+    $numeric = preg_replace('/[^0-9]/', '', $deliveries['package_type']);
+    $multiplier = $numeric !== '' ? (int)$numeric : 1;
+}
+
     $stmt = $pdo->prepare("
     SELECT p.*, pc.item_id, pc.qty, i.item_name
     FROM package_status ps
