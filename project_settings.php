@@ -45,43 +45,53 @@ if (!$arSettings) {
 
         <div class="card-body">
 
-            <!-- Project Info -->
-            <div class="mb-3">
-                <label class="form-label fw-bold">Project Name:</label>
-                <p><?= htmlspecialchars($arSettings['project_name']) ?></p>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-bold">Company:</label>
-                <p><?= htmlspecialchars($arSettings['company']) ?></p>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-bold">Client:</label>
-                <p><?= htmlspecialchars($arSettings['client']) ?></p>
-            </div>
-
-            <!-- Checkboxes -->
             <form method="POST" action="update_ar_settings.php">
+
                 <input type="hidden" name="project_id" value="<?= $project_id ?>">
 
+                <!-- Editable Fields -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Project Name:</label>
+                    <input type="text"
+                        name="project_name"
+                        class="form-control"
+                        value="<?= htmlspecialchars($arSettings['project_name']) ?>">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Company:</label>
+                    <input type="text"
+                        name="company"
+                        class="form-control"
+                        value="<?= htmlspecialchars($arSettings['company']) ?>">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Client:</label>
+                    <input type="text"
+                        name="client"
+                        class="form-control"
+                        value="<?= htmlspecialchars($arSettings['client']) ?>">
+                </div>
+
+                <!-- Checkboxes -->
                 <div class="form-check mb-2">
-                    <input class="form-check-input" 
-                           type="checkbox" 
-                           name="display_label" 
-                           value="1"
-                           <?= (int)$arSettings['display_label'] === 1 ? 'checked' : '' ?>>
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="display_label"
+                        value="1"
+                        <?= (int)$arSettings['display_label'] === 1 ? 'checked' : '' ?>>
                     <label class="form-check-label">
                         Display Label
                     </label>
                 </div>
 
                 <div class="form-check mb-3">
-                    <input class="form-check-input" 
-                           type="checkbox" 
-                           name="display_school_id" 
-                           value="1"
-                           <?= (int)$arSettings['display_school_id'] === 1 ? 'checked' : '' ?>>
+                    <input class="form-check-input"
+                        type="checkbox"
+                        name="display_school_id"
+                        value="1"
+                        <?= (int)$arSettings['display_school_id'] === 1 ? 'checked' : '' ?>>
                     <label class="form-check-label">
                         Display School ID
                     </label>
@@ -90,8 +100,8 @@ if (!$arSettings) {
                 <button type="submit" class="btn btn-success">
                     Save Settings
                 </button>
-            </form>
 
+            </form>
         </div>
     </div>
 
