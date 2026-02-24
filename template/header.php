@@ -239,7 +239,8 @@ if (isset($_GET['id'])):
     $projectNav += [
         "items.php" => "Items",
         "packages.php" => "Packages",
-        "project_reports.php" => "Reports"
+        //"project_reports.php" => "Reports"
+        "project_settings.php" => "Project Settings"
     ];
 ?>
 
