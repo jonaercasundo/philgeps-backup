@@ -67,10 +67,7 @@ LEFT JOIN (
                 CONCAT(
                     i.item_name, 
                     ' (', 
-                    pc.qty * COALESCE(
-    CAST(NULLIF(REGEXP_REPLACE(COALESCE(d.package_type, ''), '[^0-9]', ''), '') AS UNSIGNED),
-    1
-), 
+                    pc.qty * CAST(SUBSTRING(d.package_type, 2) AS UNSIGNED), 
                     ')'
                 ) SEPARATOR '<br>'
             ) AS items,
