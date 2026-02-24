@@ -61,43 +61,61 @@ LEFT JOIN (
         SELECT
             d.delivery_id,
             p.package_id,
-            ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
-            COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
+
+            ROW_NUMBER() OVER (
+                PARTITION BY d.delivery_id
+                ORDER BY p.package_id
+            ) AS rn,
+
+            COUNT(*) OVER (
+                PARTITION BY d.delivery_id
+            ) AS total_packages,
+
             GROUP_CONCAT(
                 CONCAT(
-                    i.item_name, 
-                    ' (', 
-                    pc.qty * CAST(SUBSTRING(d.package_type, 2) AS UNSIGNED), 
+                    i.item_name,
+                    ' (',
+                    pc.qty * d.package_qty,
                     ')'
-                ) SEPARATOR '<br>'
+                )
+                SEPARATOR '<br>'
             ) AS items,
 
-           CASE
+            CASE
                 WHEN COALESCE(MAX(dp.status), 'PENDING') = 'DELIVERED' THEN
-                    CONCAT('<span class=\"text-success font-weight-bold\">DELIVERED</span>')
+                    '<span class=\"text-success font-weight-bold\">DELIVERED</span>'
                 WHEN COALESCE(MAX(dp.status), 'PENDING') = 'ACCEPTED' THEN
-                    CONCAT('<span class=\"text-primary font-weight-bold\">ACCEPTED</span>')
+                    '<span class=\"text-primary font-weight-bold\">ACCEPTED</span>'
                 WHEN COALESCE(MAX(dp.status), 'PENDING') = 'WAREHOUSE' THEN
-                    CONCAT('<span class=\"text-info font-weight-bold\">WAREHOUSE</span>')
+                    '<span class=\"text-info font-weight-bold\">WAREHOUSE</span>'
                 ELSE
-                    CONCAT('<span class=\"text-warning font-weight-bold\">PENDING</span>')
+                    '<span class=\"text-warning font-weight-bold\">PENDING</span>'
             END AS colored_pkg_status
 
         FROM deliveries d
+
         LEFT JOIN package p
             ON (
                 (d.keystage_id IS NOT NULL AND d.keystage_id = p.keystage_id)
-                OR (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
+                OR
+                (d.keystage_id IS NULL AND d.lot_id = p.lot_id)
             )
+
         JOIN package_content pc ON pc.package_id = p.package_id
         JOIN item i ON pc.item_id = i.item_id
+
         LEFT JOIN package_status dp
             ON dp.delivery_id = d.delivery_id
            AND dp.package_id = p.package_id
-        GROUP BY d.delivery_id, p.package_id
+
+        GROUP BY
+            d.delivery_id,
+            p.package_id,
+            d.package_qty
     ) x
     GROUP BY x.delivery_id
 ) pkg_items ON pkg_items.delivery_id = d.delivery_id
+
 
 ORDER BY d.status, d.delivery_date
 LIMIT :limit OFFSET :offset;
