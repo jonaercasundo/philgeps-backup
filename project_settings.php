@@ -15,23 +15,39 @@ if (!$project_id) {
     die("Project ID is required.");
 }
 
-// Fetch AR settings + fallback project name
-$stmt = $pdo->prepare("
-    SELECT 
-        COALESCE(ar.project_name, p.project_name) AS project_name,
-        ar.company,
-        ar.client,
-        COALESCE(ar.display_label, 0) AS display_label,
-        COALESCE(ar.display_school_id, 0) AS display_school_id
-    FROM AR_settings ar
-    LEFT JOIN projects p ON p.project_id = ar.project_id
-    WHERE ar.project_id = ?
-");
-$stmt->execute([$project_id]);
-$arSettings = $stmt->fetch(PDO::FETCH_ASSOC);
+try {
 
-if (!$arSettings) {
-    die("No AR settings found for this project.");
+    $stmt = $pdo->prepare("
+        SELECT 
+            COALESCE(ar.project_name, p.project_name) AS project_name,
+            ar.company,
+            ar.client,
+            COALESCE(ar.display_label, 0) AS display_label,
+            COALESCE(ar.display_school_id, 0) AS display_school_id
+        FROM AR_settings ar
+        LEFT JOIN projects p ON p.project_id = ar.project_id
+        WHERE ar.project_id = ?
+    ");
+
+    if (!$stmt) {
+        print_r($pdo->errorInfo());
+        exit;
+    }
+
+    $stmt->execute([$project_id]);
+
+    $arSettings = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$arSettings) {
+        die("No AR settings found for this project.");
+    }
+
+} catch (PDOException $e) {
+    echo "<pre>";
+    echo "SQL ERROR:\n";
+    echo $e->getMessage();
+    echo "</pre>";
+    exit;
 }
 ?>
   <div class="container mt-4">
