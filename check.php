@@ -26,6 +26,19 @@ if (!isset($_POST['captcha_answer']) || $_POST['captcha_answer'] != ($_SESSION['
 }
 
 try {
+
+    // Fetch the delivery info for this package
+    $stmt_delivery = $pdo->prepare("SELECT package_type FROM deliveries WHERE delivery_id = :delivery_id");
+    $stmt_delivery->execute([':delivery_id' => $delivery_id]);
+    $delivery_info = $stmt_delivery->fetch(PDO::FETCH_ASSOC);
+
+    $multiplier = 1;
+    if (!empty($delivery_info['package_type'])) {
+        // Remove letters, keep numbers
+        $numeric = preg_replace('/[^0-9]/', '', $delivery_info['package_type']);
+        $multiplier = $numeric !== '' ? (int)$numeric : 1;
+    }
+
     // Fetch current package status
     $stmt_package_status = $pdo->prepare("SELECT status, delivery_id FROM package_status WHERE package_status_id = :package_status_id");
     $stmt_package_status->execute([':package_status_id' => $package_status_id]);
@@ -70,7 +83,7 @@ try {
         // Subtract quantities from inventory
         foreach ($package_items as $item) {
             $item_id = $item['item_id'];
-            $quantity_to_subtract = $item['qty'];
+            $quantity_to_subtract = $item['qty'] * $multiplier; // <-- apply multiplier
             
             // Get available approved inventory for this item in current warehouse
             $stmt_inventory = $pdo->prepare("

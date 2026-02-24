@@ -227,68 +227,78 @@
     }
 
     // Load packages for this delivery
-    fetch(`script/get_delivery_packages.php?delivery_id=${deliveryId}`)
-      .then(res => res.json())
-      .then(packages => {
-        const packageList = document.getElementById('packageList');
-        packageList.innerHTML = '';
-        packages.forEach(pkg => {
-          const isPending = pkg.status === 'pending';
-          const isAccepted = pkg.status === 'accepted';
-          const isDelivered = pkg.status === 'delivered';
-          
-          const itemsList = pkg.items_detail.map(item => 
-            `${item.item_name} (${item.qty})`
-          ).join(', ');
-          
-          let statusBadge = '';
-          let statusChangeOptions = '';
-          
-          if (isAccepted) {
-            statusBadge = '<span class="badge bg-success ms-2">Accepted</span>';
-            statusChangeOptions = `
-              <select class="form-select form-select-sm" name="package_status_change[${pkg.package_status_id}]">
-                <option value="">Keep as Accepted</option>
-                <option value="delivered">Change to Delivered</option>
-                <option value="pending">Revert to Pending (returns inventory)</option>
-              </select>
-            `;
-          } else if (isDelivered) {
-            statusBadge = '<span class="badge bg-info ms-2">Delivered</span>';
-            statusChangeOptions = `
-              <select class="form-select form-select-sm" name="package_status_change[${pkg.package_status_id}]">
-                <option value="">Keep as Delivered</option>
-                <option value="accepted">Change to Accepted</option>
-                <option value="pending">Revert to Pending (returns inventory)</option>
-              </select>
-            `;
-          }
-          
-          packageList.innerHTML += `
-            <div class="card mb-3">
-              <div class="card-body">
-                <div class="row align-items-center">
-                  <div class="col-md-6">
-                    <strong>Package #${pkg.package_num}</strong>
-                    ${statusBadge}
-                    <br>
-                    <small class="text-muted">${itemsList}</small>
-                  </div>
-                  <div class="col-md-6">
-                    ${isPending ? `
-                      <label class="form-label mb-1">Number of Packages</label>
-                      <input type="number" class="form-control" 
-                             name="package_qty[${pkg.package_status_id}]"
-                             min="0" value="0">
-                      <small class="text-muted">Enter quantity to subtract from inventory</small>
-                    ` : statusChangeOptions}
-                  </div>
-                </div>
+fetch(`script/get_delivery_packages.php?delivery_id=${deliveryId}`)
+  .then(res => res.json())
+  .then(packages => {
+    const packageList = document.getElementById('packageList');
+    packageList.innerHTML = '';
+    packages.forEach(pkg => {
+      const isPending = pkg.status === 'pending';
+      const isAccepted = pkg.status === 'accepted';
+      const isDelivered = pkg.status === 'delivered';
+
+      // Compute multiplier from package_type (strip letters)
+      let multiplier = 1;
+      if (pkg.package_type) {
+        const numeric = pkg.package_type.replace(/[^0-9]/g, '');
+        multiplier = numeric ? parseInt(numeric) : 1;
+      }
+
+      const itemsList = pkg.items_detail.map(item =>
+        `${item.item_name} (${item.qty * multiplier})`
+      ).join(', ');
+
+      let statusBadge = '';
+      let statusChangeOptions = '';
+
+      if (isAccepted) {
+        statusBadge = '<span class="badge bg-success ms-2">Accepted</span>';
+        statusChangeOptions = `
+          <select class="form-select form-select-sm" name="package_status_change[${pkg.package_status_id}]">
+            <option value="">Keep as Accepted</option>
+            <option value="delivered">Change to Delivered</option>
+            <option value="pending">Revert to Pending (returns inventory)</option>
+          </select>
+        `;
+      } else if (isDelivered) {
+        statusBadge = '<span class="badge bg-info ms-2">Delivered</span>';
+        statusChangeOptions = `
+          <select class="form-select form-select-sm" name="package_status_change[${pkg.package_status_id}]">
+            <option value="">Keep as Delivered</option>
+            <option value="accepted">Change to Accepted</option>
+            <option value="pending">Revert to Pending (returns inventory)</option>
+          </select>
+        `;
+      }
+
+      // If pending, show input with package_type as default value
+      const pendingInput = `
+        <label class="form-label mb-1">Number of Packages</label>
+        <input type="number" class="form-control" 
+               name="package_qty[${pkg.package_status_id}]"
+               min="0" value="${multiplier}">
+        <small class="text-muted">Inventory will be multiplied accordingly</small>
+      `;
+
+      packageList.innerHTML += `
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-6">
+                <strong>Package #${pkg.package_num}</strong>
+                ${statusBadge}
+                <br>
+                <small class="text-muted">${itemsList}</small>
+              </div>
+              <div class="col-md-6">
+                ${isPending ? pendingInput : statusChangeOptions}
               </div>
             </div>
-          `;
-        });
-      });
+          </div>
+        </div>
+      `;
+    });
+  });
   });
 
   // Show/hide package section when status changes

@@ -63,7 +63,14 @@ LEFT JOIN (
             p.package_id,
             ROW_NUMBER() OVER (PARTITION BY d.delivery_id ORDER BY p.package_id) AS rn,
             COUNT(*) OVER (PARTITION BY d.delivery_id) AS total_packages,
-            GROUP_CONCAT(CONCAT(i.item_name, ' (', pc.qty, ')') SEPARATOR '<br>') AS items,
+            GROUP_CONCAT(
+                CONCAT(
+                    i.item_name, 
+                    ' (', 
+                    pc.qty * CAST(REGEXP_REPLACE(COALESCE(d.package_type,''), '[^0-9]', '') AS UNSIGNED DEFAULT 1), 
+                    ')'
+                ) SEPARATOR '<br>'
+            ) AS items,
 
            CASE
                 WHEN COALESCE(MAX(dp.status), 'PENDING') = 'DELIVERED' THEN
