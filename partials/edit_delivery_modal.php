@@ -240,7 +240,7 @@ fetch(`script/get_delivery_packages.php?delivery_id=${deliveryId}`)
       // Use pkg.qty as multiplier instead of package_type
       const multiplier = pkg.package_qty || 1;
   // default to 1 if missing
-
+console.log('Package #'+pkg.package_num+' multiplier:', multiplier);
       const itemsList = pkg.items_detail.map(item =>
         `${item.item_name} (${item.qty * multiplier})`
       ).join(', ');
