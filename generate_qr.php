@@ -216,7 +216,7 @@ foreach ($ids as $id) {
     $itemHolder = "";
     foreach ($allGroups as $group) {
         if (!empty($group['keystage'])) {
-            $itemHolder .= "<br>" . $group['keystage'];
+            $itemHolder .= "<br>Keystage " . $group['keystage'];
         }
         $itemHolder .= "
                             <div class='packing-list'>
