@@ -243,7 +243,6 @@ LIMIT :limit OFFSET :offset;
             <td>LOT <?= htmlspecialchars($d['lot_name'])?> <?= !empty($d['keystage_num']) ? "Keystage ".$d['keystage_num']." ".$d['description'] : '' ?></td>
             <td><?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?></td>
             <td>
-                 <?php if($_SESSION['role'] == "Super Admin" || $_SESSION['role'] == "Office Admin" || $_SESSION['role'] == "Office Coordinator"):?>
                 <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
                         data-id="<?= $d['delivery_id'] ?>"
                         data-project="<?= htmlspecialchars($d['project_name']) ?>"
@@ -255,7 +254,6 @@ LIMIT :limit OFFSET :offset;
                         data-warehouse-id="' . ($delivery['warehouse_id'] ?? '') . '"
                         data-warehouse-name="' . htmlspecialchars($delivery['warehouse_name'] ?? '') . '">
                 <i class="bi bi-pencil-square fs-4"></i></button>
-                <?php endif;?>
                 <?php if ($has_photos): ?>
                     <a class="btn btn-info mb-1" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
                 <?php endif; ?>
