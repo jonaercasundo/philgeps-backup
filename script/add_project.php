@@ -5,11 +5,15 @@ require "../config/db.php";
 
 $keystage = isset($_POST['keystage']) ? $_POST['keystage'] : 0;
 
-// Set ref_no to NULL if empty or not set
 $ref_no = !empty($_POST['ref_no']) ? $_POST['ref_no'] : null;
-$status = !empty($_POST['status']) ? $_POST['status'] : 'Pending'; // Default to Pending if not provided
+$status = !empty($_POST['status']) ? $_POST['status'] : 'Pending';
 
 try {
+
+    // Start transaction (recommended)
+    $pdo->beginTransaction();
+
+    // Insert Project
     $stmt = $pdo->prepare("INSERT INTO projects
         (ref_no, agency, project_name, contract_amount, keystage, start_date, end_date, ABC, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -27,6 +31,11 @@ try {
 
     $project_id = $pdo->lastInsertId();
 
+    // ✅ Insert default AR_settings row
+    $stmt = $pdo->prepare("INSERT INTO AR_settings (project_id) VALUES (?)");
+    $stmt->execute([$project_id]);
+
+    // Insert Activity Log
     $stmt = $pdo->prepare("INSERT INTO activity_logs
         (user_id, action)
         VALUES (?, ?)");
@@ -35,7 +44,16 @@ try {
         $_SESSION['name'] . " Added Project " . $_POST['project_name']
     ]);
 
+    $pdo->commit();
+
     echo json_encode(["success" => true]);
+
 } catch (Exception $e) {
-    echo json_encode(["success" => false, "message" => $e->getMessage()]);
+
+    $pdo->rollBack();
+
+    echo json_encode([
+        "success" => false,
+        "message" => $e->getMessage()
+    ]);
 }
