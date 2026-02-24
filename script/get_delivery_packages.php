@@ -12,10 +12,12 @@ if (!$delivery_id) {
 }
 
 try {
+    // Fetch packages including qty from package_status
     $stmt = $pdo->prepare("
         SELECT 
             ps.package_status_id,
             ps.status,
+            ps.qty AS package_qty,
             p.package_num
         FROM package_status ps
         JOIN package p ON p.package_id = ps.package_id
@@ -40,9 +42,8 @@ try {
         $stmt->execute([$package['package_status_id']]);
         $package['items_detail'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
+
     echo json_encode($packages);
 } catch (PDOException $e) {
     echo json_encode([]);
 }
-?>
