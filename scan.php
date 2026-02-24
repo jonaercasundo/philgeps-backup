@@ -147,20 +147,21 @@ if($deliveries['package_status'] == 'pending' && isset($warehouse_id) == false &
         <?php foreach ($items as $item){ 
           if ($deliveries['package_status'] === 'pending') {
             $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
-            $isSufficient = $availableQty >= $item['qty'];
+            $isSufficient = $availableQty >= $actualQty;
           } else {
             $isSufficient = true; // Always sufficient for non-pending
           }
           ?>
           <tr class="<?= ($deliveries['package_status'] === 'pending' && !$isSufficient) ? 'insufficient-item' : '' ?>">
             <td><?=$item['item_name']?></td>
-            <td><?=$item['qty']?></td>
+            <?php $actualQty = $item['qty'] * $multiplier; ?>
+            <td><?=$actualQty?></td>
             <?php if ($deliveries['package_status'] === 'pending'): ?>
               <td>
                 <?=$availableQty?>
                 <?php if (!$isSufficient): ?>
                   <div class="quantity-warning">
-                    Insufficient! Need <?=$item['qty'] - $availableQty?> more
+                    Insufficient! Need <?=$actualQty - $availableQty?> more
                   </div>
                 <?php endif; ?>
               </td>
