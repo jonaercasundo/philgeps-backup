@@ -9,7 +9,7 @@ $allowed_roles = ['Super Admin', 'Admin', 'Office Coordinator', 'Office Admin'];
 redirectIfNotAuthorized($allowed_roles, 'index.php');
 ?>
 <?php
-$project_id = $_GET['project_id'] ?? null;
+$project_id = $_GET['id'] ?? null;
 
 if (!$project_id) {
     die("Project ID is required.");
