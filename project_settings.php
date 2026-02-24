@@ -21,8 +21,8 @@ $stmt = $pdo->prepare("
         COALESCE(ar.project_name, p.project_name) AS project_name,
         ar.company,
         ar.client,
-        ar.display_label,
-        ar.display_school_id
+        COALESCE(ar.display_label, 0) AS display_label,
+        COALESCE(ar.display_school_id, 0) AS display_school_id
     FROM AR_settings ar
     LEFT JOIN projects p ON p.project_id = ar.project_id
     WHERE ar.project_id = ?
@@ -70,7 +70,7 @@ if (!$arSettings) {
                            type="checkbox" 
                            name="display_label" 
                            value="1"
-                           <?= $arSettings['display_label'] ? 'checked' : '' ?>>
+                           <?= $arSettings['display_label'] === 1 ? 'checked' : '' ?>>
                     <label class="form-check-label">
                         Display Label
                     </label>
@@ -81,7 +81,7 @@ if (!$arSettings) {
                            type="checkbox" 
                            name="display_school_id" 
                            value="1"
-                           <?= $arSettings['display_school_id'] ? 'checked' : '' ?>>
+                           <?= (int)$arSettings['display_school_id'] === 1 ? 'checked' : '' ?>>
                     <label class="form-check-label">
                         Display School ID
                     </label>
