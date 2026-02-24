@@ -70,7 +70,7 @@ if (!$arSettings) {
                            type="checkbox" 
                            name="display_label" 
                            value="1"
-                           <?= $arSettings['display_label'] === 1 ? 'checked' : '' ?>>
+                           <?= (int)$arSettings['display_label'] === 1 ? 'checked' : '' ?>>
                     <label class="form-check-label">
                         Display Label
                     </label>
