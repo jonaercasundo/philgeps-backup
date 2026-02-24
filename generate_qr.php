@@ -243,7 +243,7 @@ foreach ($ids as $id) {
             foreach ($pkg['items'] as $item) {
                 $itemHolder .= "<tr>
                                     <td  style='width:80%;'>" . htmlspecialchars($item['item_name'], ENT_QUOTES, 'UTF-8') . "</td>
-                                    <td  style='width:20%; text-align:center;'>".$item['qty']."</td>
+                                    <td  style='width:20%; text-align:center;'>".($item['qty'] * $multiplier)."</td>
                                 </tr>";
             }
         }
