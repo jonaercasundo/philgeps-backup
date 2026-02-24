@@ -15,11 +15,17 @@ if (!$project_id) {
     die("Project ID is required.");
 }
 
-// Fetch AR settings
+// Fetch AR settings + fallback project name
 $stmt = $pdo->prepare("
-    SELECT project_name, company, client, display_label, display_school_id 
-    FROM AR_settings 
-    WHERE project_id = ?
+    SELECT 
+        COALESCE(ar.project_name, p.project_name) AS project_name,
+        ar.company,
+        ar.client,
+        ar.display_label,
+        ar.display_school_id
+    FROM AR_settings ar
+    LEFT JOIN projects p ON p.project_id = ar.project_id
+    WHERE ar.project_id = ?
 ");
 $stmt->execute([$project_id]);
 $arSettings = $stmt->fetch(PDO::FETCH_ASSOC);
