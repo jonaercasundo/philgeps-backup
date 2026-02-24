@@ -119,6 +119,14 @@ foreach ($ids as $id) {
     $allQrs = [];
 
     foreach ($deliveries as $delivery) {
+        // Extract number from package_type (remove letters)
+        $multiplier = 1;
+
+        if (!empty($delivery['package_type'])) {
+            $numeric = preg_replace('/[^0-9]/', '', $delivery['package_type']);
+            $multiplier = $numeric !== '' ? (int)$numeric : 1;
+        }
+
         // Get package data
         $stmt = $pdo->prepare("
             SELECT p.package_id, p.length, p.width, p.height, pc.item_id, pc.qty, i.item_name
