@@ -90,6 +90,29 @@ foreach ($ids as $id) {
     if (!$deliveries) continue;
 
     $first = $deliveries[0];
+    // Fetch AR Settings
+
+    $stmt = $pdo->prepare("
+        SELECT 
+            COALESCE(ar.project_name, p.project_name) AS project_name,
+            ar.company,
+            ar.client,
+            COALESCE(ar.display_label, 0) AS display_label,
+            COALESCE(ar.display_school_id, 0) AS display_school_id
+        FROM projects p
+        LEFT JOIN AR_settings ar ON ar.project_id = p.project_id
+        WHERE p.project_id = ?
+    ");
+    $stmt->execute([$first['project_id']]);
+    $ar = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Safe defaults
+    $projectName = $ar['project_name'] ?? $first['project_name'];
+    $company = $ar['company'];
+    $client = $ar['client'];
+    $displayLabel = (int)($ar['display_label'] ?? 0);
+    $displaySchoolId = (int)($ar['display_school_id'] ?? 0);
+
     $today = date("Y-m-d");
 
     $allGroups = [];
@@ -228,15 +251,27 @@ $html .= "
     <table class='header-table' width='100%' cellspacing='0' cellpadding='4'>
         <tr>
             <td style='width:80px; font-size:13px; font-weight:bold;'>Project:</td>
-            <td style='font-size:13px; font-weight:bold;'>".ucfirst($first['project_name'])."</td>
+            <td style='font-size:13px; font-weight:bold;'>".ucfirst($projectName)."</td>
         </tr>
     </table>
     <h3 style='border-top:2px solid #000; padding-top:10px; text-align:center;'>ACKNOWLEDGEMENT OF RECEIPT OF GOODS</h3>
     <p>
-        The undersigned hereby acknowledges the receipt of goods pursuant to Contract No. {$first['contract_no']}" . (!empty($first['keystage_num']) ? ' (LOT ' . htmlspecialchars($first['lot_name'], ENT_QUOTES, 'UTF-8') . ')' : '') . " between METRO MOBILIA CORPORATION and DEPARTMENT OF EDUCATION-BUREAU OF LEARNING RESOURCES-CEBU (BLR-CEBU).<br><br>
-        School Name: {$first['school_name']}<br>
-        School Address: {$first['address']}<br>
-        School ID: {$first['school_id']}
+        The undersigned hereby acknowledges the receipt of goods pursuant to Contract No. {$first['contract_no']}" . (!empty($first['keystage_num']) ? ' (LOT ' . htmlspecialchars($first['lot_name'], ENT_QUOTES, 'UTF-8') . ')' : '') . " between ".htmlspecialchars($company, ENT_QUOTES, 'UTF-8')." 
+and ".htmlspecialchars($client, ENT_QUOTES, 'UTF-8').".<br><br>
+        ";
+if ($displayLabel === 1) {
+    $html .= "
+        School Name: ".htmlspecialchars($first['school_name'], ENT_QUOTES, 'UTF-8')."<br>
+        School Address: ".htmlspecialchars($first['address'], ENT_QUOTES, 'UTF-8')."<br>
+    ";
+
+    if ($displaySchoolId === 1) {
+        $html .= "
+            School ID: ".htmlspecialchars($first['school_id'], ENT_QUOTES, 'UTF-8')."
+        ";
+    }
+}
+$html .= "
     </p>
     
         
