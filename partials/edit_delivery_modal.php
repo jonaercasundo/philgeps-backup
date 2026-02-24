@@ -226,7 +226,7 @@
       document.getElementById('editWarehouse').value = warehouseId;
     }
 
-   // Load packages for this delivery
+    // Load packages for this delivery
 fetch(`script/get_delivery_packages.php?delivery_id=${deliveryId}`)
   .then(res => res.json())
   .then(packages => {
@@ -237,10 +237,13 @@ fetch(`script/get_delivery_packages.php?delivery_id=${deliveryId}`)
       const isAccepted = pkg.status === 'accepted';
       const isDelivered = pkg.status === 'delivered';
 
-      // Use pkg.qty as multiplier instead of package_type
-      const multiplier = pkg.package_qty || 1;
-  // default to 1 if missing
-console.log('Package #'+pkg.package_num+' multiplier:', multiplier);
+      // Compute multiplier from package_type (strip letters)
+      let multiplier = 1;
+      if (pkg.package_type) {
+        const numeric = pkg.package_type.replace(/[^0-9]/g, '');
+        multiplier = numeric ? parseInt(numeric) : 1;
+      }
+
       const itemsList = pkg.items_detail.map(item =>
         `${item.item_name} (${item.qty * multiplier})`
       ).join(', ');
@@ -268,6 +271,7 @@ console.log('Package #'+pkg.package_num+' multiplier:', multiplier);
         `;
       }
 
+      // If pending, show input with package_type as default value
       const pendingInput = `
         <label class="form-label mb-1">Number of Packages</label>
         <input type="number" class="form-control" 
