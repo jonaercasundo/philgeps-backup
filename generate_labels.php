@@ -21,8 +21,19 @@ $ids = is_string($raw_ids)
     : array_filter($raw_ids);
 if (empty($ids)) die("Invalid School IDs.");
 
-// --- PROJECT ID ---
-$project_id = trim($_GET['project_id'] ?? $_POST['project_id'] ?? '');
+// --- Get project_id from schools_project ---
+$stmtProject = $pdo->prepare("
+    SELECT project_id 
+    FROM schools_project 
+    WHERE school_id = ?
+    LIMIT 1
+");
+$stmtProject->execute([$ids[0]]); // use first school ID
+$project_id = $stmtProject->fetchColumn();
+
+if (!$project_id) {
+    die("No project found for selected school.");
+}
 
 $stmtSettings = $pdo->prepare("
     SELECT label_school_id, label_municipality, label_division, label_region 
