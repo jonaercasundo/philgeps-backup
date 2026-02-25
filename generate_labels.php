@@ -27,7 +27,34 @@ $project_id = trim($_GET['project_id'] ?? $_POST['project_id'] ?? '');
 // --- Fetch Label Settings ---
 $stmtSettings = $pdo->prepare("SELECT label_school_id, label_municipality, label_division, label_region FROM AR_settings WHERE project_id = ?");
 $stmtSettings->execute([$project_id]);
+// --- Fetch Label Settings ---
+$stmtSettings = $pdo->prepare("
+    SELECT label_school_id, label_municipality, label_division, label_region 
+    FROM AR_settings 
+    WHERE project_id = ?
+    LIMIT 1
+");
+$stmtSettings->execute([$project_id]);
 $arSettings = $stmtSettings->fetch(PDO::FETCH_ASSOC);
+
+// Default all to 0 first
+$showSchoolID     = 0;
+$showMunicipality = 0;
+$showDivision     = 0;
+$showRegion       = 0;
+
+if ($arSettings) {
+    $showSchoolID     = (int)$arSettings['label_school_id'];
+    $showMunicipality = (int)$arSettings['label_municipality'];
+    $showDivision     = (int)$arSettings['label_division'];
+    $showRegion       = (int)$arSettings['label_region'];
+}
+
+// Convert to boolean
+$showSchoolID     = $showSchoolID === 1;
+$showMunicipality = $showMunicipality === 1;
+$showDivision     = $showDivision === 1;
+$showRegion       = $showRegion === 1;
 
 $showSchoolID     = (int)$arSettings['label_school_id'] === 1;
 $showMunicipality = (int)$arSettings['label_municipality'] === 1;
