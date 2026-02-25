@@ -270,7 +270,7 @@ fetch(`script/get_delivery_packages.php?delivery_id=${deliveryId}`)
       // If pending, show input with package_type as default value
       const pendingInput = `
         <label class="form-label mb-1">Number of Packages</label>
-        <input disabled type="number" class="form-control" 
+        <input readonly type="number" class="form-control" 
                name="package_qty[${pkg.package_status_id}]"
                min="0" value="${multiplier}">
         <small class="text-muted">Inventory will be multiplied accordingly</small>
