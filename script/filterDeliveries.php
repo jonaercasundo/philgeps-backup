@@ -56,16 +56,13 @@ if (!empty($_POST['municipality'])) {
 // Search
 if (!empty($_POST['search'])) {
     $where[] = "(
-        p.project_name LIKE :search
-        OR s.school_name LIKE :search
+        s.school_name LIKE :search
+        OR s.school_id LIKE :search
         OR s.address LIKE :search
         OR d.dr_no LIKE :search
-        OR d.status LIKE :search
-        OR d.package_type LIKE :search
         OR s.region LIKE :search
         OR s.division LIKE :search
         OR s.municipality LIKE :search
-        OR YEAR(d.created_at) LIKE :search
     )";
     $params[':search'] = "%" . $_POST['search'] . "%";
 }
