@@ -19,12 +19,12 @@ try {
             p.keystage_id,
             k.keystage_num AS keystage_name,
             k.description,
-            l.lot_id,
+            p.lot_id,
             l.lot_name
         FROM package p
         LEFT JOIN keystage k ON k.keystage_id = p.keystage_id
-        LEFT JOIN lot l ON l.lot_id = k.lot_id
-        WHERE p.package_id = ?;
+        LEFT JOIN lot l ON l.lot_id = p.lot_id
+        WHERE p.package_id = 295;
     ");
     $stmt->execute([$package_id]);
     $package = $stmt->fetch(PDO::FETCH_ASSOC);
