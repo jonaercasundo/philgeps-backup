@@ -25,7 +25,7 @@ if (empty($ids)) die("Invalid School IDs.");
 $stmtProject = $pdo->prepare("
     SELECT project_id 
     FROM schools_project 
-    WHERE school_id = '?'
+    WHERE school_id = ?
     LIMIT 1
 ");
 $stmtProject->execute([$ids[0]]); // use first school ID
