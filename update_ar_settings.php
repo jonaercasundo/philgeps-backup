@@ -10,7 +10,7 @@ $ar_company_footer = trim($_POST['ar_company_footer'] ?? '');
 $ar_address_footer = trim($_POST['ar_address_footer'] ?? '');
 $display_label      = isset($_POST['display_label']) ? 1 : 0;
 $display_school_id  = isset($_POST['display_school_id']) ? 1 : 0;
-
+$ar_contact_footer = trim($_POST['ar_address_footer'] ?? '');
 $label_school_id    = isset($_POST['label_school_id']) ? 1 : 0;
 $label_municipality = isset($_POST['label_municipality']) ? 1 : 0;
 $label_division     = isset($_POST['label_division']) ? 1 : 0;
@@ -50,7 +50,8 @@ try {
             label_municipality = ?,
             label_division = ?,
             label_region = ?,
-            ar_logo = ?
+            ar_logo = ?,
+            ar_contact_footer = ?
         WHERE project_id = ?
     ");
 
@@ -67,6 +68,7 @@ try {
         $label_division,
         $label_region,
         $logoName,
+        $ar_contact_footer,
         $project_id
     ]);
 

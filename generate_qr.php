@@ -95,6 +95,7 @@ foreach ($ids as $id) {
                 ar.client,
                 ar.ar_company_footer,
                 ar.ar_address_footer,
+                ar.ar_contact_footer,
                 COALESCE(ar.display_label, 0) AS display_label,
                 COALESCE(ar.display_school_id, 0) AS display_school_id,
                 COALESCE(ar.ar_logo, 'logo.webp') AS ar_logo
@@ -134,6 +135,10 @@ $arAddressFooter = !empty($ar['ar_address_footer'])
     : 'Unit B 15th Floor Asian Star Building, Asean Drive Corner Singapura Lane,
        Filinvest Corporate City, Alabang, Muntinlupa City 1781, Philippines
        T: +632.8821.7261 | F: +632.8821.7097';
+
+$ar_contact_footer = !empty($ar['ar_contact_footer'])
+    ? htmlspecialchars($ar['ar_contact_footer'], ENT_QUOTES, 'UTF-8') 
+    : 'T: +632.8821.7261 | F: +632.8821.7097';
 
     $today = date("Y-m-d");
 
@@ -314,7 +319,7 @@ $html .= "
                 <td>{$_SESSION['name']}<br>{$arCompanyFooter}</td>
             </tr>
         </table>
-        <small>{$arAddressFooter}</small>
+        <small>{$arAddressFooter}<br>{$ar_contact_footer}</small>
     </div>
 </div>
 <div style='page-break-after:always;'></div>";

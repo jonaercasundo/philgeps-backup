@@ -105,11 +105,19 @@ if (is_dir($logoDir)) {
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-bold">Footer Address / Contact Info:</label>
+                <label class="form-label fw-bold">Footer Address:</label>
                 <textarea name="ar_address_footer" 
                         class="form-control" 
                         rows="4"><?= htmlspecialchars($arSettings['ar_address_footer'] ?? '') ?></textarea>
-                <div class="form-text">Full address and contact details shown at the bottom of the AR.</div>
+                <div class="form-text">Full address shown at the bottom of the AR.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Footer Contact:</label>
+                <textarea name="ar_contact_footer" 
+                        class="form-control" 
+                        rows="4"><?= htmlspecialchars($arSettings['ar_contact_footer'] ?? '') ?></textarea>
+                <div class="form-text">Contact details shown at the bottom of the AR.</div>
             </div>
 
             <div class="form mb-3">
