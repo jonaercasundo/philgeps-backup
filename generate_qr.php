@@ -43,10 +43,6 @@ if (empty($ids)) {
     die("Invalid or empty DR numbers provided.");
 }
 
-// ---- Continue your logic ----
-$logoPath = __DIR__ . "/assets/uploads/logo/logo.webp";
-$logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-
 
 $html = "<!DOCTYPE html>
 <html>
@@ -92,19 +88,34 @@ foreach ($ids as $id) {
     $first = $deliveries[0];
     // Fetch AR Settings
 
-    $stmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
         SELECT 
             COALESCE(ar.project_name, p.project_name) AS project_name,
             ar.company,
             ar.client,
             COALESCE(ar.display_label, 0) AS display_label,
-            COALESCE(ar.display_school_id, 0) AS display_school_id
+            COALESCE(ar.display_school_id, 0) AS display_school_id,
+            COALESCE(ar.ar_logo, 'logo.webp') AS ar_logo
         FROM projects p
         LEFT JOIN AR_settings ar ON ar.project_id = p.project_id
         WHERE p.project_id = ?
     ");
     $stmt->execute([$first['project_id']]);
     $ar = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $arLogoFile = !empty($ar['ar_logo']) ? $ar['ar_logo'] : 'logo.webp';
+
+    $logoPath = __DIR__ . "/assets/uploads/logo/" . $arLogoFile;
+
+    // Fallback safety if file does not exist
+    if (!file_exists($logoPath)) {
+        $logoPath = __DIR__ . "/assets/uploads/logo/logo.webp";
+    }
+
+    // Detect mime type automatically
+    $mimeType = mime_content_type($logoPath);
+    $logoBase64 = 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($logoPath));
+
 
     // Safe defaults
     $projectName = $ar['project_name'] ?? $first['project_name'];
