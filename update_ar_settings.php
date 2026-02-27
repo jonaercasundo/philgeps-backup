@@ -15,6 +15,24 @@ $label_municipality = isset($_POST['label_municipality']) ? 1 : 0;
 $label_division     = isset($_POST['label_division']) ? 1 : 0;
 $label_region       = isset($_POST['label_region']) ? 1 : 0;
 
+// --- Handle Logo ---
+$logoName = $_POST['ar_logo'] ?? 'logo.webp'; // default from dropdown
+
+if (!empty($_FILES['new_logo']['name']) && $_FILES['new_logo']['error'] === UPLOAD_ERR_OK) {
+    $uploadDir = __DIR__ . "/assets/uploads/logo/";
+    $fileTmp   = $_FILES['new_logo']['tmp_name'];
+    $fileName  = time() . "_" . basename($_FILES['new_logo']['name']);
+    $fileExt   = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+    $allowed = ['png', 'jpg', 'jpeg', 'webp'];
+
+    if (in_array($fileExt, $allowed)) {
+        if (move_uploaded_file($fileTmp, $uploadDir . $fileName)) {
+            $logoName = $fileName; // override dropdown
+        }
+    }
+}
+
 try {
 
     $stmt = $pdo->prepare("
@@ -28,7 +46,8 @@ try {
             label_school_id = ?,
             label_municipality = ?,
             label_division = ?,
-            label_region = ?
+            label_region = ?,
+            ar_logo = ?
         WHERE project_id = ?
     ");
 
@@ -42,6 +61,7 @@ try {
         $label_municipality,
         $label_division,
         $label_region,
+        $logoName,
         $project_id
     ]);
 

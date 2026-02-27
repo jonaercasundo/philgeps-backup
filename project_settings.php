@@ -22,6 +22,7 @@ $stmt = $pdo->prepare("
         ar.company,
         ar.client,
         COALESCE(ar.display_label, 0) AS display_label,
+        COALESCE(ar.ar_logo, 'logo.webp') AS ar_logo,
         COALESCE(ar.display_school_id, 0) AS display_school_id,
         COALESCE(ar.label_school_id, 0) AS label_school_id,
         COALESCE(ar.label_municipality, 0) AS label_municipality,
@@ -37,11 +38,27 @@ $arSettings = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$arSettings) {
     die("No AR settings found for this project.");
 }
+
+$logoDir = __DIR__ . "/assets/uploads/logo/";
+$logoFiles = [];
+
+if (is_dir($logoDir)) {
+    $files = scandir($logoDir);
+    foreach ($files as $file) {
+        if ($file !== '.' && $file !== '..') {
+            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp'])) {
+                $logoFiles[] = $file;
+            }
+        }
+    }
+}
+
 ?>
   <div class="container mt-4">
     <h2 class="mb-4">Project Settings</h2>
 
-<form method="POST" action="update_ar_settings.php">
+<form method="POST" action="update_ar_settings.php" enctype="multipart/form-data">
 
     <input type="hidden" name="project_id" value="<?= $project_id ?>">
 
@@ -75,6 +92,33 @@ if (!$arSettings) {
                 <input class="form-check-input" type="checkbox" name="display_school_id" value="1" <?= (int)$arSettings['display_school_id'] === 1 ? 'checked' : '' ?>>
                 <label class="form-check-label">Display School ID</label>
             </div>
+
+            <div class="form mb-3">
+                <label class="form-label fw-bold">Select Logo:</label>
+                <select name="ar_logo" class="form-select">
+                    <?php foreach ($logoFiles as $logo): ?>
+                        <option value="<?= htmlspecialchars($logo) ?>"
+                            <?= ($arSettings['ar_logo'] ?? 'logo.webp') === $logo ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($logo) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="form-text">Choose from existing logos.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Or Upload New Logo:</label>
+                <input type="file" name="new_logo" class="form-control" accept=".png,.jpg,.jpeg,.webp">
+                <div class="form-text">Uploading a file will override selected logo.</div>
+            </div>
+
+            <?php if (!empty($arSettings['ar_logo'])): ?>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Current Logo Preview:</label><br>
+                    <img src="assets/uploads/logo/<?= htmlspecialchars($arSettings['ar_logo']) ?>" 
+                        style="max-height:100px;">
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
