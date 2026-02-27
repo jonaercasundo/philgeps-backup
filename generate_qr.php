@@ -89,17 +89,19 @@ foreach ($ids as $id) {
     // Fetch AR Settings
 
         $stmt = $pdo->prepare("
-        SELECT 
-            COALESCE(ar.project_name, p.project_name) AS project_name,
-            ar.company,
-            ar.client,
-            COALESCE(ar.display_label, 0) AS display_label,
-            COALESCE(ar.display_school_id, 0) AS display_school_id,
-            COALESCE(ar.ar_logo, 'logo.webp') AS ar_logo
-        FROM projects p
-        LEFT JOIN AR_settings ar ON ar.project_id = p.project_id
-        WHERE p.project_id = ?
-    ");
+            SELECT 
+                COALESCE(ar.project_name, p.project_name) AS project_name,
+                ar.company,
+                ar.client,
+                ar.ar_company_footer,
+                ar.ar_address_footer,
+                COALESCE(ar.display_label, 0) AS display_label,
+                COALESCE(ar.display_school_id, 0) AS display_school_id,
+                COALESCE(ar.ar_logo, 'logo.webp') AS ar_logo
+            FROM projects p
+            LEFT JOIN AR_settings ar ON ar.project_id = p.project_id
+            WHERE p.project_id = ?
+        ");
     $stmt->execute([$first['project_id']]);
     $ar = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -123,6 +125,15 @@ foreach ($ids as $id) {
     $client = $ar['client'];
     $displayLabel = (int)($ar['display_label'] ?? 0);
     $displaySchoolId = (int)($ar['display_school_id'] ?? 0);
+    $arCompanyFooter = !empty($ar['ar_company_footer']) 
+    ? htmlspecialchars($ar['ar_company_footer'], ENT_QUOTES, 'UTF-8') 
+    : 'Metro Mobilia Corporation';
+
+$arAddressFooter = !empty($ar['ar_address_footer']) 
+    ? htmlspecialchars($ar['ar_address_footer'], ENT_QUOTES, 'UTF-8') 
+    : 'Unit B 15th Floor Asian Star Building, Asean Drive Corner Singapura Lane,
+       Filinvest Corporate City, Alabang, Muntinlupa City 1781, Philippines
+       T: +632.8821.7261 | F: +632.8821.7097';
 
     $today = date("Y-m-d");
 
@@ -300,12 +311,10 @@ $html .= "
         <table width='100%' cellspacing='0' cellpadding='4' style='text-align:center;'>
             <tr>
                 <td>Printed Name Over Signature</td>
-                <td>{$_SESSION['name']}<br>Metro Mobilia Corporation</td>
+                <td>{$_SESSION['name']}<br>{$arCompanyFooter}</td>
             </tr>
         </table>
-        <small>Unit B 15th Floor Asian Star Building, Asean Drive Corner Singapura Lane, 
-        Filinvest Corporate City, Alabang, Muntinlupa City 1781, Philippines<br>
-        T: +632.8821.7261 | F: +632.8821.7097</small>
+        <small>{$arAddressFooter}</small>
     </div>
 </div>
 <div style='page-break-after:always;'></div>";

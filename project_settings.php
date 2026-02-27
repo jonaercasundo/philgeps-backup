@@ -21,6 +21,8 @@ $stmt = $pdo->prepare("
         COALESCE(ar.project_name, p.project_name) AS project_name,
         ar.company,
         ar.client,
+        ar.ar_company_footer,
+        ar.ar_address_footer,
         COALESCE(ar.display_label, 0) AS display_label,
         COALESCE(ar.ar_logo, 'logo.webp') AS ar_logo,
         COALESCE(ar.display_school_id, 0) AS display_school_id,
@@ -91,6 +93,23 @@ if (is_dir($logoDir)) {
             <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" name="display_school_id" value="1" <?= (int)$arSettings['display_school_id'] === 1 ? 'checked' : '' ?>>
                 <label class="form-check-label">Display School ID</label>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label fw-bold">Footer Company Name:</label>
+                <input type="text" 
+                    name="ar_company_footer" 
+                    class="form-control"
+                    value="<?= htmlspecialchars($arSettings['ar_company_footer'] ?? '') ?>">
+                <div class="form-text">This will appear under the signature in the AR PDF.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Footer Address / Contact Info:</label>
+                <textarea name="ar_address_footer" 
+                        class="form-control" 
+                        rows="4"><?= htmlspecialchars($arSettings['ar_address_footer'] ?? '') ?></textarea>
+                <div class="form-text">Full address and contact details shown at the bottom of the AR.</div>
             </div>
 
             <div class="form mb-3">

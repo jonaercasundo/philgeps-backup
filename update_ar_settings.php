@@ -6,7 +6,8 @@ $project_id = $_POST['project_id'];
 $project_name = trim($_POST['project_name']);
 $company      = trim($_POST['company']);
 $client       = trim($_POST['client']);
-
+$ar_company_footer = trim($_POST['ar_company_footer'] ?? '');
+$ar_address_footer = trim($_POST['ar_address_footer'] ?? '');
 $display_label      = isset($_POST['display_label']) ? 1 : 0;
 $display_school_id  = isset($_POST['display_school_id']) ? 1 : 0;
 
@@ -41,6 +42,8 @@ try {
             project_name = ?,
             company = ?,
             client = ?,
+            ar_company_footer = ?,
+            ar_address_footer = ?,
             display_label = ?,
             display_school_id = ?,
             label_school_id = ?,
@@ -55,6 +58,8 @@ try {
         $project_name,
         $company,
         $client,
+        $ar_company_footer,
+        $ar_address_footer,
         $display_label,
         $display_school_id,
         $label_school_id,
