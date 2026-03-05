@@ -29,6 +29,7 @@ const projectStatusColors = {
   "For Development": "#0f766e",
   "Pre Procurement": "#2563eb",
   Upcoming: "#facc15",
+  "For Rebid": "#dc2626",
 };
 
 const primaryColors = [
@@ -106,29 +107,21 @@ function createEmptyChart(ctx, message) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  // 📊 Project Status Overview (Pie Chart)
-  if (projectStatusOverview.length > 0) {
-    const totalOverall = projectStatusOverview.reduce(
-      (sum, r) => sum + parseFloat(r.total || 0),
-      0,
+  if (allProjectsWithStatus.length > 0) {
+    const projectLabels = allProjectsWithStatus.map((p) => p.project_name);
+    const projectColors = allProjectsWithStatus.map(
+      (p) => projectStatusColors[p.status] || "#6c757d", // fallback gray
     );
 
     new Chart(document.getElementById("projectStatusChart"), {
       type: "pie",
       data: {
-        labels: projectStatusOverview.map(
-          (r) =>
-            `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`,
-        ),
+        labels: projectLabels, // Each project as a slice
         datasets: [
           {
-            data: projectStatusOverview.map((r) => r.total),
-            backgroundColor: projectStatusOverview.map(
-              (r) => projectStatusColors[r.status],
-            ),
-            borderColor: projectStatusOverview.map(
-              (r) => projectStatusColors[r.status],
-            ),
+            data: projectLabels.map(() => 1), // Each project counts as 1
+            backgroundColor: projectColors,
+            borderColor: projectColors,
             borderWidth: 2,
           },
         ],
@@ -148,50 +141,19 @@ document.addEventListener("DOMContentLoaded", function () {
         onClick: function (evt, elements) {
           if (elements && elements.length > 0) {
             const elementIndex = elements[0].index;
-            const chart = this;
-            const label = chart.data.labels[elementIndex];
+            const project = allProjectsWithStatus[elementIndex];
 
-            // Extract status from label like "Upcoming (33.3%)"
-            const displayedStatus = label.split(" (")[0];
-
-            // Map displayed status back to DB status
-            const statusMap = {
-              Upcoming: "Pending Evaluation",
-              "For Award": "For Award",
-              "For Implementation": "For Implementation",
-              Ongoing: "Ongoing",
-              Completed: "Delivered", // Displayed 'Completed' is 'Delivered' in DB
-              Collected: "Completed", // Displayed 'Collected' is 'Completed' in DB
-            };
-            const dbStatus = statusMap[displayedStatus];
-
-            if (!dbStatus) return;
-
-            // Filter projects based on the database status
-            const projects = allProjectsWithStatus.filter(
-              (p) => p.status === dbStatus,
-            );
-
-            // Populate and show the modal
+            // Show modal with project info
             const projectList = document.getElementById("projectList");
             projectList.innerHTML = ""; // Clear previous list
 
-            if (projects.length > 0) {
-              projects.forEach((p) => {
-                const li = document.createElement("li");
-                li.className = "list-group-item";
-                li.textContent = p.project_name;
-                projectList.appendChild(li);
-              });
-            } else {
-              const li = document.createElement("li");
-              li.className = "list-group-item";
-              li.textContent = "No projects found for this status.";
-              projectList.appendChild(li);
-            }
+            const li = document.createElement("li");
+            li.className = "list-group-item";
+            li.textContent = `${project.project_name} — Status: ${project.status}`;
+            projectList.appendChild(li);
 
             document.getElementById("projectListModalLabel").textContent =
-              `Projects: ${displayedStatus}`;
+              `Project Details`;
 
             const projectModal = new bootstrap.Modal(
               document.getElementById("projectListModal"),

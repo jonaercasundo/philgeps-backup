@@ -181,6 +181,7 @@ try {
                             <option value="For Procurement">Pre Procurement</option>
                             <option value="Upcoming">Upcoming</option>
                             <option value="On Going">On Going</option>
+                            <option value="Upcoming">For Rebid</option>
                         </select>
                     </div>
                 </form>
@@ -254,6 +255,7 @@ try {
                             <option value="For Procurement">Pre Procurement</option>
                             <option value="Upcoming">Upcoming</option>
                             <option value="On Going">On Going</option>
+                            <option value="Upcoming">For Rebid</option>
                         </select>
                     </div>
                 </form>
