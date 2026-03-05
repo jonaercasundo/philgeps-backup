@@ -150,6 +150,8 @@ document.addEventListener("DOMContentLoaded", function () {
               label: function (context) {
                 const label = context.label.split(" (")[0]; // Status name
 
+                const dbStatus = label;
+
                 const projects = allProjectsWithStatus
                   .filter((p) => p.status === dbStatus)
                   .map((p) => `• ${p.project_name}`);
