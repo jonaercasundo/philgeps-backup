@@ -185,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {
         datasets: [
           {
             label: "Contract Amount",
-            data: contractData-abcData.map((val) => val || 0), // Subtract ABC from Contract Amount
+            data: contractData-abcData,
             backgroundColor: "#198754",
             borderColor: "#146c43",
             borderWidth: 1,
