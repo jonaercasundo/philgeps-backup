@@ -150,14 +150,6 @@ document.addEventListener("DOMContentLoaded", function () {
               label: function (context) {
                 const label = context.label.split(" (")[0]; // Status name
 
-                // Only map when display name differs from DB
-                const statusMap = {
-                  Completed: "Delivered",
-                  Collected: "Completed",
-                };
-
-                const dbStatus = statusMap[label] || label;
-
                 const projects = allProjectsWithStatus
                   .filter((p) => p.status === dbStatus)
                   .map((p) => `• ${p.project_name}`);
