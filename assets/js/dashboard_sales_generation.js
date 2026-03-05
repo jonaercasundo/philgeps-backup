@@ -204,7 +204,7 @@ document.addEventListener("DOMContentLoaded", function () {
         maintainAspectRatio: false,
         scales: {
           x: {
-            stacked: true,
+            stacked: false,
             title: {
               display: true,
               text: "Projects",
