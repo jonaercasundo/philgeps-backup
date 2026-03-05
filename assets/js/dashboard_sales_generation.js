@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", function () {
       (p) => parseFloat(p.contract_amount) || 0,
     );
     const abcData = phpData.opportunity.map((p) => parseFloat(p.ABC) || 0);
-
+    const varianceData = abcData.map((abc, i) => abc - contractData[i]);
     new Chart(document.getElementById("opportunityChart"), {
       type: "bar",
       data: {
@@ -192,7 +192,7 @@ document.addEventListener("DOMContentLoaded", function () {
           },
           {
             label: "ABC",
-            data: abcData - contractData,
+            data: varianceData,
             backgroundColor: "#fbc02d",
             borderColor: "#f9a825",
             borderWidth: 1,
