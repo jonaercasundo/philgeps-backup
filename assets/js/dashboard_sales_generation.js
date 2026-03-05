@@ -185,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {
         datasets: [
           {
             label: "Contract Amount",
-            data: contractData,
+            data: contractData-abcData.map((val) => val || 0), // Subtract ABC from Contract Amount
             backgroundColor: "#198754",
             borderColor: "#146c43",
             borderWidth: 1,
@@ -204,7 +204,7 @@ document.addEventListener("DOMContentLoaded", function () {
         maintainAspectRatio: false,
         scales: {
           x: {
-            stacked: false,
+            stacked:  ,
             title: {
               display: true,
               text: "Projects",
