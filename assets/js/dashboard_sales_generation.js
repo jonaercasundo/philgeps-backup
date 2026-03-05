@@ -147,25 +147,22 @@ document.addEventListener("DOMContentLoaded", function () {
           },
           tooltip: {
             callbacks: {
-              // Show all project names for the hovered status
               label: function (context) {
-                const label = context.label.split(" (")[0]; // Get status
-                // Map displayed status to DB status
+                const label = context.label.split(" (")[0]; // Status name
+
+                // Only map when display name differs from DB
                 const statusMap = {
-                  Upcoming: "Pending Evaluation",
-                  "For Award": "For Award",
-                  "For Implementation": "For Implementation",
-                  Ongoing: "Ongoing",
                   Completed: "Delivered",
                   Collected: "Completed",
                 };
+
                 const dbStatus = statusMap[label] || label;
 
                 const projects = allProjectsWithStatus
                   .filter((p) => p.status === dbStatus)
                   .map((p) => `• ${p.project_name}`);
 
-                return projects.length > 0
+                return projects.length
                   ? [`Projects in ${label}:`, ...projects]
                   : [`No projects in ${label}`];
               },
