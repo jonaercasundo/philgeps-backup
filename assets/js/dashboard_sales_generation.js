@@ -107,21 +107,29 @@ function createEmptyChart(ctx, message) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  if (allProjectsWithStatus.length > 0) {
-    const projectLabels = allProjectsWithStatus.map((p) => p.project_name);
-    const projectColors = allProjectsWithStatus.map(
-      (p) => projectStatusColors[p.status] || "#6c757d", // fallback gray
+  // 📊 Project Status Overview (Pie Chart)
+  if (projectStatusOverview.length > 0) {
+    const totalOverall = projectStatusOverview.reduce(
+      (sum, r) => sum + parseFloat(r.total || 0),
+      0,
     );
 
     new Chart(document.getElementById("projectStatusChart"), {
       type: "pie",
       data: {
-        labels: projectLabels, // Each project as a slice
+        labels: projectStatusOverview.map(
+          (r) =>
+            `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`,
+        ),
         datasets: [
           {
-            data: projectLabels.map(() => 1), // Each project counts as 1
-            backgroundColor: projectColors,
-            borderColor: projectColors,
+            data: projectStatusOverview.map((r) => r.total),
+            backgroundColor: projectStatusOverview.map(
+              (r) => projectStatusColors[r.status],
+            ),
+            borderColor: projectStatusOverview.map(
+              (r) => projectStatusColors[r.status],
+            ),
             borderWidth: 2,
           },
         ],
@@ -137,29 +145,32 @@ document.addEventListener("DOMContentLoaded", function () {
               font: { size: 12 },
             },
           },
-        },
-        onClick: function (evt, elements) {
-          if (elements && elements.length > 0) {
-            const elementIndex = elements[0].index;
-            const project = allProjectsWithStatus[elementIndex];
+          tooltip: {
+            callbacks: {
+              // Show all project names for the hovered status
+              label: function (context) {
+                const label = context.label.split(" (")[0]; // Get status
+                // Map displayed status to DB status
+                const statusMap = {
+                  Upcoming: "Pending Evaluation",
+                  "For Award": "For Award",
+                  "For Implementation": "For Implementation",
+                  Ongoing: "Ongoing",
+                  Completed: "Delivered",
+                  Collected: "Completed",
+                };
+                const dbStatus = statusMap[label] || label;
 
-            // Show modal with project info
-            const projectList = document.getElementById("projectList");
-            projectList.innerHTML = ""; // Clear previous list
+                const projects = allProjectsWithStatus
+                  .filter((p) => p.status === dbStatus)
+                  .map((p) => `• ${p.project_name}`);
 
-            const li = document.createElement("li");
-            li.className = "list-group-item";
-            li.textContent = `${project.project_name} — Status: ${project.status}`;
-            projectList.appendChild(li);
-
-            document.getElementById("projectListModalLabel").textContent =
-              `Project Details`;
-
-            const projectModal = new bootstrap.Modal(
-              document.getElementById("projectListModal"),
-            );
-            projectModal.show();
-          }
+                return projects.length > 0
+                  ? [`Projects in ${label}:`, ...projects]
+                  : [`No projects in ${label}`];
+              },
+            },
+          },
         },
       },
     });

@@ -264,7 +264,7 @@ if ($selectedProject > 0) {
 </script>
 
 <script src="assets/js/sortable.js"></script>
-<script src="assets/js/dashboard_sales_generation.js?v=3.0.0"></script>
+<script src="assets/js/dashboard_sales_generation.js?v=4.0.0"></script>
 
 <!-- Import Sales Generation Modal -->
 <div class="modal fade" id="importModal" tabindex="-1">
