@@ -9,12 +9,26 @@ const deliveryStatusColors = {
 
 // Project Status Colors (Green-Yellow-Red)
 const projectStatusColors = {
-  Pending: "#dc3545", // Red
-  "For Award": "#fbc02d", // Yellow
-  "For Implementation": "#e6b422", // Darker Yellow
-  Ongoing: "#d4a81e", // Even Darker Yellow
-  Completed: "#198754", // Green
-  Collected: "#157347", // Darker Green
+  Pending: "#dc3545",
+  Ongoing: "#f59e0b",
+  "On Going": "#f59e0b",
+  Completed: "#198754",
+  Awarded: "#198754",
+  "For NOA": "#6366f1",
+  "For RTA": "#0ea5e9",
+  "For Contract Signing": "#14b8a6",
+  "For NTP": "#22c55e",
+  "Bid Evaluation": "#facc15",
+  Bidding: "#eab308",
+  "Post Qualification": "#8b5cf6",
+  Implementation: "#10b981",
+  Delivered: "#16a34a",
+  "For Billing": "#f97316",
+  "For Collection": "#f43f5e",
+  Collected: "#047857",
+  "For Development": "#0f766e",
+  "Pre Procurement": "#2563eb",
+  Upcoming: "#facc15",
 };
 
 const primaryColors = [
