@@ -185,14 +185,14 @@ document.addEventListener("DOMContentLoaded", function () {
         datasets: [
           {
             label: "Contract Amount",
-            data: contractData - abcData,
+            data: contractData,
             backgroundColor: "#198754",
             borderColor: "#146c43",
             borderWidth: 1,
           },
           {
             label: "ABC",
-            data: abcData,
+            data: abcData - contractData,
             backgroundColor: "#fbc02d",
             borderColor: "#f9a825",
             borderWidth: 1,
