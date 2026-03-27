@@ -164,8 +164,24 @@ try {
                             <option value="">Select Status</option>
                             <option value="Pending" selected>Pending</option>
                             <option value="Ongoing">Ongoing</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Cancelled">Cancelled</option>
+                            <option value="Completed">Awarded</option>
+                            <option value="For NOA">For NOA</option>
+                            <option value="For RTA">For RTA</option>
+                            <option value="For Contract Signing">For Contract Signing</option>
+                            <option value="For NTP">For NTP</option>
+                            <option value="Bid Evaluation">Bid Evaluation</option>
+                            <option value="Bidding">Bidding</option>
+                            <option value="Post Qualification">Post Qualification</option>
+                            <option value="Implementation">Implementation</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="For Billing">For Billing</option>
+                            <option value="For Collection">For Collection</option>
+                            <option value="Collected">Collected</option>
+                            <option value="For Development">For Development</option>
+                            <option value="For Procurement">Pre Procurement</option>
+                            <option value="Upcoming">Upcoming</option>
+                            <option value="On Going">On Going</option>
+                            <option value="Upcoming">For Rebid</option>
                         </select>
                     </div>
                 </form>
@@ -220,10 +236,26 @@ try {
                         <label>Status</label>
                         <select name="status" id="edit_status" class="form-control" required>
                             <option value="">Select Status</option>
-                            <option value="Pending">Pending</option>
+                            <option value="Pending" selected>Pending</option>
                             <option value="Ongoing">Ongoing</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Cancelled">Cancelled</option>
+                            <option value="Completed">Awarded</option>
+                            <option value="For NOA">For NOA</option>
+                            <option value="For RTA">For RTA</option>
+                            <option value="For Contract Signing">For Contract Signing</option>
+                            <option value="For NTP">For NTP</option>
+                            <option value="Bid Evaluation">Bid Evaluation</option>
+                            <option value="Bidding">Bidding</option>
+                            <option value="Post Qualification">Post Qualification</option>
+                            <option value="Implementation">Implementation</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="For Billing">For Billing</option>
+                            <option value="For Collection">For Collection</option>
+                            <option value="Collected">Collected</option>
+                            <option value="For Development">For Development</option>
+                            <option value="For Procurement">Pre Procurement</option>
+                            <option value="Upcoming">Upcoming</option>
+                            <option value="On Going">On Going</option>
+                            <option value="Upcoming">For Rebid</option>
                         </select>
                     </div>
                 </form>

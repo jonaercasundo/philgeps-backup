@@ -9,12 +9,27 @@ const deliveryStatusColors = {
 
 // Project Status Colors (Green-Yellow-Red)
 const projectStatusColors = {
-  Pending: "#dc3545", // Red
-  "For Award": "#fbc02d", // Yellow
-  "For Implementation": "#e6b422", // Darker Yellow
-  Ongoing: "#d4a81e", // Even Darker Yellow
-  Completed: "#198754", // Green
-  Collected: "#157347", // Darker Green
+  Pending: "#dc3545",
+  Ongoing: "#f59e0b",
+  "On Going": "#f59e0b",
+  Completed: "#198754",
+  Awarded: "#198754",
+  "For NOA": "#6366f1",
+  "For RTA": "#0ea5e9",
+  "For Contract Signing": "#14b8a6",
+  "For NTP": "#22c55e",
+  "Bid Evaluation": "#facc15",
+  Bidding: "#eab308",
+  "Post Qualification": "#8b5cf6",
+  Implementation: "#10b981",
+  Delivered: "#16a34a",
+  "For Billing": "#f97316",
+  "For Collection": "#f43f5e",
+  Collected: "#047857",
+  "For Development": "#0f766e",
+  "Pre Procurement": "#2563eb",
+  Upcoming: "#facc15",
+  "For Rebid": "#dc2626",
 };
 
 const primaryColors = [
@@ -130,60 +145,23 @@ document.addEventListener("DOMContentLoaded", function () {
               font: { size: 12 },
             },
           },
-        },
-        onClick: function (evt, elements) {
-          if (elements && elements.length > 0) {
-            const elementIndex = elements[0].index;
-            const chart = this;
-            const label = chart.data.labels[elementIndex];
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                const label = context.label.split(" (")[0]; // Status name
 
-            // Extract status from label like "Upcoming (33.3%)"
-            const displayedStatus = label.split(" (")[0];
+                const dbStatus = label;
 
-            // Map displayed status back to DB status
-            const statusMap = {
-              Upcoming: "Pending Evaluation",
-              "For Award": "For Award",
-              "For Implementation": "For Implementation",
-              Ongoing: "Ongoing",
-              Completed: "Delivered", // Displayed 'Completed' is 'Delivered' in DB
-              Collected: "Completed", // Displayed 'Collected' is 'Completed' in DB
-            };
-            const dbStatus = statusMap[displayedStatus];
+                const projects = allProjectsWithStatus
+                  .filter((p) => p.status === dbStatus)
+                  .map((p) => `• ${p.project_name}`);
 
-            if (!dbStatus) return;
-
-            // Filter projects based on the database status
-            const projects = allProjectsWithStatus.filter(
-              (p) => p.status === dbStatus,
-            );
-
-            // Populate and show the modal
-            const projectList = document.getElementById("projectList");
-            projectList.innerHTML = ""; // Clear previous list
-
-            if (projects.length > 0) {
-              projects.forEach((p) => {
-                const li = document.createElement("li");
-                li.className = "list-group-item";
-                li.textContent = p.project_name;
-                projectList.appendChild(li);
-              });
-            } else {
-              const li = document.createElement("li");
-              li.className = "list-group-item";
-              li.textContent = "No projects found for this status.";
-              projectList.appendChild(li);
-            }
-
-            document.getElementById("projectListModalLabel").textContent =
-              `Projects: ${displayedStatus}`;
-
-            const projectModal = new bootstrap.Modal(
-              document.getElementById("projectListModal"),
-            );
-            projectModal.show();
-          }
+                return projects.length
+                  ? [`Projects in ${label}:`, ...projects]
+                  : [`No projects in ${label}`];
+              },
+            },
+          },
         },
       },
     });
@@ -201,7 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
       (p) => parseFloat(p.contract_amount) || 0,
     );
     const abcData = phpData.opportunity.map((p) => parseFloat(p.ABC) || 0);
-
+    const varianceData = abcData.map((abc, i) => abc - contractData[i]);
     new Chart(document.getElementById("opportunityChart"), {
       type: "bar",
       data: {
@@ -216,7 +194,7 @@ document.addEventListener("DOMContentLoaded", function () {
           },
           {
             label: "ABC",
-            data: abcData,
+            data: varianceData,
             backgroundColor: "#fbc02d",
             borderColor: "#f9a825",
             borderWidth: 1,
