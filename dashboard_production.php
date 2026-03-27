@@ -149,29 +149,84 @@ try {
     $progressPerLot = $stmt->fetchAll(PDO::FETCH_ASSOC);
     // OPERATION SUMMARY //
 
-        // BILLING SUMMARY //
-    $stmt = $pdo->query("
-        SELECT
-            (SELECT COUNT(*) FROM grouping) AS total_groups,
-            (SELECT COUNT(DISTINCT dr_no) FROM billing_grouped) AS total_drs,
-            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g
-            JOIN billing_grouped bg ON bg.group_id = g.group_id 
-            WHERE status = 'for billing') AS for_billing_count,
-            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
-            JOIN billing_grouped bg ON bg.group_id = g.group_id 
-            WHERE status = 'billed') AS billed_count,
-            (SELECT COUNT(DISTINCT bg.dr_no) FROM grouping g 
-            JOIN billing_grouped bg ON bg.group_id = g.group_id 
-            WHERE status = 'paid') AS paid_count
-    ");
-    
-    $billingTotals = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    $totalGroups = $billingTotals['total_groups'] ?? 0;
-    $totalDr = $billingTotals['total_drs'] ?? 0;
-    $forBillingPercent = $totalGroups > 0 ? round(($billingTotals['for_billing_count'] / $totalDr) * 100) : 0;
-    $billedPercent = $totalGroups > 0 ? round(($billingTotals['billed_count'] / $totalDr) * 100) : 0;
-    $paidPercent = $totalGroups > 0 ? round(($billingTotals['paid_count'] / $totalDr) * 100) : 0;
+// BILLING SUMMARY //
+$billingFilter = $selectedProject > 0 ? "WHERE d.project_id = $selectedProject" : "";
+$billingFilterBase = $selectedProject > 0 ? "WHERE project_id = $selectedProject" : "";
+
+$stmt = $pdo->query("
+    SELECT 
+        d.project_id,
+
+        t.total_amount,
+
+        SUM(CASE WHEN g.status = 'FOR BILLING' 
+            THEN i.price * pc.qty * d.package_qty ELSE 0 END) AS for_billing,
+
+        SUM(CASE WHEN g.status = 'BILLED' 
+            THEN i.price * pc.qty * d.package_qty ELSE 0 END) AS billed,
+
+        SUM(CASE WHEN g.status = 'PAID' 
+            THEN i.price * pc.qty * d.package_qty ELSE 0 END) AS paid
+
+    FROM deliveries d
+
+    -- ✅ total_amount (filtered)
+    JOIN (
+        SELECT 
+            base.project_id,
+            SUM(pc.qty * base.total_package_qty * i.price) AS total_amount
+        FROM (
+            SELECT 
+                project_id,
+                keystage_id,
+                lot_id,
+                SUM(package_qty) AS total_package_qty
+            FROM deliveries
+            $billingFilterBase
+            GROUP BY project_id, keystage_id, lot_id
+        ) base
+        JOIN package p 
+          ON p.keystage_id <=> base.keystage_id 
+         AND p.lot_id <=> base.lot_id
+        JOIN package_content pc ON pc.package_id = p.package_id
+        JOIN item i ON i.item_id = pc.item_id
+        GROUP BY base.project_id
+    ) t ON t.project_id = d.project_id
+
+    JOIN billing_grouped bg ON bg.dr_no = d.dr_no
+    JOIN grouping g ON g.group_id = bg.group_id
+
+    JOIN package p 
+      ON p.keystage_id <=> d.keystage_id 
+     AND p.lot_id <=> d.lot_id
+
+    JOIN package_content pc ON pc.package_id = p.package_id
+    JOIN item i ON i.item_id = pc.item_id
+
+    $billingFilter
+
+    GROUP BY d.project_id
+");
+
+$billingTotals = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Format totals as PxxxK / PxxM
+function formatAmount($amount) {
+    if ($amount >= 1000000) return 'P' . round($amount / 1000000) . 'M';
+    if ($amount >= 1000) return 'P' . round($amount / 1000) . 'K';
+    return 'P' . $amount;
+}
+
+$totalAmount = formatAmount($billingTotals['total_amount'] ?? 0);
+$forBilling = formatAmount($billingTotals['for_billing'] ?? 0);
+$billed = formatAmount($billingTotals['billed'] ?? 0);
+$paid = formatAmount($billingTotals['paid'] ?? 0);
+
+// Compute percentages
+$totalAmtRaw = $billingTotals['total_amount'] ?? 0;
+$forBillingPercent = $totalAmtRaw > 0 ? round(($billingTotals['for_billing'] / $totalAmtRaw) * 100) : 0;
+$billedPercent = $totalAmtRaw > 0 ? round(($billingTotals['billed'] / $totalAmtRaw) * 100) : 0;
+$paidPercent = $totalAmtRaw > 0 ? round(($billingTotals['paid'] / $totalAmtRaw) * 100) : 0;
     // BILLING SUMMARY //
 
     // MAP DATA //
@@ -350,54 +405,51 @@ if ($selectedProject > 0) {
     </div>
 
     <!-- RIGHT: Collection Summary -->
-    <div class="col-md-4 col-12 chart-item" data-chart-id="collection-summary">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <div>
-            <h6 class="mb-0 fw-bold">COLLECTION SUMMARY</h6>
-            <!-- <a href="dashboard_collection.php<?= isset($_GET['project_id']) ? '?project_id=' . urlencode($_GET['project_id']) : '' ?>"
-              class="text-primary small fw-semibold text-decoration-none d-inline-flex align-items-center gap-1 mt-1">
-              View More <i class="bi bi-arrow-right-short fs-5"></i>
-            </a> -->
-          </div>
-          <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
-        </div>
-        <div class="card-body p-2">
-          <div id="billingSummaryContainer" class="sortable-container">
-            <!-- Total Groups Card -->
-            <div class="card text-bg-primary mb-2 summary-card" data-card-id="total-groups">
-              <div class="card-body p-3 text-center">
-                <div style="font-size: 2.5rem; margin-bottom: 10px;">📊</div>
-                <small class="d-block opacity-75">Total Groups</small>
-                <h2 class="mb-1 fw-bold"><?= $billingTotals['total_groups'] ?></h2>
-                <small class="opacity-75">Total DR no: <?= $billingTotals['total_drs'] ?></small>
-              </div>
-            </div>
+   <div class="col-md-4 col-12 chart-item" data-chart-id="collection-summary">
+  <div class="card shadow-sm h-100">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="mb-0 fw-bold">COLLECTION SUMMARY</h6>
+      </div>
+      <span class="drag-handle text-muted" title="Drag to reorder">⋮⋮</span>
+    </div>
+    <div class="card-body p-2">
+      <div id="billingSummaryContainer" class="sortable-container">
 
-            <?php 
-            $billingCards = [
-                ['title'=>'For Billing','value'=>$billingTotals['for_billing_count'] ?? 0,'class'=>'danger','icon'=>'⏳', 'percent'=>$forBillingPercent],
-                ['title'=>'Billed','value'=>$billingTotals['billed_count'] ?? 0,'class'=>'warning','icon'=>'📄', 'percent'=>$billedPercent],
-                ['title'=>'Paid','value'=>$billingTotals['paid_count'] ?? 0,'class'=>'success','icon'=>'💰', 'percent'=>$paidPercent]
-            ];
-            foreach($billingCards as $c): ?>
-            <div class="card text-bg-<?=$c['class']?> mb-2 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
-              <div class="card-body p-3 d-flex align-items-center">
-                <div class="me-3" style="font-size: 2rem;"><?=$c['icon']?></div>
-                <div class="flex-grow-1">
-                  <small class="d-block opacity-75"><?= $c['title'] ?></small>
-                  <h4 class="mb-1 fw-bold"><?= $c['value'] ?></h4>
-                  <div class="progress" style="height: 5px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <?php endforeach; ?>
+        <!-- Total Amount Card -->
+        <div class="card text-bg-primary mb-2 summary-card" data-card-id="total-amount">
+          <div class="card-body p-3 text-center">
+            <div style="font-size: 2.5rem; margin-bottom: 10px;">📊</div>
+            <small class="d-block opacity-75">Total Amount</small>
+            <h2 class="mb-1 fw-bold"><?= $totalAmount ?></h2>
           </div>
         </div>
+
+        <?php 
+        $billingCards = [
+            ['title'=>'For Billing','value'=>$forBilling,'class'=>'danger','icon'=>'⏳', 'percent'=>$forBillingPercent],
+            ['title'=>'Billed','value'=>$billed,'class'=>'warning','icon'=>'📄', 'percent'=>$billedPercent],
+            ['title'=>'Paid','value'=>$paid,'class'=>'success','icon'=>'💰', 'percent'=>$paidPercent]
+        ];
+        foreach($billingCards as $c): ?>
+        <div class="card text-bg-<?=$c['class']?> mb-2 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
+          <div class="card-body p-3 d-flex align-items-center">
+            <div class="me-3" style="font-size: 2rem;"><?=$c['icon']?></div>
+            <div class="flex-grow-1">
+              <small class="d-block opacity-75"><?= $c['title'] ?></small>
+              <h4 class="mb-1 fw-bold"><?= $c['value'] ?> (<?= $c['percent'] ?>%)</h4>
+              <div class="progress" style="height: 5px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <?php endforeach; ?>
+
       </div>
     </div>
+  </div>
+</div>
 
     <!-- RIGHT: Map Summary -->
     <div class="col-md-4 col-12 chart-item" data-chart-id="map-summary">
