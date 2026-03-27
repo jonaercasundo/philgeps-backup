@@ -344,29 +344,63 @@ if ($selectedProject > 0) {
           <div id="deliverySummaryContainer" class="sortable-container">
             <div class="row g-2">
               <?php 
-              $deliveryCards = [
-                  ['title'=>'In Progress','value'=>$deliveryTotals['pending'] ?? 0,'class'=>'danger','icon'=>'⏳', 'percent'=>$pendingPercent],
-                  ['title'=>'Accepted','value'=>$deliveryTotals['accepted'] ?? 0,'class'=>'warning','icon'=>'🚚', 'percent'=>$acceptedPercent],
-                  ['title'=>'Delivered','value'=>$deliveryTotals['delivered'] ?? 0,'class'=>'success','icon'=>'📦', 'percent'=>$deliveredPercent],
-                  ['title'=>'Completion Rate','value'=>$completionRate . '%','class'=>'primary','icon'=>'📊',
-                  'percent'=>$completionRate]
-              ];
-              foreach($deliveryCards as $c): ?>
-              <div class="col-md-3 col-6">
-                  <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
-                    <div class="card-body p-3 text-center">
-                      <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
-                      <small class="d-block opacity-75"><?= $c['title'] ?></small>
-                      <h3 class="mb-2 fw-bold"><?= $c['value'] ?></h3>
-                      <?php if (isset($c['percent'])): ?>
-                      <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: <?= $c['percent'] ?>%;"></div>
-                      </div>
-                      <?php endif; ?>
-                    </div>
-                  </div>
-              </div>
-              <?php endforeach; ?>
+$deliveryCards = [
+    [
+        'title'   => 'In Progress',
+        'value'   => $deliveryTotals['pending'] ?? 0,
+        'class'   => 'danger',
+        'icon'    => '⏳',
+        'percent' => $pendingPercent
+    ],
+    [
+        'title'   => 'Accepted',
+        'value'   => $deliveryTotals['accepted'] ?? 0,
+        'class'   => 'warning',
+        'icon'    => '🚚',
+        'percent' => $acceptedPercent
+    ],
+    [
+        'title'   => 'Delivered',
+        'value'   => $deliveryTotals['delivered'] ?? 0,
+        'class'   => 'success',
+        'icon'    => '📦',
+        'percent' => $deliveredPercent
+    ],
+    [
+        'title'   => 'Completion Rate',
+        'value'   => $completionRate,
+        'class'   => 'primary',
+        'icon'    => '📊',
+        'percent' => $completionRate
+    ]
+];
+
+foreach($deliveryCards as $c): 
+    // Format numbers
+    $displayValue = is_numeric($c['value']) 
+        ? number_format($c['value']) 
+        : $c['value'];
+
+    // Format percentage for Completion Rate card
+    $displayPercent = isset($c['percent']) ? round($c['percent']) : 0;
+?>
+<div class="col-md-3 col-6">
+    <div class="card text-bg-<?=$c['class']?> h-100 summary-card" data-card-id="<?=strtolower(str_replace(' ','-',$c['title']))?>">
+        <div class="card-body p-3 text-center">
+            <div style="font-size: 2rem; margin-bottom: 10px;"><?=$c['icon']?></div>
+            <small class="d-block opacity-75"><?= $c['title'] ?></small>
+            <h3 class="mb-2 fw-bold">
+                <?= $c['title'] === 'Completion Rate' ? $displayValue . '%' : $displayValue ?>
+            </h3>
+            <?php if (isset($c['percent'])): ?>
+            <div class="progress" style="height: 6px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: <?= $displayPercent ?>%;"></div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endforeach; ?>
             </div>
           </div>
 
@@ -518,7 +552,7 @@ if ($selectedProject > 0) {
 
 
 <script src="assets/js/sortable.js"></script>
-<script src="assets/js/dashboard_production.js"></script>
+<script src="assets/js/dashboard_production.js?v=2"></script>
 
 <?php require "template/footer.php"; ?>
 

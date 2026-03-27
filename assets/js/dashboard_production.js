@@ -97,33 +97,34 @@ function createEmptyChart(ctx, message) {
 
 document.addEventListener('DOMContentLoaded', function() {
     // 1. Delivery Status Overview (Doughnut)
-    if (deliveryStatusOverview.length > 0) {
-        const totalOverall = deliveryStatusOverview.reduce((sum, r) => sum + r.total, 0);
+   if (deliveryStatusOverview.length > 0) {
+    const totalOverall = deliveryStatusOverview.reduce((sum, r) => sum + Number(r.total), 0);
 
-        new Chart(document.getElementById('deliveryStatusChart'), {
+    new Chart(document.getElementById('deliveryStatusChart'), {
         type: 'doughnut',
         data: {
-            labels: deliveryStatusOverview.map(r => 
-            `${r.status} (${((r.total / totalOverall) * 100).toFixed(1)}%)`
-            ),
+            labels: deliveryStatusOverview.map(r => {
+                const percent = totalOverall > 0 ? ((Number(r.total) / totalOverall) * 100).toFixed(1) : 0;
+                return `${r.status} (${percent}%)`;
+            }),
             datasets: [{
-            data: deliveryStatusOverview.map(r => r.total),
-            backgroundColor: deliveryStatusOverview.map(r => deliveryStatusColors[r.status] || primaryColors[0]),
-            borderColor: deliveryStatusOverview.map(r => colorVariants.border[r.status] || primaryColors[0]),
-            borderWidth: 2
+                data: deliveryStatusOverview.map(r => Number(r.total)),
+                backgroundColor: deliveryStatusOverview.map(r => deliveryStatusColors[r.status] || primaryColors[0]),
+                borderColor: deliveryStatusOverview.map(r => colorVariants.border[r.status] || primaryColors[0]),
+                borderWidth: 2
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-            legend: { position: 'bottom' }
+                legend: { position: 'bottom' }
             }
         }
-        });
-    } else {
-        createEmptyChart(document.getElementById('deliveryStatusChart'), 'No delivery data available');
-    }
+    });
+} else {
+    createEmptyChart(document.getElementById('deliveryStatusChart'), 'No delivery data available');
+}
 
         // 2. Monthly Delivery Trend (Line)
     if (monthlyDeliveryTrend.length > 0) {
@@ -231,94 +232,134 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         new Chart(document.getElementById('deliveryStatusPerLotChart'), {
-            type: 'bar',
-            data: {
-                labels: lots,
-                datasets: [
-                    {
-                        label: 'Delivered',
-                        data: deliveredData,
-                        backgroundColor: deliveryStatusColors.Delivered,
-                        borderColor: colorVariants.border.Delivered,
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Accepted',
-                        data: acceptedData,
-                        backgroundColor: deliveryStatusColors.Accepted,
-                        borderColor: colorVariants.border.Accepted,
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Pending',
-                        data: pendingData,
-                        backgroundColor: deliveryStatusColors.Pending,
-                        borderColor: colorVariants.border.Pending,
-                        borderWidth: 1
-                    }
-                ]
+    type: 'bar',
+    data: {
+        labels: lots,
+        datasets: [
+            {
+                label: 'Delivered',
+                data: deliveredData,
+                backgroundColor: deliveryStatusColors.Delivered,
+                borderColor: colorVariants.border.Delivered,
+                borderWidth: 1
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                        title: {
-                            display: true,
-                            text: 'Lots'
-                        }
+            {
+                label: 'Accepted',
+                data: acceptedData,
+                backgroundColor: deliveryStatusColors.Accepted,
+                borderColor: colorVariants.border.Accepted,
+                borderWidth: 1
+            },
+            {
+                label: 'Pending',
+                data: pendingData,
+                backgroundColor: deliveryStatusColors.Pending,
+                borderColor: colorVariants.border.Pending,
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                backgroundColor: '#333',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                padding: 10,
+                cornerRadius: 6,
+                callbacks: {
+                    title: function(context) {
+                        const index = context[0].dataIndex;
+                        const lotName = phpData.progressPerLot[index].lot_name || index;
+                        return 'Lot ' + lotName;
                     },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true,
-                        max: 100,
-                        title: {
-                            display: true,
-                            text: 'Percentage (%)'
+                    label: function(context) {
+                        const lotData = phpData.progressPerLot[context.dataIndex];
+                        const total = lotData.total || 1;
+                        const percent = context.parsed.y;
+
+                        const formatNumber = (num) => num.toLocaleString();
+
+                        switch(context.dataset.label) {
+                            case 'Delivered':
+                                return `Delivered: ${formatNumber(lotData.delivered)}/${formatNumber(total)} (${percent}%)`;
+                            case 'Accepted':
+                                return `Accepted: ${formatNumber(lotData.accepted)}/${formatNumber(total)} (${percent}%)`;
+                            case 'Pending':
+                                const pending = total - lotData.accepted - lotData.delivered;
+                                return `Pending: ${formatNumber(pending)}/${formatNumber(total)} (${percent}%)`;
                         }
+                    }
+                }
+            },
+            legend: {
+                labels: {
+                    font: {
+                        size: 13,
+                        weight: 'bold'
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                stacked: true,
+                title: {
+                    display: true,
+                    text: 'Lots',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
                     }
                 },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const lotData = phpData.progressPerLot[context.dataIndex];
-                                const total = lotData.total || 1;
-                                
-                                switch(context.dataset.label) {
-                                    case 'Delivered':
-                                        return `Delivered: ${lotData.delivered}/${total} (${context.parsed.y}%)`;
-                                    case 'Accepted':
-                                        return `Accepted: ${lotData.accepted}/${total} (${context.parsed.y}%)`;
-                                    case 'Pending':
-                                        const pending = total - lotData.accepted - lotData.delivered;
-                                        return `Pending: ${pending}/${total} (${context.parsed.y}%)`;
-                                }
-                            }
-                        }
+                ticks: {
+                    font: {
+                        size: 12
                     }
                 }
             },
-            plugins: [{
-                afterDatasetsDraw: function(chart) {
-                    const ctx = chart.ctx;
-                    chart.data.datasets.forEach((dataset, i) => {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach((bar, index) => {
-                            const data = dataset.data[index];
-                            if (data > 0) {
-                                ctx.fillStyle = '#fff';
-                                ctx.font = 'bold 12px Arial';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'middle';
-                                ctx.fillText(data + '%', bar.x, bar.y + (bar.height / 2));
-                            }
-                        });
-                    });
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                max: 100,
+                title: {
+                    display: true,
+                    text: 'Percentage (%)',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    }
+                },
+                ticks: {
+                    callback: (value) => `${value}%`,
+                    font: {
+                        size: 12
+                    }
                 }
-            }]
-        });
+            }
+        }
+    },
+    plugins: [{
+        afterDatasetsDraw: function(chart) {
+            const ctx = chart.ctx;
+            chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                meta.data.forEach((bar, index) => {
+                    const value = dataset.data[index];
+                    if (value > 0) {
+                        ctx.fillStyle = '#fff';
+                        ctx.font = 'bold 12px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(`${value}%`, bar.x, bar.y + bar.height / 2);
+                    }
+                });
+            });
+        }
+    }]
+});
     } else {
         createEmptyChart(document.getElementById('deliveryStatusPerLotChart'), 'No lot data available');
     }
