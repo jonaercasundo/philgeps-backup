@@ -5,3 +5,10 @@ uploads/
 error/
 # Ignore all .env files
 *.env
+config.php
+.env
+uploads/
+logs/
+*.log
+phpmyadmin/
+

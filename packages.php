@@ -42,25 +42,29 @@ try {
 
     } elseif ($project_id) {
         $stmt = $pdo->prepare("
-            SELECT 
-                p.package_id,
-                p.package_num,
-                GROUP_CONCAT(CONCAT(i.item_name) SEPARATOR '<br>') AS Content,
-                GROUP_CONCAT(CONCAT(pc.qty) SEPARATOR '<br>') AS qty,
-                p.keystage_id,
-                p.width,
-                p.height,
-                p.length,
-                CONCAT(p.width,'x',p.height,'x',p.length) AS Dimension
-            FROM package p
-            LEFT JOIN package_content pc ON p.package_id = pc.package_id
-            LEFT JOIN item i ON pc.item_id = i.item_id
-		LEFT JOIN keystage k ON p.keystage_id = k.keystage_id
-		LEFT JOIN lot l ON k.lot_id = l.lot_id            
-            WHERE l.project_id = ?
-            OR p.keystage_id IS NULL
-            GROUP BY p.package_id, p.package_num, p.keystage_id, p.length, p.width, p.height
-            ORDER BY p.package_num ASC
+            SELECT
+    p.package_id,
+    p.package_num,
+    GROUP_CONCAT(i.item_name SEPARATOR '<br>') AS Content,
+    GROUP_CONCAT(pc.qty SEPARATOR '<br>') AS qty,
+    p.keystage_id,
+    p.width,
+    p.height,
+    p.length,
+    CONCAT(p.width,'x',p.height,'x',p.length) AS Dimension
+FROM package p
+LEFT JOIN package_content pc ON p.package_id = pc.package_id
+LEFT JOIN item i ON pc.item_id = i.item_id
+LEFT JOIN lot l ON p.lot_id = l.lot_id
+WHERE l.project_id = ?
+GROUP BY
+    p.package_id,
+    p.package_num,
+    p.keystage_id,
+    p.length,
+    p.width,
+    p.height
+ORDER BY p.package_num ASC
         ");
         $stmt->execute([$project_id]);
     } else {
