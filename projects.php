@@ -70,6 +70,7 @@ try {
             <td class="text-center">
                 <button class="btn btn-warning btn-sm me-1 mb-2"
                         onclick="updateEdit(
+                            <?= $p['project_id'] ?>,
                             '<?= addslashes(htmlspecialchars($p['ref_no'])) ?>',
                             '<?= addslashes(htmlspecialchars($p['project_name'])) ?>',
                             <?= floatval($p['contract_amount']) ?>,
@@ -122,7 +123,7 @@ try {
                     <?php
                     $fields = [
                         ['label'=>'PhilGEPS Ref No','name'=>'ref_no','type'=>'text', 'id'=>'ref_no'],
-                        ['label'=>'Project Name','name'=>'project_name','type'=>'text', 'id' =>'project_name'],
+                        ['label'=>'Project Name','type'=>'text', 'id' =>'project_name'],
                         ['label'=>'Contract Amount','name'=>'contract_amount','type'=>'text', 'id'=>'contract_formatter'],
                         ['label'=>'ABC','name'=>'ABC','type'=>'text', 'id'=>'ABC_formatter']
                     ];
