@@ -123,7 +123,7 @@ try {
                     <?php
                     $fields = [
                         ['label'=>'PhilGEPS Ref No','name'=>'ref_no','type'=>'text', 'id'=>'ref_no'],
-                        ['label'=>'Project Name','type'=>'text', 'id' =>'project_name'],
+                        ['label'=>'Project Name','name'=>'project_name','type'=>'text', 'id' =>'project_name'],
                         ['label'=>'Contract Amount','name'=>'contract_amount','type'=>'text', 'id'=>'contract_formatter'],
                         ['label'=>'ABC','name'=>'ABC','type'=>'text', 'id'=>'ABC_formatter']
                     ];
