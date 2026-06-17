@@ -216,7 +216,7 @@ $ar_contact_footer = !empty($ar['ar_contact_footer'])
 
             // Generate QR
             $url = "https://mmc.metro-ltd.com/entry.php?id=" . $package['package_status_id'] . "&delivery_id=" . $delivery['delivery_id'];
-            $orderId = "Package $int of $package_count<br> ORD-" . str_pad($package['package_status_id'], 5, "0", STR_PAD_LEFT);
+            $orderId = "Packages $int of $package_count<br> ORD-" . str_pad($package['package_status_id'], 5, "0", STR_PAD_LEFT);
 
             $qr = Builder::create()
                 ->writer(new PngWriter())
