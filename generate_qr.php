@@ -300,11 +300,11 @@ if ($displayLabel === 1) {
         School Address: ".htmlspecialchars($first['address'], ENT_QUOTES, 'UTF-8')."<br>
     ";
 
-    if ($displaySchoolId === 1) {
-        $html .= "
-            School ID: ".htmlspecialchars($first['school_id'], ENT_QUOTES, 'UTF-8')."
-        ";
-    }
+   // if ($displaySchoolId === 1) {
+      //  $html .= "
+     //       School ID: ".htmlspecialchars($first['school_id'], ENT_QUOTES, 'UTF-8')."
+     //   ";
+   // }
 }
 $html .= "
     </p>
