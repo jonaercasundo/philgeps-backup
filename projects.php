@@ -70,7 +70,6 @@ try {
             <td class="text-center">
                 <button class="btn btn-warning btn-sm me-1 mb-2"
                         onclick="updateEdit(
-                            <?= $p['project_id'] ?>,
                             '<?= addslashes(htmlspecialchars($p['ref_no'])) ?>',
                             '<?= addslashes(htmlspecialchars($p['project_name'])) ?>',
                             <?= floatval($p['contract_amount']) ?>,
