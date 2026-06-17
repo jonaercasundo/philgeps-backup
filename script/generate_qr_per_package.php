@@ -100,8 +100,8 @@ foreach ($lotKeystages as $lotKeystage) {
             $html .= "
                 <td>
                     <img src='data:image/png;base64,{$qrData}'><br>
-                    <small>Package $packageIndex of $packageCount</small>
-                    <small>".$packageRef['package_id']."</small>
+                    <!-- <small>Package $packageIndex of $packageCount</small> -->
+                    <!-- <small>".$packageRef['package_id']."</small> -->
                 </td>
             ";
 
