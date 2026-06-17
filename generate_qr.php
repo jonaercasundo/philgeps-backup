@@ -282,7 +282,7 @@ $ar_contact_footer = !empty($ar['ar_contact_footer'])
 $html .= "
 <div class='label'>
     <div style='text-align:center;'><img class='logoimg' src='$logoBase64'></div>
-    <div style='text-align:right;'><small>Date: $today</small><br><small>AR: ".$delivery['dr_no']."</small></div>
+    <div style='text-align:right;'><small>Date: $today</small><br><small>AR: ".$delivery['school_id']."</small></div>
     <table class='header-table' width='100%' cellspacing='0' cellpadding='4'>
         <tr>
             <td style='width:80px; font-size:13px; font-weight:bold;'>Project:</td>
