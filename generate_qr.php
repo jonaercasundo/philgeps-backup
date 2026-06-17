@@ -335,12 +335,12 @@ $html .= "
         $html .= "
 
             <td align='center' style='border:1px solid #000; padding:10px;'>
-                <img src='{$q['qr']}'><br>
+                <img src='{$q['qr']}'>
                 
-                <!-- <small>{$q['orderId']}</small> -->";
+                <!-- <br> <small>{$q['orderId']}</small> -->";
             
         if (!empty($q['keystage'])) {
-            $html .= "<br><small>{$q['keystage']}</small>";
+            $html .= "<!-- <br><small>{$q['keystage']}</small> -->";
         }
         $html .= "
             </td>";
