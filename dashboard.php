@@ -208,7 +208,7 @@ $salesClasses = getKpiClass($salesGenerationKPI);
               <div class="kpi-number fw-bold text-<?php echo $financeClasses[1]; ?>">
                 <?php echo $financeKPI; ?>% <span class="kpi-label text-uppercase fw-semibold">KPI</span>
               </div>
-              <div class="kpi-title fw-semibold mt-3">Finance</div>
+              <div class="kpi-title fw-semibold mt-3">Finances</div>
             </div>
           </button>
         </div>
