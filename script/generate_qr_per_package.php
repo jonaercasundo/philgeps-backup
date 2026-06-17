@@ -85,7 +85,7 @@ foreach ($lotKeystages as $lotKeystage) {
         $packageIndex = 1;
         foreach ($packageRefs as $packageRef) {
             if ($col % 2 === 0) $html .= "<tr>";
-
+                $label = ($col == 0) ? "Textbook" : "Teacher's Manual";
             $desc = isset($packageRef['description']) ? strtok($packageRef['description'], ' ') : '';
 
             $qr = Builder::create()
@@ -102,6 +102,8 @@ foreach ($lotKeystages as $lotKeystage) {
                     <img src='data:image/png;base64,{$qrData}'><br>
                     <!-- <small>Package $packageIndex of $packageCount</small> -->
                     <!-- <small>".$packageRef['package_id']."</small> -->
+                    <!-- <small>".$packageRef['package_id']."</small> -->
+                    <small><b>{$label}</b></small>
                 </td>
             ";
 
