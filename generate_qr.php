@@ -332,11 +332,13 @@ $html .= "
     $col = 0;
     foreach ($allQrs as $q) {
         if ($col % 2 == 0) $html .= "<tr>";
+
+        $label = ($col == 0) ? "Textbook" : "Teacher's Manual";
         $html .= "
 
             <td align='center' style='border:1px solid #000; padding:10px;'>
                 <img src='{$q['qr']}'>
-                
+                <br><small><b>{$label}</b></small>
                 <!-- <br> <small>{$q['orderId']}</small> -->";
             
         if (!empty($q['keystage'])) {
