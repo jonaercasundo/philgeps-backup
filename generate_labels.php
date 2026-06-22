@@ -177,18 +177,18 @@ foreach ($data as $school) {
             <td colspan='4'>DISTRICT: " . htmlspecialchars($i['school_name']) . "</td>
         </tr>";
 
-    if ($showSchoolID) {
-        $html .= "<tr>
-            <td><strong>School ID</strong></td>
-            <td colspan='3'>" . htmlspecialchars($i['school_id']) . "</td>
-        </tr>";
-    }
-    if ($showMunicipality) {
-        $html .= "<tr>
-            <td><strong>Municipality</strong></td>
-            <td colspan='3'>" . htmlspecialchars($i['municipality']) . "</td>
-        </tr>";
-    }
+   // if ($showSchoolID) {
+      //  $html .= "<tr>
+       //     <td><strong>School ID</strong></td>
+      //      <td colspan='3'>" . htmlspecialchars($i['school_id']) . "</td>
+      //  </tr>";
+    //}
+   // if ($showMunicipality) {
+     //   $html .= "<tr>
+       //     <td><strong>Municipality</strong></td>
+       //     <td colspan='3'>" . htmlspecialchars($i['municipality']) . "</td>
+       // </tr>";
+   // }
     if ($showDivision) {
         $html .= "<tr>
             <td><strong>Division</strong></td>
