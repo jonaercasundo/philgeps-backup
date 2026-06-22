@@ -70,8 +70,11 @@ $sql = "
         l.lot_name,
         i.item_name,
         i.unit,
-        SUM(pc.qty * d.package_qty) as total_qty
+        SUM(pc.qty * d.package_qty) as total_qty,
+        td.qty_teachers_manual AS qty_teachersManual
     FROM schools_project sp
+    INNER JOIN temp_deliveries td
+    ON td.id = d.delivery_id
     INNER JOIN school s          ON s.school_id = sp.school_id
     INNER JOIN deliveries d      ON d.project_id = sp.project_id 
                                 AND d.school_id = sp.school_id
@@ -123,7 +126,8 @@ foreach ($rows as $row) {
     $data[$sid]['lots'][$lot][] = [
         'item_name' => $row['item_name'],
         'qty'       => (int)$row['total_qty'],
-        'unit'      => $row['unit']
+        'unit'      => $row['unit'],
+        'qty_teachersManual'      => (int)$row['qty_teachersManual']
     ];
 }
 
@@ -146,21 +150,21 @@ foreach ($data as $school) {
 
     $html .= "<table>
         <tr class='header'>
-            <td colspan='4'>SCHOOL: " . htmlspecialchars($i['school_name']) . "</td>
+            <td colspan='4'>DISTRICT: " . htmlspecialchars($i['school_name']) . "</td>
         </tr>";
 
-    if ($showSchoolID) {
-        $html .= "<tr>
-            <td><strong>School ID</strong></td>
-            <td colspan='3'>" . htmlspecialchars($i['school_id']) . "</td>
-        </tr>";
-    }
-    if ($showMunicipality) {
-        $html .= "<tr>
-            <td><strong>Municipality</strong></td>
-            <td colspan='3'>" . htmlspecialchars($i['municipality']) . "</td>
-        </tr>";
-    }
+   // if ($showSchoolID) {
+      //  $html .= "<tr>
+       //     <td><strong>School ID</strong></td>
+       //     <td colspan='3'>" . htmlspecialchars($i['school_id']) . "</td>
+      //  </tr>";
+   // }
+   // if ($showMunicipality) {
+      //  $html .= "<tr>
+         //   <td><strong>Municipality</strong></td>
+         //   <td colspan='3'>" . htmlspecialchars($i['municipality']) . "</td>
+       // </tr>";
+   // }
     if ($showDivision) {
         $html .= "<tr>
             <td><strong>Division</strong></td>
@@ -185,7 +189,7 @@ foreach ($data as $school) {
             }
             $html .= "<td>" . htmlspecialchars($item['item_name']) . "</td>
                       <td style='text-align:center;'>" . number_format($item['qty']) . "</td>
-                      <td style='text-align:center;'>" . htmlspecialchars($item['unit']) . "</td>
+                      <td style='text-align:center;'>" . number_format($item['qty_teachersManual']) . "</td>
                      </tr>";
         }
     }
