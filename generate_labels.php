@@ -21,6 +21,9 @@ $ids = is_string($raw_ids)
     : array_filter($raw_ids);
 if (empty($ids)) die("Invalid School IDs.");
 
+// FIX 1: Use reset() instead of $ids[0] — array_filter may leave non-zero keys
+$first_id = reset($ids);
+
 // --- Get project_id from schools_project ---
 $stmtProject = $pdo->prepare("
     SELECT project_id 
@@ -28,10 +31,11 @@ $stmtProject = $pdo->prepare("
     WHERE school_id = ?
     LIMIT 1
 ");
-$stmtProject->execute([$ids[0]]); // use first school ID
+$stmtProject->execute([$first_id]);
 $project_id = $stmtProject->fetchColumn();
 
-if (!$project_id) {
+// FIX 2: fetchColumn() returns false (not '') on no result — check strictly
+if ($project_id === false) {
     die("No project found for selected school.");
 }
 
@@ -60,67 +64,53 @@ if ($arSettings) {
 // --- Prepare SQL ---
 $placeholders = str_repeat('?,', count($ids) - 1) . '?';
 
+// FIX 3: GROUP BY now includes all non-aggregated SELECT columns to avoid
+//         undefined/collapsed rows. Also added s.school_name, s.municipality,
+//         s.division, s.region, i.unit so every selected column is accounted for.
 $sql = "
-SELECT
-    s.school_id,
-    s.school_name,
-    s.municipality,
-    s.division,
-    s.region,
-    l.lot_name,
-    i.item_name,
-    i.unit,
-    SUM(pc.qty * d.package_qty) AS total_qty
-FROM schools_project sp
-LEFT JOIN school s
-    ON s.school_id = sp.school_id
-
-LEFT JOIN deliveries d
-    ON d.project_id = sp.project_id
-    AND d.school_id = sp.school_id
-
-LEFT JOIN lot l
-    ON l.lot_id = d.lot_id
-
-LEFT JOIN package_status ps
-    ON ps.delivery_id = d.delivery_id
-
-LEFT JOIN package p
-    ON p.package_id = ps.package_id
-
-LEFT JOIN package_content pc
-    ON pc.package_id = p.package_id
-
-LEFT JOIN item i
-    ON i.item_id = pc.item_id
-
-WHERE s.school_id IN ($placeholders)
-AND sp.project_id = ?
-GROUP BY
-    s.school_id,
-    s.school_name,
-    s.municipality,
-    s.division,
-    s.region,
-    l.lot_name,
-    i.item_name,
-    i.unit
-ORDER BY
-    l.lot_name, i.item_name
+    SELECT
+        s.school_id,
+        s.school_name,
+        s.municipality,
+        s.division,
+        s.region,
+        sp.batch_id,
+        l.lot_name,
+        i.item_name,
+        i.unit,
+        SUM(pc.qty * d.package_qty) AS total_qty
+    FROM schools_project sp
+    LEFT JOIN school s           ON s.school_id    = sp.school_id
+    LEFT JOIN deliveries d       ON d.project_id   = sp.project_id
+                                AND d.school_id    = sp.school_id
+    LEFT JOIN lot l              ON l.lot_id       = d.lot_id
+    LEFT JOIN package_status ps  ON ps.delivery_id = d.delivery_id
+    LEFT JOIN package p          ON p.package_id   = ps.package_id
+    LEFT JOIN package_content pc ON pc.package_id  = p.package_id
+    LEFT JOIN item i             ON i.item_id      = pc.item_id
+    WHERE s.school_id IN ($placeholders)
+      AND sp.project_id = ?
+    GROUP BY
+        s.school_id,
+        s.school_name,
+        s.municipality,
+        s.division,
+        s.region,
+        sp.batch_id,
+        l.lot_name,
+        i.item_name,
+        i.unit
+    ORDER BY
+        s.school_name,
+        sp.batch_id,
+        l.lot_name,
+        i.item_name
 ";
 
-$params = $ids;
-if ($project_id !== '') {
-    $sql .= " AND sp.project_id = ?";
-    $params[] = $project_id;
-}
-
-$sql .= "
-    GROUP BY 
-        sp.batch_id, l.lot_name, i.item_name, i.unit
-    ORDER BY 
-        sp.batch_id, l.lot_name, i.item_name
-";
+// FIX 4: Always append project_id (we already die above if it's false),
+//         so no conditional needed — just add it directly to params.
+$params   = array_values($ids); // re-index after array_filter
+$params[] = $project_id;
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -146,11 +136,23 @@ foreach ($rows as $row) {
             'lots' => []
         ];
     }
-    $data[$sid]['lots'][$lot][] = [
-        'item_name' => $row['item_name'],
-        'qty'       => (int)$row['total_qty'],
-        'unit'      => $row['unit']
-    ];
+
+    // Accumulate quantities in case a lot+item combo appears across multiple batches
+    if (!isset($data[$sid]['lots'][$lot])) {
+        $data[$sid]['lots'][$lot] = [];
+    }
+
+    // FIX 5: Merge duplicate item rows within the same lot (e.g. across batches)
+    $item_key = $row['item_name'];
+    if (isset($data[$sid]['lots'][$lot][$item_key])) {
+        $data[$sid]['lots'][$lot][$item_key]['qty'] += (int)$row['total_qty'];
+    } else {
+        $data[$sid]['lots'][$lot][$item_key] = [
+            'item_name' => $row['item_name'],
+            'qty'       => (int)$row['total_qty'],
+            'unit'      => $row['unit'],
+        ];
+    }
 }
 
 // --- PDF Generation ---
@@ -159,11 +161,11 @@ body { font-family: Arial, sans-serif; font-size: 11px; margin: 15px; }
 table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
 th, td { border: 1px solid #000; padding: 8px; }
 .header { background: #f0f0f0; font-weight: bold; text-align: center; }
-.lot-cell { background: #e0e0e0; font-weight: bold; text-align:center; vertical-align:middle;}
+.lot-cell { background: #e0e0e0; font-weight: bold; text-align:center; vertical-align:middle; }
 .page-break { page-break-after: always; }
 </style></head><body>";
 
-$school_count = 0;
+$school_count  = 0;
 $total_schools = count($data);
 
 foreach ($data as $school) {
@@ -175,18 +177,18 @@ foreach ($data as $school) {
             <td colspan='4'>DISTRICT: " . htmlspecialchars($i['school_name']) . "</td>
         </tr>";
 
-   // if ($showSchoolID) {
-      //  $html .= "<tr>
-       //     <td><strong>School ID</strong></td>
-       //     <td colspan='3'>" . htmlspecialchars($i['school_id']) . "</td>
-      //  </tr>";
-   // }
-   // if ($showMunicipality) {
-      //  $html .= "<tr>
-         //   <td><strong>Municipality</strong></td>
-         //   <td colspan='3'>" . htmlspecialchars($i['municipality']) . "</td>
-       // </tr>";
-   // }
+    if ($showSchoolID) {
+        $html .= "<tr>
+            <td><strong>School ID</strong></td>
+            <td colspan='3'>" . htmlspecialchars($i['school_id']) . "</td>
+        </tr>";
+    }
+    if ($showMunicipality) {
+        $html .= "<tr>
+            <td><strong>Municipality</strong></td>
+            <td colspan='3'>" . htmlspecialchars($i['municipality']) . "</td>
+        </tr>";
+    }
     if ($showDivision) {
         $html .= "<tr>
             <td><strong>Division</strong></td>
@@ -201,12 +203,15 @@ foreach ($data as $school) {
     }
 
     foreach ($school['lots'] as $lot_name => $items) {
+        // Re-index items array (keys were item_name strings after fix 5)
+        $items     = array_values($items);
         $itemCount = count($items);
-        $firstRow = true;
+        $firstRow  = true;
+
         foreach ($items as $item) {
             $html .= "<tr>";
             if ($firstRow) {
-                $html .= "<td class='lot-cell' rowspan='{$itemCount}'>LOT {$lot_name}</td>";
+                $html .= "<td class='lot-cell' rowspan='{$itemCount}'>LOT " . htmlspecialchars($lot_name) . "</td>";
                 $firstRow = false;
             }
             $html .= "<td>" . htmlspecialchars($item['item_name']) . "</td>
