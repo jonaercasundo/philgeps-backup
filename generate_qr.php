@@ -39,11 +39,20 @@ if (is_string($raw_ids)) {
 $ids = array_filter($ids, fn($id) => is_numeric($id));
 if (empty($ids)) die("Invalid or empty DR numbers provided.");
 
-// FIX 2: Accept project_id from request to prevent wrong-project matches
-// dr_no is NOT unique across projects — must filter by project_id
-$project_id = $_POST['project_id'] ?? $_GET['project_id'] ?? null;
+// project_id is optional — auto-detect from session or first dr_no if not passed.
+// dr_no is NOT unique across projects, so project_id is needed for accuracy.
+$project_id = $_POST['project_id'] ?? $_GET['project_id'] ?? $_SESSION['project_id'] ?? null;
+
 if (empty($project_id) || !is_numeric($project_id)) {
-    die("No project_id provided. Use ?ids=1&project_id=502703");
+    // Auto-detect: use the most recent project linked to the first dr_no
+    $first_dr    = intval(reset($ids));
+    $stmtDetect  = $pdo->prepare("SELECT project_id FROM deliveries WHERE dr_no = ? ORDER BY delivery_id DESC LIMIT 1");
+    $stmtDetect->execute([$first_dr]);
+    $project_id  = $stmtDetect->fetchColumn();
+
+    if (!$project_id) {
+        die("Could not determine project_id for DR #{$first_dr}. Please pass ?project_id=XXXXX in the URL.");
+    }
 }
 $project_id = (int)$project_id;
 
