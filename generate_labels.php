@@ -175,18 +175,26 @@ foreach ($data as $school) {
     }
 
     foreach ($school['lots'] as $lot_name => $items) {
+
         $itemCount = count($items);
         $firstRow = true;
+
         foreach ($items as $item) {
+
+            $qty = (int)$item['qty'];
+
             $html .= "<tr>";
+
             if ($firstRow) {
                 $html .= "<td class='lot-cell' rowspan='{$itemCount}'>LOT {$lot_name}</td>";
                 $firstRow = false;
             }
-            $html .= "<td>" . htmlspecialchars($item['item_name']) . "</td>
-                      <td style='text-align:center;'>" . number_format($item['qty']) . "</td>
-                      <td style='text-align:center;'>" . htmlspecialchars($item['unit']) . "</td>
-                     </tr>";
+
+            $html .= "
+                <td>" . htmlspecialchars($item['item_name']) . "</td>
+                <td style='text-align:center;'>" . number_format($qty) . "</td>
+                <td style='text-align:center;'>" . htmlspecialchars($item['unit']) . "</td>
+            </tr>";
         }
     }
 
