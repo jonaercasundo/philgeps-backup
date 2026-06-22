@@ -70,11 +70,13 @@ $sql = "
         l.lot_name,
         i.item_name,
         i.unit,
+        td.qty_teachers_manual,
         SUM(pc.qty * d.package_qty) as total_qty
     FROM schools_project sp
     INNER JOIN school s          ON s.school_id = sp.school_id
     INNER JOIN deliveries d      ON d.project_id = sp.project_id 
                                 AND d.school_id = sp.school_id
+    INNER JOIN temp_deliveries td ON td.id = d.delivery_id
     INNER JOIN lot l             ON l.lot_id = d.lot_id
     INNER JOIN package_status ps ON ps.delivery_id = d.delivery_id
     INNER JOIN package p         ON p.package_id = ps.package_id
@@ -186,7 +188,7 @@ foreach ($data as $school) {
             }
             $html .= "<td>" . htmlspecialchars($item['item_name']) . "</td>
                       <td style='text-align:center;'>" . number_format($item['qty']) . "</td>
-                      <td style='text-align:center;'>" . htmlspecialchars($item['unit']) . "</td>
+                      <td style='text-align:center;'>" . htmlspecialchars($item['qty_teachersManual'] ?? 0) . "</td>
                      </tr>";
         }
     }
