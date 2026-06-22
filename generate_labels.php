@@ -81,7 +81,7 @@ $sql = "
         SUM(pc.qty * d.package_qty) AS total_qty
     FROM schools_project sp
     INNER JOIN school s           ON s.school_id    = sp.school_id
-    LEFT JOIN deliveries d       ON d.project_id   = sp.project_id
+    INNER JOIN deliveries d       ON d.project_id   = sp.project_id
                                 AND d.school_id    = sp.school_id
     INNER JOIN lot l              ON l.lot_id       = d.lot_id
     INNER JOIN package_status ps  ON ps.delivery_id = d.delivery_id
