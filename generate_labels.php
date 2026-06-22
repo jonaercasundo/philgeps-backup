@@ -73,11 +73,12 @@ $sql = "
         SUM(pc.qty * d.package_qty) as total_qty,
         td.qty_teachers_manual AS qty_teachersManual
     FROM schools_project sp
-    INNER JOIN temp_deliveries td
-    ON td.id = d.delivery_id
+
     INNER JOIN school s          ON s.school_id = sp.school_id
     INNER JOIN deliveries d      ON d.project_id = sp.project_id 
                                 AND d.school_id = sp.school_id
+    INNER JOIN temp_deliveries td
+    ON td.id = d.delivery_id
     INNER JOIN lot l             ON l.lot_id = d.lot_id
     INNER JOIN package_status ps ON ps.delivery_id = d.delivery_id
     INNER JOIN package p         ON p.package_id = ps.package_id
