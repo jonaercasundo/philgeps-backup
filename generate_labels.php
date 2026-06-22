@@ -61,7 +61,7 @@ if ($arSettings) {
 $placeholders = str_repeat('?,', count($ids) - 1) . '?';
 
 $sql = "
-    SELECT
+SELECT
     s.school_id,
     s.school_name,
     s.municipality,
@@ -95,7 +95,7 @@ LEFT JOIN item i
     ON i.item_id = pc.item_id
 
 WHERE s.school_id IN ($placeholders)
-
+AND sp.project_id = ?
 GROUP BY
     s.school_id,
     s.school_name,
@@ -104,8 +104,10 @@ GROUP BY
     s.region,
     l.lot_name,
     i.item_name,
-    i.unit;
-    ";
+    i.unit
+ORDER BY
+    l.lot_name, i.item_name
+";
 
 $params = $ids;
 if ($project_id !== '') {
