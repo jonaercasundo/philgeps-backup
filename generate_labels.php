@@ -61,7 +61,7 @@ if ($arSettings) {
 $placeholders = str_repeat('?,', count($ids) - 1) . '?';
 
 $sql = "
-    SELECT DISTINCT
+    SELECT
         s.school_id,
         s.school_name,
         s.municipality,
@@ -70,21 +70,51 @@ $sql = "
         l.lot_name,
         i.item_name,
         i.unit,
-        SUM(pc.qty * d.package_qty) as total_qty,
-        td.qty_teachers_manual AS qty_teachersManual
+        SUM(pc.qty * d.package_qty) AS total_qty,
+
+        (
+            SELECT td.qty_teachers_manual
+            FROM temp_deliveries td
+            WHERE td.id = d.delivery_id
+            LIMIT 1
+        ) AS qty_teachersManual
+
     FROM schools_project sp
 
-    INNER JOIN school s          ON s.school_id = sp.school_id
-    INNER JOIN deliveries d      ON d.project_id = sp.project_id 
-                                AND d.school_id = sp.school_id
-    LEFT JOIN temp_deliveries td
-    ON td.id = d.delivery_id
-    INNER JOIN lot l             ON l.lot_id = d.lot_id
-    INNER JOIN package_status ps ON ps.delivery_id = d.delivery_id
-    INNER JOIN package p         ON p.package_id = ps.package_id
-    INNER JOIN package_content pc ON pc.package_id = p.package_id
-    INNER JOIN item i            ON i.item_id = pc.item_id
+    INNER JOIN school s
+        ON s.school_id = sp.school_id
+
+    INNER JOIN deliveries d
+        ON d.project_id = sp.project_id
+        AND d.school_id = sp.school_id
+
+    INNER JOIN lot l
+        ON l.lot_id = d.lot_id
+
+    INNER JOIN package_status ps
+        ON ps.delivery_id = d.delivery_id
+
+    INNER JOIN package p
+        ON p.package_id = ps.package_id
+
+    INNER JOIN package_content pc
+        ON pc.package_id = p.package_id
+
+    INNER JOIN item i
+        ON i.item_id = pc.item_id
+
     WHERE s.school_id IN (" . $placeholders . ")
+
+    GROUP BY
+        s.school_id,
+        s.school_name,
+        s.municipality,
+        s.division,
+        s.region,
+        l.lot_name,
+        i.item_name,
+        i.unit,
+        d.delivery_id
 ";
 
 $params = $ids;
