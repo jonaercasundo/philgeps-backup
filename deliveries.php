@@ -22,6 +22,7 @@ try {
     $stmt = $pdo->prepare("
 SELECT
     d.delivery_id,
+    d.project_id,
     p.project_name,
     s.school_id,
     s.school_name,
@@ -231,6 +232,7 @@ LIMIT :limit OFFSET :offset;
         class="form-check-input dr-checkbox" 
         value="<?= htmlspecialchars($dr_group['dr_no']) ?>"
         data-school-id="<?= htmlspecialchars($dr_group['school_id']) ?>"
+        data-project-id="<?= htmlspecialchars($dr_group['deliveries'][0]['project_id']) ?>"
         >
         </td>
         <td class="align-middle"colspan="2">
@@ -336,10 +338,13 @@ function generateARs() {
         alert('Please select at least one DR.');
         return;
     }
+    // Get project_id from the first checked box
+    const projectId = checkboxes[0].getAttribute('data-project-id');
 
     // Example: open your batch generate page with selected DRs and input
     const params = new URLSearchParams();
     params.append('ids', selectedDrs.join(','));
+    params.append('project_id', projectId);          // ← added
 
     window.open('generate_qr.php?' + params.toString(), '_blank');
 };
