@@ -61,7 +61,7 @@ if ($arSettings) {
 $placeholders = str_repeat('?,', count($ids) - 1) . '?';
 
 $sql = "
-    SELECT
+    SELECT DISTINCT
         s.school_id,
         s.school_name,
         s.municipality,
@@ -70,19 +70,16 @@ $sql = "
         l.lot_name,
         i.item_name,
         i.unit,
-        SUM(pc.qty * d.package_qty) AS total_qty,
-        MAX(td.qty_teachers_manual) AS qty_teachersManual
+        SUM(pc.qty * d.package_qty) as total_qty
     FROM schools_project sp
-
-    INNER JOIN school s           ON s.school_id = sp.school_id
-    INNER JOIN deliveries d       ON d.project_id = sp.project_id
-                                 AND d.school_id = sp.school_id
-    LEFT JOIN temp_deliveries td  ON td.delivery_id = d.delivery_id
-    INNER JOIN lot l              ON l.lot_id = d.lot_id
-    INNER JOIN package_status ps  ON ps.delivery_id = d.delivery_id
-    INNER JOIN package p          ON p.package_id = ps.package_id
+    INNER JOIN school s          ON s.school_id = sp.school_id
+    INNER JOIN deliveries d      ON d.project_id = sp.project_id 
+                                AND d.school_id = sp.school_id
+    INNER JOIN lot l             ON l.lot_id = d.lot_id
+    INNER JOIN package_status ps ON ps.delivery_id = d.delivery_id
+    INNER JOIN package p         ON p.package_id = ps.package_id
     INNER JOIN package_content pc ON pc.package_id = p.package_id
-    INNER JOIN item i             ON i.item_id = pc.item_id
+    INNER JOIN item i            ON i.item_id = pc.item_id
     WHERE s.school_id IN (" . $placeholders . ")
 ";
 
@@ -126,8 +123,8 @@ foreach ($rows as $row) {
     $data[$sid]['lots'][$lot][] = [
         'item_name' => $row['item_name'],
         'qty'       => (int)$row['total_qty'],
-        'unit'      => $row['unit'],
-        'qty_teachersManual'      => (int)$row['qty_teachersManual']
+        'unit'      => $row['unit']
+        
     ];
 }
 
@@ -189,7 +186,7 @@ foreach ($data as $school) {
             }
             $html .= "<td>" . htmlspecialchars($item['item_name']) . "</td>
                       <td style='text-align:center;'>" . number_format($item['qty']) . "</td>
-                      <td style='text-align:center;'>" . number_format($item['qty_teachersManual']) . "</td>
+                      <td style='text-align:center;'>" . htmlspecialchars($item['unit']) . "</td>
                      </tr>";
         }
     }
