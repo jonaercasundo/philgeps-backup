@@ -89,7 +89,7 @@ $sql = "
     LEFT JOIN package_content pc ON pc.package_id  = p.package_id
     LEFT JOIN item i             ON i.item_id      = pc.item_id
     WHERE s.school_id IN ($placeholders)
-      OR sp.project_id = ?
+      AND sp.project_id = ?
     GROUP BY
         s.school_id,
         s.school_name,
