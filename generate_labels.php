@@ -10,34 +10,40 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 
 $options = new Options();
-$options->set(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'dpi' => 120]);
+$options->set([
+    'isRemoteEnabled' => true,
+    'isHtml5ParserEnabled' => true,
+    'dpi' => 120
+]);
 
-
+// -------------------------------
+// PROJECT ID (FIXED)
+// -------------------------------
 $project_id = $_GET['project_id'] ?? null;
 
-if (!$project_id) {
-    die("Project ID not found.");
+if (!$project_id || !is_numeric($project_id)) {
+    die("Invalid Project ID.");
 }
 
-// FIX 2: fetchColumn() returns false (not '') on no result — check strictly
-if ($project_id === false) {
-    die("No project found for selected school.");
-}
+$project_id = (int)$project_id;
 
+// -------------------------------
+// SETTINGS
+// -------------------------------
 $stmtSettings = $pdo->prepare("
-    SELECT label_school_id, label_municipality, label_division, label_region 
-    FROM AR_settings 
+    SELECT label_school_id, label_municipality, label_division, label_region
+    FROM AR_settings
     WHERE project_id = ?
     LIMIT 1
 ");
 $stmtSettings->execute([$project_id]);
 $arSettings = $stmtSettings->fetch(PDO::FETCH_ASSOC);
 
-// Default all to false
-$showSchoolID     = false;
+// Default settings
+$showSchoolID = false;
 $showMunicipality = false;
-$showDivision     = false;
-$showRegion       = false;
+$showDivision = false;
+$showRegion = false;
 
 if ($arSettings) {
     $showSchoolID     = (int)$arSettings['label_school_id'] === 1;
@@ -46,10 +52,9 @@ if ($arSettings) {
     $showRegion       = (int)$arSettings['label_region'] === 1;
 }
 
-
-// FIX 3: GROUP BY now includes all non-aggregated SELECT columns to avoid
-//         undefined/collapsed rows. Also added s.school_name, s.municipality,
-//         s.division, s.region, i.unit so every selected column is accounted for.
+// -------------------------------
+// QUERY
+// -------------------------------
 $sql = "
     SELECT
         s.school_id,
@@ -63,14 +68,14 @@ $sql = "
         i.unit,
         SUM(COALESCE(pc.qty, 1) * COALESCE(d.package_qty, 1)) AS total_qty
     FROM schools_project sp
-    LEFT JOIN school s           ON s.school_id    = sp.school_id
-    LEFT JOIN deliveries d       ON d.project_id   = sp.project_id
-                                AND d.school_id    = sp.school_id
-    LEFT JOIN lot l              ON l.lot_id       = d.lot_id
-    LEFT JOIN package_status ps  ON ps.delivery_id = d.delivery_id
-    LEFT JOIN package p          ON p.package_id   = ps.package_id
-    LEFT JOIN package_content pc ON pc.package_id  = p.package_id
-    LEFT JOIN item i             ON i.item_id      = pc.item_id
+    LEFT JOIN school s ON s.school_id = sp.school_id
+    LEFT JOIN deliveries d ON d.project_id = sp.project_id
+        AND d.school_id = sp.school_id
+    LEFT JOIN lot l ON l.lot_id = d.lot_id
+    LEFT JOIN package_status ps ON ps.delivery_id = d.delivery_id
+    LEFT JOIN package p ON p.package_id = ps.package_id
+    LEFT JOIN package_content pc ON pc.package_id = p.package_id
+    LEFT JOIN item i ON i.item_id = pc.item_id
     WHERE sp.project_id = ?
     GROUP BY
         s.school_id,
@@ -89,18 +94,19 @@ $sql = "
         i.item_name
 ";
 
-// FIX 4: Always append project_id (we already die above if it's false),
-//         so no conditional needed — just add it directly to params.
-$params = [$project_id];
-
 $stmt = $pdo->prepare($sql);
-$stmt->execute($params);
+$stmt->execute([$project_id]);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if (empty($rows)) die("No data found.");
+if (!$rows) {
+    die("No data found.");
+}
 
-// --- Group by school → lot → items ---
+// -------------------------------
+// GROUP DATA
+// -------------------------------
 $data = [];
+
 foreach ($rows as $row) {
     $sid = $row['school_id'];
     $lot = $row['lot_name'];
@@ -118,17 +124,16 @@ foreach ($rows as $row) {
         ];
     }
 
-    // Accumulate quantities in case a lot+item combo appears across multiple batches
     if (!isset($data[$sid]['lots'][$lot])) {
         $data[$sid]['lots'][$lot] = [];
     }
 
-    // FIX 5: Merge duplicate item rows within the same lot (e.g. across batches)
-    $item_key = $row['item_name'];
-    if (isset($data[$sid]['lots'][$lot][$item_key])) {
-        $data[$sid]['lots'][$lot][$item_key]['qty'] += (int)$row['total_qty'];
+    $key = $row['item_name'];
+
+    if (isset($data[$sid]['lots'][$lot][$key])) {
+        $data[$sid]['lots'][$lot][$key]['qty'] += (int)$row['total_qty'];
     } else {
-        $data[$sid]['lots'][$lot][$item_key] = [
+        $data[$sid]['lots'][$lot][$key] = [
             'item_name' => $row['item_name'],
             'qty'       => (int)$row['total_qty'],
             'unit'      => $row['unit'],
@@ -136,18 +141,26 @@ foreach ($rows as $row) {
     }
 }
 
-// --- PDF Generation ---
-$html = "<!DOCTYPE html><html><head><meta charset='utf-8'><style>
-body { font-family: Arial, sans-serif; font-size: 11px; margin: 15px; }
+// -------------------------------
+// PDF GENERATION
+// -------------------------------
+$html = "<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8'>
+<style>
+body { font-family: Arial; font-size: 11px; margin: 15px; }
 table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
 th, td { border: 1px solid #000; padding: 8px; }
 .header { background: #f0f0f0; font-weight: bold; text-align: center; }
 .lot-cell { background: #e0e0e0; font-weight: bold; text-align:center; vertical-align:middle; }
 .page-break { page-break-after: always; }
-</style></head><body>";
+</style>
+</head>
+<body>";
 
-$school_count  = 0;
 $total_schools = count($data);
+$school_count = 0;
 
 foreach ($data as $school) {
     $school_count++;
@@ -158,24 +171,13 @@ foreach ($data as $school) {
             <td colspan='4'>DISTRICT: " . htmlspecialchars($i['school_name']) . "</td>
         </tr>";
 
-   // if ($showSchoolID) {
-      //  $html .= "<tr>
-       //     <td><strong>School ID</strong></td>
-      //      <td colspan='3'>" . htmlspecialchars($i['school_id']) . "</td>
-      //  </tr>";
-    //}
-   // if ($showMunicipality) {
-     //   $html .= "<tr>
-       //     <td><strong>Municipality</strong></td>
-       //     <td colspan='3'>" . htmlspecialchars($i['municipality']) . "</td>
-       // </tr>";
-   // }
     if ($showDivision) {
         $html .= "<tr>
             <td><strong>Division</strong></td>
             <td colspan='3'>" . htmlspecialchars($i['division']) . "</td>
         </tr>";
     }
+
     if ($showRegion) {
         $html .= "<tr>
             <td><strong>Region</strong></td>
@@ -184,21 +186,23 @@ foreach ($data as $school) {
     }
 
     foreach ($school['lots'] as $lot_name => $items) {
-        // Re-index items array (keys were item_name strings after fix 5)
-        $items     = array_values($items);
+
+        $items = array_values($items);
         $itemCount = count($items);
-        $firstRow  = true;
+        $first = true;
 
         foreach ($items as $item) {
             $html .= "<tr>";
-            if ($firstRow) {
+
+            if ($first) {
                 $html .= "<td class='lot-cell' rowspan='{$itemCount}'>LOT " . htmlspecialchars($lot_name) . "</td>";
-                $firstRow = false;
+                $first = false;
             }
+
             $html .= "<td>" . htmlspecialchars($item['item_name']) . "</td>
                       <td style='text-align:center;'>" . number_format($item['qty']) . "</td>
                       <td style='text-align:center;'>" . htmlspecialchars($item['unit']) . "</td>
-                     </tr>";
+                    </tr>";
         }
     }
 
@@ -211,9 +215,13 @@ foreach ($data as $school) {
 
 $html .= "</body></html>";
 
-// --- Render PDF ---
+// -------------------------------
+// OUTPUT PDF
+// -------------------------------
 $dompdf = new Dompdf($options);
 $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
-$dompdf->stream("Packing_List_Batch_" . date('Ymd_His') . ".pdf", ["Attachment" => false]);
+$dompdf->stream("Packing_List_Batch_" . date('Ymd_His') . ".pdf", [
+    "Attachment" => false
+]);
