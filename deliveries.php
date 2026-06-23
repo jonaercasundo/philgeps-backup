@@ -338,13 +338,10 @@ function generateARs() {
         alert('Please select at least one DR.');
         return;
     }
-    // Get project_id from the first checked box
-    const projectId = checkboxes[0].getAttribute('data-project-id');
 
     // Example: open your batch generate page with selected DRs and input
     const params = new URLSearchParams();
     params.append('ids', selectedDrs.join(','));
-    params.append('project_id', projectId);          // ← added
 
     window.open('generate_qr.php?' + params.toString(), '_blank');
 };
