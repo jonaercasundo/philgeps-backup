@@ -133,6 +133,7 @@ LIMIT :limit OFFSET :offset;
         if (!isset($grouped_deliveries[$dr])) {
             $grouped_deliveries[$dr] = [
                 'dr_no' => $dr,
+                'project_id' => $row['project_id'],
                 'keystage_name' => $row['keystage_num'],
                 'description' => $row['description'],
                 'lot_name' => $row['lot_name'],
@@ -232,7 +233,7 @@ LIMIT :limit OFFSET :offset;
         class="form-check-input dr-checkbox" 
         value="<?= htmlspecialchars($dr_group['dr_no']) ?>"
         data-school-id="<?= htmlspecialchars($dr_group['school_id']) ?>"
-        data-project-id="<?= htmlspecialchars($dr_group['deliveries'][0]['project_id']) ?>"
+        data-project-id="<?= htmlspecialchars($dr_group['project_id']) ?>"
         >
         </td>
         <td class="align-middle"colspan="2">
@@ -357,10 +358,14 @@ function generateLabels() {
         return;
     }
 
-    const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
-
-    // get project_id from first selected row
     const projectId = checkboxes[0].getAttribute('data-project-id');
+
+    if (!projectId) {
+        alert("Project ID is missing. Please refresh or reselect DR.");
+        return;
+    }
+
+    const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
 
     const params = new URLSearchParams();
     params.append('drs', selectedDrs.join(','));
