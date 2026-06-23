@@ -26,7 +26,6 @@ async function updateTable(page = 1) {
   const tbody = document.querySelector("#resultTable tbody");
   tbody.innerHTML = "";
   showLoading();
-
   try {
     const res = await fetch("script/filterDeliveries.php", {
       method: "POST",
@@ -35,6 +34,7 @@ async function updateTable(page = 1) {
     });
     const data = await res.json();
 
+    console.log(data.rows[0]);
     if (data.rows?.length) {
       tbody.innerHTML = data.rows.map((group) => `
         <tr class="table-secondary fw-bold">
