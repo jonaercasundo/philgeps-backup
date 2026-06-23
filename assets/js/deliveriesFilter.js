@@ -23,7 +23,7 @@ function getFilters() {
 
 // Update table via AJAX
 async function updateTable(page = 1) {
-  const tbody = document.getElementById("resultTable");
+  const tbody = document.querySelector("#resultTable tbody");
   tbody.innerHTML = "";
   showLoading();
 
@@ -36,90 +36,60 @@ async function updateTable(page = 1) {
     const data = await res.json();
 
     if (data.rows?.length) {
-      tbody.innerHTML = `
-                <thead class="table-dark">
-                        <tr>
-                            <th></th>
-                            <th>Delivery Details</th>
-                            <th>Items</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                <tbody>
-                        <tbody>
-                `;
-      tbody.innerHTML += data.rows
-        .map(
-          (group) => `
-                <tr class="table-secondary fw-bold">
-                    <td class="text-center align-middle"colspan ="1">
-                        <input type="checkbox" class="form-check-input dr-checkbox" 
-                        value="${group.dr_no}" data-school-id=" ${
-            group.school_id
-          }">
-                    </td>
-                    <td class="align-middle" colspan="2">
-                        DR No: ${group.dr_no} —
-                        Project: ${group.project_name} —
-                        School: ${group.school_name}
-                    </td>
-                    <td colspan ="1">
-                        <button class="btn btn-secondary mb-1" onclick="generateARs()"><i class="bi bi-qr-code fs-4"></i></button>
-                        <button class="btn btn-secondary mb-1" onclick="generateLabels()"><i class="bi bi-tags fs-4"></i></button>
-                        ${
-                          group.status === "delivered"
-                            ? `
-                                <a class="btn btn-success mb-1" href="manual_checking.php" target="_blank"><i class="bi bi-clipboard-check fs-4"></i></a>`
-                            : ""
-                        }
-                    </td>
-                </tr>
-                ${group.deliveries
-                  .map(
-                    (d) => `
-                    <tr>
-                        <td></td>
-                        <td>LOT ${d.lot_name}${d.keystage_num ? ` Keystage ${d.keystage_num} ${d.description || ''}` : ''}</td>
-                        <td>${d.items_contents}</td>
-                        <td>
-                            <button class="btn btn-warning mb-1"
-                                data-bs-toggle="modal"
-                                data-bs-target="#editDeliveryModal"
-                                data-id="${d.delivery_id}"
-                                data-project="${d.project_name}"
-                                data-school="${d.school_name}"
-                                data-address="${d.address}"
-                                data-remarks='${d.items_contents}'
-                                data-drno="${d.dr_no}"
-                                data-status="${d.status}">
-                                <i class="bi bi-pencil-square fs-4"></i>
-                            </button>
-                            ${
-                              d.has_photos
-                                ? `<a class="btn btn-primary mb-1" href="deliveries_details.php?id=${d.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>`
-                                : ""
-                            }
-                        </td>
-                    </tr>
-                `
-                  )
-                  .join("")}
-            `
-        )
-        .join("");
+      tbody.innerHTML = data.rows.map((group) => `
+        <tr class="table-secondary fw-bold">
+          <td class="text-center align-middle">
+            <input type="checkbox" class="form-check-input dr-checkbox"
+              value="${group.dr_no}"
+              data-school-id="${group.school_id}"
+              data-project-id="${group.project_id}">
+          </td>
+          <td class="align-middle" colspan="2">
+            DR No: ${group.dr_no} —
+            Project: ${group.project_name} —
+            School: ${group.school_name}
+          </td>
+          <td>
+            <button class="btn btn-secondary mb-1" onclick="generateARs()"><i class="bi bi-qr-code fs-4"></i></button>
+            <button class="btn btn-secondary mb-1" onclick="generateLabels()"><i class="bi bi-tags fs-4"></i></button>
+            ${group.status === "delivered" ? `
+              <a class="btn btn-success mb-1" href="manual_checking.php" target="_blank"><i class="bi bi-clipboard-check fs-4"></i></a>` : ""}
+          </td>
+        </tr>
+        ${group.deliveries.map((d) => `
+          <tr>
+            <td></td>
+            <td>LOT ${d.lot_name}${d.keystage_num ? ` Keystage ${d.keystage_num} ${d.description || ""}` : ""}</td>
+            <td>${d.items_contents}</td>
+            <td>
+              <button class="btn btn-warning mb-1"
+                data-bs-toggle="modal"
+                data-bs-target="#editDeliveryModal"
+                data-id="${d.delivery_id}"
+                data-project="${d.project_name}"
+                data-school="${d.school_name}"
+                data-address="${d.address}"
+                data-remarks='${d.items_contents}'
+                data-drno="${d.dr_no}"
+                data-status="${d.status}"
+                data-warehouse-id="${d.warehouse_id ?? ''}"
+                data-warehouse-name="${d.warehouse_name ?? ''}">
+                <i class="bi bi-pencil-square fs-4"></i>
+              </button>
+              ${d.has_photos ? `<a class="btn btn-info mb-1" href="deliveries_details.php?id=${d.dr_no}" target="_blank"><i class="bi bi-eye fs-4"></i></a>` : ""}
+            </td>
+          </tr>
+        `).join("")}
+      `).join("");
+    } else {
+      tbody.innerHTML = `<tr><td colspan="4" class="text-center">No deliveries found.</td></tr>`;
     }
-    tbody.innerHTML += `
-        </tbody>
 
-            </tbody>
-        </table>
-        `;
     renderPagination(data, page);
   } finally {
     hideLoading();
   }
 }
-
 // Pagination rendering
 function renderPagination(data, currentPage) {
   const pagination = document.getElementById("pagination");
