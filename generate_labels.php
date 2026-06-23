@@ -13,14 +13,11 @@ $options = new Options();
 $options->set(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'dpi' => 120]);
 
 
-// --- Get project_id from schools_project ---
-$stmtProject = $pdo->prepare("
-    SELECT project_id 
-    FROM schools_project 
-    LIMIT 1
-");
-$stmtProject->execute();
-$project_id = $stmtProject->fetchColumn();
+$project_id = $_SESSION['project_id'] ?? null;
+
+if (!$project_id) {
+    die("Project ID not found in session.");
+}
 
 // FIX 2: fetchColumn() returns false (not '') on no result — check strictly
 if ($project_id === false) {
