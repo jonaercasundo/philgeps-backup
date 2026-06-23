@@ -127,33 +127,30 @@ LIMIT :limit OFFSET :offset;
     $stmt->execute();
     $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $grouped_deliveries = [];
+    $grouped_deliveries = [];
     foreach ($deliveries as $row) {
         $dr = $row['dr_no'];
         if (!isset($grouped_deliveries[$dr])) {
             $grouped_deliveries[$dr] = [
-                'dr_no' => $dr,
-                'project_id' => $row['project_id'],
-                'keystage_name' => $row['keystage_num'],
-                'description' => $row['description'],
-                'lot_name' => $row['lot_name'],
-                'project_name' => $row['project_name'],
-                'school_id' => $row['school_id'],
-                'school_name' => $row['school_name'],
-                'address' => $row['address'],
-                'delivery_date' => $row['delivery_date'],
-                'status' => $row['status'],
-                'deliveries' => []
+                'dr_no'          => $dr,
+                'project_id'     => $row['project_id'],
+                'keystage_name'  => $row['keystage_num'],
+                'description'    => $row['description'],
+                'lot_name'       => $row['lot_name'],
+                'project_name'   => $row['project_name'],
+                'school_id'      => $row['school_id'],
+                'school_name'    => $row['school_name'],
+                'address'        => $row['address'],
+                'delivery_date'  => $row['delivery_date'],
+                'status'         => $row['status'],
+                'deliveries'     => []
             ];
         }
         $grouped_deliveries[$dr]['deliveries'][] = $row;
     }
 
-    // Fetch deliveries with project name
-    $stmt = $pdo->prepare("
-        SELECT *
-        FROM projects;
-    ");
+    // Fetch projects
+    $stmt = $pdo->prepare("SELECT * FROM projects;");
     $stmt->execute();
     $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -215,7 +212,7 @@ LIMIT :limit OFFSET :offset;
 </div>
 
 <!-- Table -->
-<table class="table table-bordered shadow-sm"  id="resultTable">
+<table class="table table-bordered shadow-sm" id="resultTable">
     <thead class="table-dark">
         <tr>
             <th></th>
@@ -224,86 +221,81 @@ LIMIT :limit OFFSET :offset;
             <th>Actions</th>
         </tr>
     </thead>
-   <tbody>
-        <tbody>
-<?php foreach ($grouped_deliveries as $dr_group): ?>
-    <tr class="table-secondary fw-bold">
-        <td class="text-center align-middle"colspan ="1">
-        <input type="checkbox" 
-        class="form-check-input dr-checkbox" 
-        value="<?= htmlspecialchars($dr_group['dr_no']) ?>"
-        data-school-id="<?= htmlspecialchars($dr_group['school_id']) ?>"
-        data-project-id="123">"
-        >
-        </td>
-        <td class="align-middle"colspan="2">
-            DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> —
-            Project: <?= htmlspecialchars($dr_group['project_name']) ?> —
-            School: <?= htmlspecialchars($dr_group['school_name']) ?>
-        </td>
-        <td colspan ="1">
-            <button class="btn btn-secondary mb-1" onclick="generateARs()"><i class="bi bi-qr-code fs-4"></i></button>
-            <button class="btn btn-secondary mb-1" onclick="generateLabels()"><i class="bi bi-tags fs-4"></i></button>
-        </td>
-    </tr>
-
-    <?php foreach ($dr_group['deliveries'] as $d): ?>
-        <?php
-            $stmt_check = $pdo->prepare("
-                SELECT COUNT(dp.delivery_photo_id)
-                FROM deliveries d
-                JOIN package_status ps ON d.delivery_id = ps.delivery_id
-                JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
-                WHERE d.delivery_id = :delivery_id AND dp.status IN ('accepted', 'delivered')
-            ");
-            $stmt_check->execute([':delivery_id' => $d['delivery_id']]);
-            $has_photos = ($stmt_check->fetchColumn() > 0);
-        ?>
-        <tr>
-            <td></td>
-            <td>LOT <?= htmlspecialchars($d['lot_name'])?> <?= !empty($d['keystage_num']) ? "Keystage ".$d['keystage_num']." ".$d['description'] : '' ?></td>
-            <td><?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?></td>
-            <td>
-                 <?php if($_SESSION['role'] == "Super Admin" || $_SESSION['role'] == "Office Admin" || $_SESSION['role'] == "Office Coordinator" || $_SESSION['role'] == "Warehouse Admin"):?>
-                <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
-                        data-id="<?= $d['delivery_id'] ?>"
-                        data-project="<?= htmlspecialchars($d['project_name']) ?>"
-                        data-school="<?= htmlspecialchars($d['school_id']). ' '. htmlspecialchars($d['school_name']) ?>"
-                        data-address="<?= htmlspecialchars($d['address']) ?>"
-                        data-remarks="<?= htmlspecialchars($d['items_contents']) ?>"
-                        data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
-                        data-status="<?= htmlspecialchars($d['status']) ?>"
-                        data-warehouse-id="' . ($delivery['warehouse_id'] ?? '') . '"
-                        data-warehouse-name="' . htmlspecialchars($delivery['warehouse_name'] ?? '') . '">
-                <i class="bi bi-pencil-square fs-4"></i></button>
-                <?php endif;?>
-                <?php if ($has_photos): ?>
-                    <a class="btn btn-info mb-1" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
-                <?php endif; ?>
+    <tbody>
+        <?php foreach ($grouped_deliveries as $dr_group): ?>
+        <tr class="table-secondary fw-bold">
+            <td class="text-center align-middle" colspan="1">
+                <input type="checkbox"
+                    class="form-check-input dr-checkbox"
+                    value="<?= htmlspecialchars($dr_group['dr_no']) ?>"
+                    data-school-id="<?= htmlspecialchars($dr_group['school_id']) ?>"
+                    data-project-id="<?= htmlspecialchars($dr_group['project_id']) ?>">
+            </td>
+            <td class="align-middle" colspan="2">
+                DR No: <?= htmlspecialchars($dr_group['dr_no']) ?> —
+                Project: <?= htmlspecialchars($dr_group['project_name']) ?> —
+                School: <?= htmlspecialchars($dr_group['school_name']) ?>
+            </td>
+            <td colspan="1">
+                <button class="btn btn-secondary mb-1" onclick="generateARs()"><i class="bi bi-qr-code fs-4"></i></button>
+                <button class="btn btn-secondary mb-1" onclick="generateLabels()"><i class="bi bi-tags fs-4"></i></button>
             </td>
         </tr>
-    <?php endforeach; ?>
-<?php endforeach; ?>
-</tbody>
 
+        <?php foreach ($dr_group['deliveries'] as $d): ?>
+            <?php
+                $stmt_check = $pdo->prepare("
+                    SELECT COUNT(dp.delivery_photo_id)
+                    FROM deliveries d
+                    JOIN package_status ps ON d.delivery_id = ps.delivery_id
+                    JOIN delivery_photo dp ON ps.package_status_id = dp.package_status_id
+                    WHERE d.delivery_id = :delivery_id AND dp.status IN ('accepted', 'delivered')
+                ");
+                $stmt_check->execute([':delivery_id' => $d['delivery_id']]);
+                $has_photos = ($stmt_check->fetchColumn() > 0);
+            ?>
+            <tr>
+                <td></td>
+                <td>LOT <?= htmlspecialchars($d['lot_name']) ?> <?= !empty($d['keystage_num']) ? "Keystage " . $d['keystage_num'] . " " . $d['description'] : '' ?></td>
+                <td><?= !empty($d['items_contents']) ? $d['items_contents'] : '<em>No items</em>' ?></td>
+                <td>
+                    <?php if ($_SESSION['role'] == "Super Admin" || $_SESSION['role'] == "Office Admin" || $_SESSION['role'] == "Office Coordinator" || $_SESSION['role'] == "Warehouse Admin"): ?>
+                    <button class="btn btn-warning mb-1" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"
+                            data-id="<?= $d['delivery_id'] ?>"
+                            data-project="<?= htmlspecialchars($d['project_name']) ?>"
+                            data-school="<?= htmlspecialchars($d['school_id']) . ' ' . htmlspecialchars($d['school_name']) ?>"
+                            data-address="<?= htmlspecialchars($d['address']) ?>"
+                            data-remarks="<?= htmlspecialchars($d['items_contents']) ?>"
+                            data-drno="<?= htmlspecialchars($d['dr_no']) ?>"
+                            data-status="<?= htmlspecialchars($d['status']) ?>"
+                            data-warehouse-id="<?= htmlspecialchars($d['warehouse_id'] ?? '') ?>"
+                            data-warehouse-name="<?= htmlspecialchars($d['warehouse_name'] ?? '') ?>">
+                        <i class="bi bi-pencil-square fs-4"></i>
+                    </button>
+                    <?php endif; ?>
+                    <?php if ($has_photos): ?>
+                        <a class="btn btn-info mb-1" href="deliveries_details.php?id=<?= $d['dr_no'] ?>" target="_blank"><i class="bi bi-eye fs-4"></i></a>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        <?php endforeach; ?>
     </tbody>
 </table>
 
 <!-- Pagination -->
 <nav>
     <ul class="pagination justify-content-center" id="pagination">
-          <!-- Previous button -->
-     <!-- Previous -->
+        <!-- Previous -->
         <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
-        <a class="page-link" href="?page=<?= max(1, $page - 1) ?>&limit=<?= $limit ?>">Previous</a>
+            <a class="page-link" href="?page=<?= max(1, $page - 1) ?>&limit=<?= $limit ?>">Previous</a>
         </li>
 
         <?php
-        $window = 9; // number of page links to display
+        $window = 9;
         $start = max(1, $page - floor($window / 2));
         $end   = min($total_pages, $start + $window - 1);
 
-        // adjust start if we don't have enough pages at the end
         if ($end - $start + 1 < $window) {
             $start = max(1, $end - $window + 1);
         }
@@ -316,7 +308,7 @@ LIMIT :limit OFFSET :offset;
 
         <!-- Next -->
         <li class="page-item <?= ($page >= $total_pages) ? 'disabled' : '' ?>">
-        <a class="page-link" href="?page=<?= min($total_pages, $page + 1) ?>&limit=<?= $limit ?>">Next</a>
+            <a class="page-link" href="?page=<?= min($total_pages, $page + 1) ?>&limit=<?= $limit ?>">Next</a>
         </li>
     </ul>
 </nav>
@@ -347,7 +339,6 @@ function generateARs() {
     }
 
     const projectId = projectIds[0];
-
     const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
 
     const params = new URLSearchParams();
@@ -380,7 +371,6 @@ function generateLabels() {
     }
 
     const projectId = uniqueProjects[0];
-
     const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
 
     const params = new URLSearchParams();
