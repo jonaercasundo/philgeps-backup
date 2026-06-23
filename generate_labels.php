@@ -12,26 +12,14 @@ use Dompdf\Options;
 $options = new Options();
 $options->set(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'dpi' => 120]);
 
-// --- SCHOOL IDs ---
-$raw_ids = $_POST['school_ids'] ?? $_GET['school_ids'] ?? '';
-if (empty($raw_ids)) die("No School IDs provided.");
-
-$ids = is_string($raw_ids)
-    ? array_filter(array_map('trim', explode(',', $raw_ids)))
-    : array_filter($raw_ids);
-if (empty($ids)) die("Invalid School IDs.");
-
-// FIX 1: Use reset() instead of $ids[0] — array_filter may leave non-zero keys
-$first_id = reset($ids);
 
 // --- Get project_id from schools_project ---
 $stmtProject = $pdo->prepare("
     SELECT project_id 
     FROM schools_project 
-    WHERE school_id = ?
     LIMIT 1
 ");
-$stmtProject->execute([$first_id]);
+$stmtProject->execute();
 $project_id = $stmtProject->fetchColumn();
 
 // FIX 2: fetchColumn() returns false (not '') on no result — check strictly
@@ -61,8 +49,6 @@ if ($arSettings) {
     $showRegion       = (int)$arSettings['label_region'] === 1;
 }
 
-// --- Prepare SQL ---
-$placeholders = str_repeat('?,', count($ids) - 1) . '?';
 
 // FIX 3: GROUP BY now includes all non-aggregated SELECT columns to avoid
 //         undefined/collapsed rows. Also added s.school_name, s.municipality,
@@ -88,7 +74,7 @@ $sql = "
     LEFT JOIN package p          ON p.package_id   = ps.package_id
     LEFT JOIN package_content pc ON pc.package_id  = p.package_id
     LEFT JOIN item i             ON i.item_id      = pc.item_id
-    WHERE s.school_id IN ($placeholders)
+    WHERE sp.project_id = ?
     GROUP BY
         s.school_id,
         s.school_name,
@@ -108,8 +94,7 @@ $sql = "
 
 // FIX 4: Always append project_id (we already die above if it's false),
 //         so no conditional needed — just add it directly to params.
-$params   = array_values($ids); // re-index after array_filter
-$params[] = $project_id;
+$params = [$project_id];
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
