@@ -320,7 +320,6 @@ LIMIT :limit OFFSET :offset;
 <?php include "partials/batchAdd_delivery_modal.php"; ?>
 <script src="assets/js/deliveriesModalSelect.js"></script>
 <script src="assets/js/deliveriesFilter.js"></script>
-<?php require "template/footer.php"; ?>
 
 <script>
 function generateARs() {
@@ -380,3 +379,5 @@ function generateLabels() {
     window.open('generate_labels.php?' + params.toString(), '_blank');
 }
 </script>
+
+<?php require "template/footer.php"; ?>
