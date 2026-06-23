@@ -349,17 +349,23 @@ function generateARs() {
     window.open('generate_qr.php?' + params.toString(), '_blank');
 };
 
-function generateLabels() 
-{ 
-    const checkboxes = document.querySelectorAll('.dr-checkbox:checked'); 
-    const selectedSchoolIds = Array.from(checkboxes).map(cb => cb.getAttribute('data-school-id')); 
-        if (selectedSchoolIds.length === 0) 
-            { 
-                alert('Please select at least one School.'); 
-                return;
-            } 
-    const projectId = checkboxes[0].getAttribute('data-project-id'); 
-    const params = new URLSearchParams(); 
-    params.append('project_id', projectId); 
-    window.open('generate_labels.php?' + params.toString(), '_blank'); }
+function generateLabels() {
+    const checkboxes = document.querySelectorAll('.dr-checkbox:checked');
+
+    if (checkboxes.length === 0) {
+        alert('Please select at least one DR.');
+        return;
+    }
+
+    const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
+
+    // get project_id from first selected row
+    const projectId = checkboxes[0].getAttribute('data-project-id');
+
+    const params = new URLSearchParams();
+    params.append('drs', selectedDrs.join(','));
+    params.append('project_id', projectId);
+
+    window.open('generate_labels.php?' + params.toString(), '_blank');
+}
 </script>
