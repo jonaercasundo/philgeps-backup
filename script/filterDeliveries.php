@@ -1,5 +1,7 @@
 <?php
 require "../config/db.php"; 
+header('Content-Type: application/json');
+ob_clean();
 
 $where = [];
 $params = [];
