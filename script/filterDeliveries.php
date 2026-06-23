@@ -89,6 +89,7 @@ $sql = "
 SELECT
     d.delivery_id,
     p.project_name,
+    d.project_id, 
     s.school_id,
     s.school_name,
     s.address,
@@ -230,11 +231,12 @@ $total_pages = ceil($total_rows / $limit);
 $grouped = [];
 foreach ($rows as $r) {
     $grouped[$r['dr_no']]['dr_no'] = $r['dr_no'];
+    $grouped[$r['dr_no']]['project_id'] = $r['project_id'];   // ← ADD THIS
     $grouped[$r['dr_no']]['project_name'] = $r['project_name'];
     $grouped[$r['dr_no']]['school_name'] = $r['school_name'];
     $grouped[$r['dr_no']]['status'] = $r['status'];
     $grouped[$r['dr_no']]['deliveries'][] = $r;
-    $grouped[$r['dr_no']]['school_id'][] = $r['school_id'];
+    $grouped[$r['dr_no']]['school_id'] = $r['school_id']; 
 }
 echo json_encode([
     'rows' => array_values($grouped), 
