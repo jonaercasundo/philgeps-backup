@@ -233,7 +233,7 @@ LIMIT :limit OFFSET :offset;
         class="form-check-input dr-checkbox" 
         value="<?= htmlspecialchars($dr_group['dr_no']) ?>"
         data-school-id="<?= htmlspecialchars($dr_group['school_id']) ?>"
-        data-project-id="<?= htmlspecialchars($dr_group['project_id']) ?>"
+        data-project-id="123">"
         >
         </td>
         <td class="align-middle"colspan="2">
