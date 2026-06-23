@@ -78,7 +78,7 @@ $sql = "
         l.lot_name,
         i.item_name,
         i.unit,
-        SUM(pc.qty * d.package_qty) AS total_qty
+        SUM(COALESCE(pc.qty, 1) * COALESCE(d.package_qty, 1)) AS total_qty
     FROM schools_project sp
     LEFT JOIN school s           ON s.school_id    = sp.school_id
     LEFT JOIN deliveries d       ON d.project_id   = sp.project_id
