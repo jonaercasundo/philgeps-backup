@@ -358,9 +358,6 @@ function generateLabels() {
         return;
     }
 
-    const params = new URLSearchParams();
-    params.append('school_ids', selectedSchoolIds.join(','));
-
-    window.open('generate_labels.php?' + params.toString(), '_blank');
-};
+    window.open('generate_labels.php', '_blank');
+}
 </script>
