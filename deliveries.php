@@ -333,22 +333,29 @@ LIMIT :limit OFFSET :offset;
 <script>
 function generateARs() {
     const checkboxes = document.querySelectorAll('.dr-checkbox:checked');
-    const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
 
-    if (selectedDrs.length === 0) {
+    if (checkboxes.length === 0) {
         alert('Please select at least one DR.');
         return;
     }
-    // Get project_id from the first checked box
-    const projectId = checkboxes[0].getAttribute('data-project-id');
 
-    // Example: open your batch generate page with selected DRs and input
+    const projectIds = Array.from(checkboxes).map(cb => cb.dataset.projectId);
+
+    if (projectIds.some(id => !id)) {
+        alert("Project ID is missing. Please refresh or reselect DR.");
+        return;
+    }
+
+    const projectId = projectIds[0];
+
+    const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
+
     const params = new URLSearchParams();
     params.append('ids', selectedDrs.join(','));
-    params.append('project_id', projectId);          // ← added
+    params.append('project_id', projectId);
 
     window.open('generate_qr.php?' + params.toString(), '_blank');
-};
+}
 
 function generateLabels() {
     const checkboxes = document.querySelectorAll('.dr-checkbox:checked');
@@ -358,12 +365,21 @@ function generateLabels() {
         return;
     }
 
-    const projectId = checkboxes[0].getAttribute('data-project-id');
+    const projectIds = Array.from(checkboxes).map(cb => cb.dataset.projectId);
 
-    if (!projectId) {
+    if (projectIds.some(id => !id)) {
         alert("Project ID is missing. Please refresh or reselect DR.");
         return;
     }
+
+    const uniqueProjects = [...new Set(projectIds)];
+
+    if (uniqueProjects.length > 1) {
+        alert("Please select DRs from the same project only.");
+        return;
+    }
+
+    const projectId = uniqueProjects[0];
 
     const selectedDrs = Array.from(checkboxes).map(cb => cb.value);
 
