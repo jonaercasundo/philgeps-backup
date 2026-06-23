@@ -13,10 +13,10 @@ $options = new Options();
 $options->set(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true, 'dpi' => 120]);
 
 
-$project_id = $_SESSION['project_id'] ?? null;
+$project_id = $_GET['project_id'] ?? null;
 
 if (!$project_id) {
-    die("Project ID not found in session.");
+    die("Project ID not found.");
 }
 
 // FIX 2: fetchColumn() returns false (not '') on no result — check strictly
