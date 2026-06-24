@@ -221,7 +221,7 @@ foreach ($ids as $id) {
             // FIX 4: Use keystage label from data instead of hardcoded Textbook/Teacher's Manual
             $allQrs[] = [
                 'orderId'  => $orderId,
-                'qr'       => 'data:image/png;base64,' . base64_encode($qr->getString()),
+                'qr' => $qr->getDataUri(),
                 'keystage' => $delivery['keystage_num']
                     ? 'Keystage ' . $delivery['keystage_num'] . ' ' . strtok($delivery['description'] ?? '', ' ')
                     : ''
