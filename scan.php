@@ -80,10 +80,7 @@ if (!empty($deliveries['package_type'])) {
 } catch (PDOException $e) {
     die("DB Error: " . $e->getMessage());
 }
-$warehouse_id = $_SESSION['warehouse_id'] ?? null;
-if($deliveries['package_status'] == 'pending' && isset($warehouse_id) == false && empty($warehouse_id)){
-  header("Location: index.php");
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
