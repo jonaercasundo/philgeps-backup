@@ -42,17 +42,20 @@ if (!empty($deliveries['package_type'])) {
     exit;
     function getRequiredQty($item, $deliveries, $multiplier)
     {
-        switch (trim($item['item_name'])) {
+        $name = strtolower(trim($item['item_name']));
 
-            case 'Grade 2 Makabansa':
-                return (int)$deliveries['package_qty'];
-
-            case "Teacher's Manual":
-                return (int)$deliveries['qty_teachers_manual'];
-
-            default:
-                return $item['qty'] * $multiplier;
+        if (str_contains($name, 'teacher')) {
+            // Teacher's Manual
+            return (int)$deliveries['qty_teachers_manual'];
         }
+
+        if (str_contains($name, 'textbook')) {
+            // Student Textbook
+            return (int)$deliveries['package_qty'];
+        }
+
+        // Default for all other items
+        return $item['qty'] * $multiplier;
     }
     // NEW: Fetch current inventory quantities for comparison
     $warehouse_id = $_SESSION['warehouse_id'] ?? null;
