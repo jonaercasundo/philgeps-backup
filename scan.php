@@ -36,10 +36,7 @@ if (!empty($deliveries['package_type'])) {
     ");
     $stmt->execute();
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo '<pre>';
-    print_r($items);
-    echo '</pre>';
-    exit;
+    
     function getRequiredQty($item, $deliveries, $multiplier)
     {
         $name = strtolower(trim($item['item_name']));
