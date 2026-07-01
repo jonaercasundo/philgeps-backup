@@ -59,8 +59,14 @@ if (!empty($deliveries['package_type'])) {
       }
 
       // Check if quantities are sufficient - ONLY FOR PENDING STATUS
-      foreach ($items as $item) {
-          $requiredQty = $item['qty'];
+      foreach ($items as $index => $item) {
+          if ($index === 0) {
+              $requiredQty = (int)$deliveries['package_qty'];
+          } elseif ($index === 1) {
+              $requiredQty = (int)$deliveries['qty_teachers_manual'];
+          } else {
+              $requiredQty = $item['qty'] * $multiplier;
+          }
           $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
           
           if ($availableQty < $requiredQty) {
@@ -147,11 +153,17 @@ if (!empty($deliveries['package_type'])) {
         </thead>
 
         <tbody>
-            <?php foreach ($items as $item): ?>
+            <?php foreach ($items as $index => $item): ?>
 
                 <?php
                     // Compute required quantity first
-                    $actualQty = $item['qty'] * $multiplier;
+                    if ($index === 0) {
+                        $actualQty = (int)$deliveries['package_qty'];
+                    } elseif ($index === 1) {
+                        $actualQty = (int)$deliveries['qty_teachers_manual'];
+                    } else {
+                        $actualQty = $item['qty'] * $multiplier;
+                    }
 
                     if ($deliveries['package_status'] === 'pending') {
                         $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
@@ -173,7 +185,7 @@ if (!empty($deliveries['package_type'])) {
 
                             <?php if (!$isSufficient): ?>
                                 <div class="quantity-warning">
-                                    Insufficient! Need <?= $actualQty - $availableQty ?> more
+                                    <?= $actualQty - $availableQty ?>
                                 </div>
                             <?php endif; ?>
                         </td>
