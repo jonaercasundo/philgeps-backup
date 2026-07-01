@@ -36,7 +36,20 @@ if (!empty($deliveries['package_type'])) {
     ");
     $stmt->execute();
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    function getRequiredQty($item, $deliveries, $multiplier)
+    {
+        switch (trim($item['item_name'])) {
 
+            case 'Grade 2 Makabansa':
+                return (int)$deliveries['package_qty'];
+
+            case "Teacher's Manual":
+                return (int)$deliveries['qty_teachers_manual'];
+
+            default:
+                return $item['qty'] * $multiplier;
+        }
+    }
     // NEW: Fetch current inventory quantities for comparison
     $warehouse_id = $_SESSION['warehouse_id'] ?? null;
     $inventoryQuantities = [];
@@ -60,13 +73,7 @@ if (!empty($deliveries['package_type'])) {
 
       // Check if quantities are sufficient - ONLY FOR PENDING STATUS
       foreach ($items as $index => $item) {
-          if ($index === 0) {
-              $requiredQty = (int)$deliveries['package_qty'];
-          } elseif ($index === 1) {
-              $requiredQty = (int)$deliveries['qty_teachers_manual'];
-          } else {
-              $requiredQty = $item['qty'] * $multiplier;
-          }
+          $requiredQty = getRequiredQty($item, $deliveries, $multiplier);
           $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
           
           if ($availableQty < $requiredQty) {
@@ -157,13 +164,7 @@ if (!empty($deliveries['package_type'])) {
 
                 <?php
                     // Compute required quantity first
-                    if ($index === 0) {
-                        $actualQty = (int)$deliveries['package_qty'];
-                    } elseif ($index === 1) {
-                        $actualQty = (int)$deliveries['qty_teachers_manual'];
-                    } else {
-                        $actualQty = $item['qty'] * $multiplier;
-                    }
+                    $actualQty = getRequiredQty($item, $deliveries, $multiplier);
 
                     if ($deliveries['package_status'] === 'pending') {
                         $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
