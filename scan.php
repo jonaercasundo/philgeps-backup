@@ -130,50 +130,68 @@ if (!empty($deliveries['package_type'])) {
       <p class="mb-0"><?=$deliveries['address']?></p>
     </div>
 
-    <!-- Items Table -->
-    <div class="items mb-4">
-      <h5 class="mb-2">Packing List</h5>
-      <table>
-        <tr>
-          <th>Item</th>
-          <th>Quantity</th>
-          <?php if ($deliveries['package_status'] === 'pending'): ?>
-            <th>Available</th>
-          <?php endif; ?>
-        </tr>
-        <?php foreach ($items as $item){ 
-          if ($deliveries['package_status'] === 'pending') {
-            $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
-            $isSufficient = $availableQty >= $actualQty;
-          } else {
-            $isSufficient = true; // Always sufficient for non-pending
-          }
-          ?>
-          <tr class="<?= ($deliveries['package_status'] === 'pending' && !$isSufficient) ? 'insufficient-item' : '' ?>">
-            <td><?=$item['item_name']?></td>
-            <?php $actualQty = $item['qty'] * $multiplier; ?>
-            <td><?=$actualQty?></td>
-            <?php if ($deliveries['package_status'] === 'pending'): ?>
-              <td>
-                <?=$availableQty?>
-                <?php if (!$isSufficient): ?>
-                  <div class="quantity-warning">
-                    Insufficient! Need <?=$actualQty - $availableQty?> more
-                  </div>
+<!-- Items Table -->
+<div class="items mb-4">
+    <h5 class="mb-2">Packing List</h5>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+
+                <?php if ($deliveries['package_status'] === 'pending'): ?>
+                    <th>Available</th>
                 <?php endif; ?>
-              </td>
-            <?php endif; ?>
-          </tr>
-        <?php } ?>
-      </table>
-      <!-- Warning Message -->
-      <?php if ($deliveries['package_status'] === 'pending' && !$sufficientQuantities): ?>
+            </tr>
+        </thead>
+
+        <tbody>
+            <?php foreach ($items as $item): ?>
+
+                <?php
+                    // Compute required quantity first
+                    $actualQty = $item['qty'] * $multiplier;
+
+                    if ($deliveries['package_status'] === 'pending') {
+                        $availableQty = $inventoryQuantities[$item['item_id']] ?? 0;
+                        $isSufficient = $availableQty >= $actualQty;
+                    } else {
+                        $availableQty = null;
+                        $isSufficient = true;
+                    }
+                ?>
+
+                <tr class="<?= ($deliveries['package_status'] === 'pending' && !$isSufficient) ? 'insufficient-item' : '' ?>">
+                    <td><?= htmlspecialchars($item['item_name']) ?></td>
+
+                    <td><?= $actualQty ?></td>
+
+                    <?php if ($deliveries['package_status'] === 'pending'): ?>
+                        <td>
+                            <?= $availableQty ?>
+
+                            <?php if (!$isSufficient): ?>
+                                <div class="quantity-warning">
+                                    Insufficient! Need <?= $actualQty - $availableQty ?> more
+                                </div>
+                            <?php endif; ?>
+                        </td>
+                    <?php endif; ?>
+
+                </tr>
+
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <?php if ($deliveries['package_status'] === 'pending' && !$sufficientQuantities): ?>
         <div class="alert alert-warning mt-3">
-          <strong>Warning:</strong> Some items have insufficient quantities in inventory. 
-          Please ensure all items are available before submitting.
+            <strong>Warning:</strong>
+            Some items do not have sufficient inventory. Please replenish the required quantities before submitting.
         </div>
-      <?php endif; ?>
-    </div>
+    <?php endif; ?>
+</div>
 
     <!-- Form -->
     <form method="POST" action="check.php" enctype="multipart/form-data">
