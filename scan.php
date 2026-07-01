@@ -36,7 +36,7 @@ if (!empty($deliveries['package_type'])) {
     ");
     $stmt->execute();
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     function getRequiredQty($item, $deliveries, $multiplier)
     {
         $name = strtolower(trim($item['item_name']));
@@ -187,12 +187,6 @@ if (!empty($deliveries['package_type'])) {
                     <?php if ($deliveries['package_status'] === 'pending'): ?>
                         <td>
                             <?= $availableQty ?>
-
-                            <?php if (!$isSufficient): ?>
-                                <div class="quantity-warning">
-                                    <?= $actualQty - $availableQty ?>
-                                </div>
-                            <?php endif; ?>
                         </td>
                     <?php endif; ?>
 
