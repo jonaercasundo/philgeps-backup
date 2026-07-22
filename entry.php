@@ -8,5 +8,5 @@ if (!$id || !$delivery_id) {
     exit('Invalid QR Code');
 }
 
-header("Location: http://127.0.0.1:8000/receive-delivery/" . $id . "?delivery_id=" . $delivery_id);
+header("Location: https://tracker.metro-mobilia.com/receive-delivery/" . $id . "?delivery_id=" . $delivery_id);
 exit;
