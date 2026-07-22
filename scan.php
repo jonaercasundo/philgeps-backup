@@ -106,19 +106,9 @@ if (!empty($deliveries['package_type'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Receive of Items</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
     body {
       background: #f8f9fa;
-    }
-    #map{
-        height:350px;
-        border-radius:10px;
-        margin-bottom:15px;
-    }
-
-    .location-status{
-        font-weight:bold;
     }
     .card {
       max-width: 650px;
@@ -215,160 +205,57 @@ if (!empty($deliveries['package_type'])) {
 </div>
 
     <!-- Form -->
-<form method="POST" action="check.php" enctype="multipart/form-data">
+    <form method="POST" action="check.php" enctype="multipart/form-data">
+      <input type="hidden" value="<?=$id?>" name="id">
+      <input type="hidden" value="<?=$deliveries['status'];?>" name="status">
+      <input type="hidden" name="delivery_id" value="<?=$_GET['delivery_id']?>">
 
-<input type="hidden" value="<?=$id?>" name="id">
-<input type="hidden" value="<?=$deliveries['status'];?>" name="status">
-<input type="hidden" name="delivery_id" value="<?=$_GET['delivery_id']?>">
+      <div class="mb-3">
+          <label for="photo_upload" class="form-label">Upload Photos (Optional)</label>
+          <input
+              type="file"
+              class="form-control"
+              id="photo_upload"
+              name="photo_upload[]"
+              accept="image/*"
+              multiple
+          >
+      </div>
 
-<input type="hidden" name="latitude" id="latitude">
-<input type="hidden" name="longitude" id="longitude">
-<input type="hidden" name="accuracy" id="accuracy">
+      <!-- Captcha -->
+      <div class="mb-3">
+        <label for="captcha_answer" class="form-label"><?=$question?></label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="captcha_answer" 
+          name="captcha_answer" 
+          placeholder="Enter your answer" 
+          required
+        >
+      </div>
 
-<h5 class="mb-3">Delivery Location</h5>
-
-<div id="map"></div>
-
-<div class="alert alert-info mt-2">
-    <span class="location-status" id="locationStatus">
-        Waiting for GPS...
-    </span>
-</div>
-
-<div class="form-check mb-3">
-    <input
-        class="form-check-input"
-        type="checkbox"
-        id="confirmDelivery">
-
-    <label class="form-check-label" for="confirmDelivery">
-        I have already delivered this package.
-    </label>
-</div>
-
-<div class="mb-3">
-    <label class="form-label">
-        Upload Delivery Photos
-    </label>
-
-    <input
-        type="file"
-        class="form-control"
-        name="photo_upload[]"
-        multiple
-        accept="image/*">
-</div>
-
-<div class="mb-3">
-    <label class="form-label">
-        <?=$question?>
-    </label>
-
-    <input
-        type="text"
-        class="form-control"
-        name="captcha_answer"
-        required>
-</div>
-
-<button
-    class="btn btn-success w-100"
-    id="submitBtn"
-    disabled>
-    Confirm Delivery
-</button>
-
-</form>
+      <button type="submit" class="btn btn-primary w-100" id="submitBtn" 
+        <?= ($deliveries['package_status'] === 'pending' && !$sufficientQuantities) ? 'disabled' : '' ?>>
+        <?= ($deliveries['package_status'] === 'pending' && !$sufficientQuantities) ? 'Insufficient Inventory' : 'Submit' ?>
+      </button>
+      
+      <?php if ($deliveries['package_status'] === 'pending' && !$sufficientQuantities): ?>
+        <div class="alert alert-danger mt-2">
+          <strong>Cannot Submit:</strong> The following items are insufficient:
+          <ul class="mb-0">
+            <?php foreach ($insufficientItems as $insufficient): ?>
+              <li>
+                <?=$insufficient['item_name']?>: 
+                Required <?=$insufficient['required']?>, 
+                Available <?=$insufficient['available']?>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
+    </form>
   </div>
 </div>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </body>
-<script>
-
-let map = L.map('map').setView([14.5995,120.9842],13);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap'
-}).addTo(map);
-
-let marker=null;
-
-const submitBtn=document.getElementById("submitBtn");
-const confirm=document.getElementById("confirmDelivery");
-
-let gpsReady=false;
-
-function updateButton(){
-
-    let inventoryOK = <?= ($deliveries['package_status'] === 'pending' && !$sufficientQuantities) ? 'false' : 'true' ?>;
-
-    submitBtn.disabled=!(
-        gpsReady &&
-        confirm.checked &&
-        inventoryOK
-    );
-
-}
-
-confirm.addEventListener("change",updateButton);
-
-if(navigator.geolocation){
-
-    navigator.geolocation.watchPosition(function(position){
-
-        const lat=position.coords.latitude;
-        const lng=position.coords.longitude;
-        const acc=Math.round(position.coords.accuracy);
-
-        gpsReady=true;
-
-        document.getElementById("latitude").value=lat;
-        document.getElementById("longitude").value=lng;
-        document.getElementById("accuracy").value=acc;
-
-        document.getElementById("locationStatus").innerHTML=
-            "GPS Acquired ("+acc+" meters accuracy)";
-
-        if(marker){
-
-            marker.setLatLng([lat,lng]);
-
-        }else{
-
-            marker=L.marker([lat,lng]).addTo(map)
-                .bindPopup("Current Rider Location")
-                .openPopup();
-
-        }
-
-        map.setView([lat,lng],18);
-
-        updateButton();
-
-    },
-
-    function(error){
-
-        gpsReady=false;
-
-        document.getElementById("locationStatus").innerHTML=
-            "Unable to obtain GPS.";
-
-        updateButton();
-
-    },
-
-    {
-        enableHighAccuracy:true,
-        maximumAge:0,
-        timeout:10000
-    });
-
-}else{
-
-    alert("GPS is not supported.");
-
-}
-
-</script>
 </html>
