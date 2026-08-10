@@ -183,13 +183,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
           JOIN lot l ON k.lot_id = l.lot_id
           WHERE l.project_id   = :project_id
             AND k.keystage_num = :num
-            AND k.description  = :desc
+            AND TRIM(k.description) = :desc
             AND k.lot_id       = :lot_id
       ");
       $stmt->execute([
           'project_id' => $project_id,
           'num'        => $r['keystage_num'],
-          'desc'       => $r['description'],
+          'desc' => trim($r['description']),
           'lot_id'     => array_search($r['lot_name'], $lots) ?: null,
       ]);
     $foundKs = $stmt->fetchColumn();
