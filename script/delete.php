@@ -32,10 +32,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         // ✅ Delete record dynamically
-        $sql = "DELETE FROM `$table` WHERE `$condition` = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$id]);
+// ✅ Delete record dynamically
+if ($table === 'package' && $condition === 'package_id') {
 
+    $pdo->beginTransaction();
+
+    // Delete child records first
+    $stmt = $pdo->prepare("
+        DELETE FROM package_status
+        WHERE package_id = ?
+    ");
+    $stmt->execute([$id]);
+
+    $stmt = $pdo->prepare("
+        DELETE FROM package_content
+        WHERE package_id = ?
+    ");
+    $stmt->execute([$id]);
+
+    // Delete parent package
+    $stmt = $pdo->prepare("
+        DELETE FROM package
+        WHERE package_id = ?
+    ");
+    $stmt->execute([$id]);
+
+    $pdo->commit();
+
+} else {
+
+    // Normal delete for other tables
+    $sql = "DELETE FROM `$table` WHERE `$condition` = ?";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$id]);
+}
         // 🔍 Extract project ID from URL (e.g. "schools.php?id=502661")
         $project_id = null;
         if (preg_match('/id=(\d+)/', $page, $matches)) {
