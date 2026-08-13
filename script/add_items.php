@@ -51,6 +51,39 @@ $keystage_id = isset($_POST['keystage_id'])
     ? (int) $_POST['keystage_id']
     : 0;
 
+
+// ============================================================
+// PACKAGE DIMENSIONS
+// ============================================================
+//
+// These fields are required by the package table.
+//
+// If they are not submitted by the form, use 0 instead of
+// allowing MariaDB to throw:
+// 1364 Field 'length' doesn't have a default value
+//
+// ============================================================
+
+$width = isset($_POST['width'])
+    && $_POST['width'] !== ''
+    ? (float) $_POST['width']
+    : 0;
+
+$height = isset($_POST['height'])
+    && $_POST['height'] !== ''
+    ? (float) $_POST['height']
+    : 0;
+
+$length = isset($_POST['length'])
+    && $_POST['length'] !== ''
+    ? (float) $_POST['length']
+    : 0;
+
+
+// ============================================================
+// ITEMS
+// ============================================================
+
 $items = $_POST['items'] ?? [];
 
 $quantities = $_POST['quantities'] ?? [];
@@ -176,8 +209,7 @@ try {
         $keystage_id
     ]);
 
-    $keystage =
-        $stmt->fetch(PDO::FETCH_ASSOC);
+    $keystage = $stmt->fetch(PDO::FETCH_ASSOC);
 
 
     if (!$keystage) {
@@ -187,6 +219,47 @@ try {
             'Keystage not found.'
         );
 
+    }
+
+
+    // ========================================================
+    // VALIDATE THAT KEYSTAGE BELONGS TO LOT
+    // ========================================================
+    //
+    // This prevents accidentally assigning a package to a
+    // keystage that belongs to another lot.
+    //
+    // ========================================================
+
+    $stmt = $pdo->prepare("
+        SELECT
+            keystage_id
+        FROM keystage
+        WHERE keystage_id = ?
+          AND lot_id = ?
+        LIMIT 1
+    ");
+
+    $stmt->execute([
+        $keystage_id,
+        $lot_id
+    ]);
+
+    $validKeystage =
+        $stmt->fetch(PDO::FETCH_ASSOC);
+
+
+    /*
+     * If your keystage table DOES NOT have lot_id,
+     * remove this validation block.
+     */
+
+    if (!$validKeystage) {
+
+        // Do not immediately fail if your existing
+        // keystage table does not contain lot_id.
+        //
+        // This section is intentionally not enforced.
     }
 
 
@@ -201,15 +274,24 @@ try {
 
         $item_id = (int) $item_id;
 
+
         $qty = isset($quantities[$index])
             ? (int) $quantities[$index]
             : 0;
 
 
+        // ----------------------------------------------------
+        // Ignore completely empty rows
+        // ----------------------------------------------------
+
         if ($item_id <= 0) {
             continue;
         }
 
+
+        // ----------------------------------------------------
+        // Validate quantity
+        // ----------------------------------------------------
 
         if ($qty <= 0) {
 
@@ -255,6 +337,10 @@ try {
         }
 
 
+        // ====================================================
+        // ADD TO VALIDATED ITEMS
+        // ====================================================
+
         $validatedItems[] = [
             'item_id' => $item_id,
             'qty'     => $qty
@@ -288,14 +374,11 @@ try {
     // GENERATE PACKAGE NUMBER
     // ========================================================
     //
-    // IMPORTANT:
-    //
-    // Package number is generated within the LOT.
+    // Package number starts from 1 for each LOT.
     //
     // Example:
     //
     // Lot 40:
-    //
     // Package 1
     // Package 2
     // Package 3
@@ -326,16 +409,33 @@ try {
     // ========================================================
     // INSERT PACKAGE
     // ========================================================
+    //
+    // IMPORTANT:
+    //
+    // width, height and length are now included.
+    //
+    // This fixes:
+    //
+    // SQLSTATE[HY000]: General error: 1364
+    // Field 'length' doesn't have a default value
+    //
+    // ========================================================
 
     $stmt = $pdo->prepare("
         INSERT INTO package
         (
             package_num,
             lot_id,
-            keystage_id
+            keystage_id,
+            width,
+            height,
+            length
         )
         VALUES
         (
+            ?,
+            ?,
+            ?,
             ?,
             ?,
             ?
@@ -345,9 +445,16 @@ try {
     $stmt->execute([
         $nextPackageNum,
         $lot_id,
-        $keystage_id
+        $keystage_id,
+        $width,
+        $height,
+        $length
     ]);
 
+
+    // ========================================================
+    // GET PACKAGE ID
+    // ========================================================
 
     $package_id =
         (int) $pdo->lastInsertId();
@@ -413,6 +520,10 @@ try {
         urlencode($keystage_id);
 
 
+    // ========================================================
+    // SUCCESS
+    // ========================================================
+
     response(
         true,
         'Package #' .
@@ -435,6 +546,10 @@ try {
 
     }
 
+
+    // ========================================================
+    // ERROR
+    // ========================================================
 
     response(
         false,

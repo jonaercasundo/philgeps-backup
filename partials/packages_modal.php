@@ -23,12 +23,7 @@ $currentKeystageId = isset($_GET['keystage_id'])
      DELETE PACKAGE MODAL
 ============================================================ -->
 
-<div
-    class="modal fade"
-    id="deleteModal"
-    tabindex="-1"
-    aria-hidden="true"
->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
 
     <div class="modal-dialog modal-md">
 
@@ -60,7 +55,7 @@ $currentKeystageId = isset($_GET['keystage_id'])
                     <input
                         type="hidden"
                         name="source_page"
-                        value="packages.php?id=<?= $currentProjectId ?>"
+                        value="packages.php?id=<?= htmlspecialchars($project_id) ?>"
                     >
 
                     <input
@@ -80,7 +75,6 @@ $currentKeystageId = isset($_GET['keystage_id'])
                         name="condition"
                         value="package_id"
                     >
-
 
                     <div class="mb-3">
 
@@ -115,7 +109,11 @@ $currentKeystageId = isset($_GET['keystage_id'])
                 <button
                     type="button"
                     class="btn btn-danger"
-                    onclick="document.getElementById('deleteForm').submit();"
+                    onclick="
+                        document
+                            .getElementById('deleteForm')
+                            .submit();
+                    "
                 >
                     Delete
                 </button>
@@ -129,9 +127,8 @@ $currentKeystageId = isset($_GET['keystage_id'])
 </div>
 
 
-
 <!-- ============================================================
-     ADD PACKAGE MODAL
+     ADD PACKAGE / ITEMS MODAL
 ============================================================ -->
 
 <div
@@ -146,9 +143,9 @@ $currentKeystageId = isset($_GET['keystage_id'])
         <div class="modal-content">
 
 
-            <!-- ====================================================
+            <!-- ==================================================
                  HEADER
-            ===================================================== -->
+            ================================================== -->
 
             <div class="modal-header">
 
@@ -160,15 +157,14 @@ $currentKeystageId = isset($_GET['keystage_id'])
                     type="button"
                     class="btn-close"
                     data-bs-dismiss="modal"
-                    aria-label="Close"
                 ></button>
 
             </div>
 
 
-            <!-- ====================================================
+            <!-- ==================================================
                  FORM
-            ===================================================== -->
+            ================================================== -->
 
             <form
                 id="addItemForm"
@@ -179,118 +175,59 @@ $currentKeystageId = isset($_GET['keystage_id'])
                 <div class="modal-body">
 
 
-                    <!-- =================================================
-                         PROJECT
-                    ================================================== -->
+                    <!-- ==========================================
+                         PROJECT ID
+                    =========================================== -->
 
                     <input
                         type="hidden"
                         name="project_id"
-                        value="<?= $currentProjectId ?>"
+                        value="<?= (int) $project_id ?>"
                     >
 
 
-                    <!-- =================================================
-                         LOT / KEYSTAGE
-                    ================================================== -->
+                    <!-- ==========================================
+                         LOT + KEYSTAGE
+                    =========================================== -->
 
-                    <?php if ($currentKeystageId > 0): ?>
-
-                        <!-- Existing LOT + KEYSTAGE context -->
-
-                        <input
-                            type="hidden"
-                            name="lot_id"
-                            value="<?= $currentLotId ?>"
-                        >
+                    <?php if (isset($_GET['keystage_id'])): ?>
 
                         <input
                             type="hidden"
                             name="keystage_id"
-                            value="<?= $currentKeystageId ?>"
+                            value="<?= (int) $_GET['keystage_id'] ?>"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="lot_id"
+                            value="<?= (int) ($_GET['lot_id'] ?? 0) ?>"
                         >
 
 
-                        <div class="row mb-3">
+                        <div class="mb-3">
 
-                            <div class="col-md-6">
+                            <label class="form-label">
+                                Lot / Keystage
+                            </label>
 
-                                <label class="form-label">
-                                    Lot
-                                </label>
+                            <div class="alert alert-info mb-0">
 
-                                <?php
+                                Lot:
+                                <strong>
+                                    <?= htmlspecialchars(
+                                        $_GET['lot_id'] ?? 'N/A'
+                                    ) ?>
+                                </strong>
 
-                                $lotStmt = $pdo->prepare("
-                                    SELECT
-                                        lot_id,
-                                        lot_name
-                                    FROM lot
-                                    WHERE lot_id = ?
-                                    LIMIT 1
-                                ");
+                                &nbsp; | &nbsp;
 
-                                $lotStmt->execute([
-                                    $currentLotId
-                                ]);
-
-                                $currentLot =
-                                    $lotStmt->fetch(PDO::FETCH_ASSOC);
-
-                                ?>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    value="<?= htmlspecialchars(
-                                        $currentLot['lot_name'] ?? 'N/A'
-                                    ) ?>"
-                                    readonly
-                                >
-
-                            </div>
-
-
-                            <div class="col-md-6">
-
-                                <label class="form-label">
-                                    Keystage
-                                </label>
-
-                                <?php
-
-                                $ksStmt = $pdo->prepare("
-                                    SELECT
-                                        keystage_id,
-                                        keystage_num,
-                                        description
-                                    FROM keystage
-                                    WHERE keystage_id = ?
-                                    LIMIT 1
-                                ");
-
-                                $ksStmt->execute([
-                                    $currentKeystageId
-                                ]);
-
-                                $currentKeystage =
-                                    $ksStmt->fetch(PDO::FETCH_ASSOC);
-
-                                ?>
-
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    value="<?= htmlspecialchars(
-                                        trim(
-                                            'Keystage ' .
-                                            ($currentKeystage['keystage_num'] ?? '') .
-                                            ' ' .
-                                            ($currentKeystage['description'] ?? '')
-                                        )
-                                    ) ?>"
-                                    readonly
-                                >
+                                Keystage:
+                                <strong>
+                                    <?= htmlspecialchars(
+                                        $_GET['keystage_id']
+                                    ) ?>
+                                </strong>
 
                             </div>
 
@@ -300,13 +237,11 @@ $currentKeystageId = isset($_GET['keystage_id'])
                     <?php else: ?>
 
 
-                        <!-- =========================================
-                             SELECT LOT
-                        ========================================== -->
+                        <div class="mb-3 d-flex">
 
-                        <div class="row mb-3">
+                            <!-- LOT -->
 
-                            <div class="col-md-6">
+                            <div class="w-50 me-2">
 
                                 <label
                                     for="lot_id"
@@ -329,23 +264,23 @@ $currentKeystageId = isset($_GET['keystage_id'])
 
                                     <?php
 
-                                    $lotStmt = $pdo->prepare("
+                                    $stmt = $pdo->prepare("
                                         SELECT
                                             lot_id,
                                             lot_name
                                         FROM lot
-                                        WHERE project_id = ?
+                                        WHERE project_id = :pid
                                         ORDER BY lot_name ASC
                                     ");
 
-                                    $lotStmt->execute([
-                                        $currentProjectId
+                                    $stmt->execute([
+                                        ':pid' => $project_id
                                     ]);
 
-                                    $lots =
-                                        $lotStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                                    foreach ($lots as $lot):
+                                    foreach (
+                                        $stmt->fetchAll(PDO::FETCH_ASSOC)
+                                        as $lot
+                                    ):
 
                                     ?>
 
@@ -366,11 +301,9 @@ $currentKeystageId = isset($_GET['keystage_id'])
                             </div>
 
 
-                            <!-- =========================================
-                                 KEYSTAGE
-                            ========================================== -->
+                            <!-- KEYSTAGE -->
 
-                            <div class="col-md-6">
+                            <div class="w-50">
 
                                 <label
                                     for="keystage_id"
@@ -397,152 +330,236 @@ $currentKeystageId = isset($_GET['keystage_id'])
 
                         </div>
 
-
                     <?php endif; ?>
 
 
-                    <!-- =================================================
-                         PASTE ITEMS
-                    ================================================== -->
+                    <!-- ==========================================
+                         PACKAGE DIMENSIONS
+                    =========================================== -->
 
                     <div class="mb-3">
 
                         <label class="form-label">
-                            Paste Items
+                            Package Dimensions
                         </label>
 
-                        <table
-                            class="table table-bordered table-hover table-striped align-middle"
-                            id="myTable"
-                        >
-
-                            <thead class="table-dark">
-
-                                <tr>
-
-                                    <th>
-                                        Paste the table below
-                                    </th>
-
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-
-                                <tr id="pasteHere">
-
-                                    <td contenteditable="true">
-
-                                        Here!
-
-                                    </td>
-
-                                </tr>
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
+                        <div class="row g-2">
 
 
-                    <!-- =================================================
-                         ITEMS
-                    ================================================== -->
+                            <!-- WIDTH -->
 
-                    <div class="mb-3">
+                            <div class="col-md-4">
 
-                        <label class="form-label">
-                            Package Items
-                        </label>
-
-
-                        <div id="itemsContainer">
-
-                            <div class="d-flex mb-2 itemRow">
-
-
-                                <select
-                                    class="form-select me-2"
-                                    name="items[]"
-                                    required
+                                <label
+                                    for="package_width"
+                                    class="form-label"
                                 >
-
-                                    <option value="">
-                                        -- Select Item --
-                                    </option>
-
-                                    <?php
-
-                                    $itemStmt = $pdo->query("
-                                        SELECT
-                                            item_id,
-                                            item_name
-                                        FROM item
-                                        ORDER BY item_name ASC
-                                    ");
-
-                                    $items =
-                                        $itemStmt->fetchAll(PDO::FETCH_ASSOC);
-
-                                    foreach ($items as $item):
-
-                                    ?>
-
-                                        <option
-                                            value="<?= (int) $item['item_id'] ?>"
-                                        >
-
-                                            <?= htmlspecialchars(
-                                                $item['item_name']
-                                            ) ?>
-
-                                        </option>
-
-                                    <?php endforeach; ?>
-
-                                </select>
-
+                                    Width
+                                </label>
 
                                 <input
                                     type="number"
-                                    class="form-control me-2"
-                                    name="quantities[]"
-                                    min="1"
+                                    step="0.01"
+                                    min="0"
+                                    class="form-control"
+                                    id="package_width"
+                                    name="width"
                                     required
-                                    placeholder="Qty"
                                 >
 
+                            </div>
 
-                                <button
-                                    type="button"
-                                    class="btn btn-danger btn-sm removeItemBtn"
+
+                            <!-- HEIGHT -->
+
+                            <div class="col-md-4">
+
+                                <label
+                                    for="package_height"
+                                    class="form-label"
                                 >
-                                    ×
-                                </button>
+                                    Height
+                                </label>
+
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    class="form-control"
+                                    id="package_height"
+                                    name="height"
+                                    required
+                                >
+
+                            </div>
+
+
+                            <!-- LENGTH -->
+
+                            <div class="col-md-4">
+
+                                <label
+                                    for="package_length"
+                                    class="form-label"
+                                >
+                                    Length
+                                </label>
+
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    class="form-control"
+                                    id="package_length"
+                                    name="length"
+                                    required
+                                >
 
                             </div>
 
                         </div>
 
+                    </div>
 
-                        <button
-                            type="button"
-                            class="btn btn-sm btn-outline-primary mt-2"
-                            id="addMoreItem"
-                        >
-                            + Add Another Item
-                        </button>
+
+                    <!-- ==========================================
+                         PASTE TABLE
+                    =========================================== -->
+
+                    <table
+                        class="table table-bordered table-hover table-striped align-middle"
+                        id="myTable"
+                    >
+
+                        <thead class="table-dark">
+
+                            <tr>
+
+                                <th>
+                                    Paste the table below
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            <tr id="pasteHere">
+
+                                <td contenteditable="true">
+                                    Here!
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+
+                    <!-- ==========================================
+                         DYNAMIC ITEMS
+                    =========================================== -->
+
+                    <div class="mb-2">
+
+                        <label class="form-label">
+                            Package Items
+                        </label>
 
                     </div>
+
+
+                    <div id="itemsContainer">
+
+                        <div class="d-flex mb-2 itemRow">
+
+
+                            <select
+                                class="form-select me-2"
+                                name="items[]"
+                                required
+                            >
+
+                                <option value="">
+                                    -- Select Item --
+                                </option>
+
+                                <?php
+
+                                $stmt = $pdo->query("
+                                    SELECT
+                                        item_id,
+                                        item_name
+                                    FROM item
+                                    ORDER BY item_name ASC
+                                ");
+
+                                foreach (
+                                    $stmt->fetchAll(PDO::FETCH_ASSOC)
+                                    as $item
+                                ):
+
+                                ?>
+
+                                    <option
+                                        value="<?= (int) $item['item_id'] ?>"
+                                    >
+
+                                        <?= htmlspecialchars(
+                                            $item['item_name']
+                                        ) ?>
+
+                                    </option>
+
+                                <?php endforeach; ?>
+
+                            </select>
+
+
+                            <input
+                                type="number"
+                                class="form-control me-2"
+                                name="quantities[]"
+                                min="1"
+                                value="1"
+                                placeholder="Qty"
+                                required
+                            >
+
+
+                            <button
+                                type="button"
+                                class="btn btn-danger btn-sm removeItemBtn"
+                            >
+                                ×
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ==========================================
+                         ADD MORE
+                    =========================================== -->
+
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary mt-2"
+                        id="addMoreItem"
+                    >
+                        + Add Another Item
+                    </button>
+
 
                 </div>
 
 
-                <!-- =================================================
+                <!-- ==============================================
                      FOOTER
-                ================================================== -->
+                =============================================== -->
 
                 <div class="modal-footer">
 
@@ -551,7 +568,7 @@ $currentKeystageId = isset($_GET['keystage_id'])
                         class="btn btn-secondary"
                         data-bs-dismiss="modal"
                     >
-                        Cancel
+                        Close
                     </button>
 
                     <button
@@ -572,7 +589,6 @@ $currentKeystageId = isset($_GET['keystage_id'])
 </div>
 
 
-
 <!-- ============================================================
      EDIT PACKAGE MODAL
 ============================================================ -->
@@ -581,13 +597,11 @@ $currentKeystageId = isset($_GET['keystage_id'])
     class="modal fade"
     id="editModal"
     tabindex="-1"
-    aria-hidden="true"
 >
 
     <div class="modal-dialog modal-lg">
 
         <div class="modal-content">
-
 
             <div class="modal-header">
 
@@ -615,11 +629,9 @@ $currentKeystageId = isset($_GET['keystage_id'])
                     >
 
 
-                    <!-- PACKAGE INFORMATION -->
+                    <div class="mb-3 d-flex">
 
-                    <div class="row mb-3">
-
-                        <div class="col-md-4">
+                        <div class="w-50 me-2">
 
                             <label class="form-label">
                                 Package Num
@@ -629,14 +641,14 @@ $currentKeystageId = isset($_GET['keystage_id'])
                                 type="text"
                                 class="form-control"
                                 name="package_num"
-                                id="edit_package_num"
                                 readonly
+                                id="edit_package_num"
                             >
 
                         </div>
 
 
-                        <div class="col-md-4">
+                        <div class="w-50 me-2">
 
                             <label class="form-label">
                                 Lot Number
@@ -645,14 +657,14 @@ $currentKeystageId = isset($_GET['keystage_id'])
                             <input
                                 type="text"
                                 class="form-control"
-                                id="edit_lot_num"
                                 readonly
+                                id="edit_lot_num"
                             >
 
                         </div>
 
 
-                        <div class="col-md-4">
+                        <div class="w-100">
 
                             <label class="form-label">
                                 Keystage
@@ -661,8 +673,8 @@ $currentKeystageId = isset($_GET['keystage_id'])
                             <input
                                 type="text"
                                 class="form-control"
-                                id="edit_key_num"
                                 readonly
+                                id="edit_key_num"
                             >
 
                         </div>
@@ -672,9 +684,9 @@ $currentKeystageId = isset($_GET['keystage_id'])
 
                     <!-- DIMENSIONS -->
 
-                    <div class="row mb-3">
+                    <div class="mb-3 d-flex">
 
-                        <div class="col-md-4">
+                        <div class="w-100 me-2">
 
                             <label class="form-label">
                                 Width
@@ -686,12 +698,13 @@ $currentKeystageId = isset($_GET['keystage_id'])
                                 class="form-control"
                                 name="width"
                                 id="edit_width"
+                                required
                             >
 
                         </div>
 
 
-                        <div class="col-md-4">
+                        <div class="w-100 me-2">
 
                             <label class="form-label">
                                 Height
@@ -703,12 +716,13 @@ $currentKeystageId = isset($_GET['keystage_id'])
                                 class="form-control"
                                 name="height"
                                 id="edit_height"
+                                required
                             >
 
                         </div>
 
 
-                        <div class="col-md-4">
+                        <div class="w-100">
 
                             <label class="form-label">
                                 Length
@@ -720,6 +734,7 @@ $currentKeystageId = isset($_GET['keystage_id'])
                                 class="form-control"
                                 name="length"
                                 id="edit_length"
+                                required
                             >
 
                         </div>
