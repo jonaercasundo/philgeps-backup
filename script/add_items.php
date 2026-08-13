@@ -144,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         echo json_encode([
             'success' => true, 
-            'redirect' => "/philgeps/packages.php?id=" . $project_id . "&toast=Packages%20added%20successfully&type=success"
+            'redirect' => "packages.php?id=" . $project_id . "&toast=Packages%20added%20successfully&type=success" 
         ]);
         exit;
     } catch (PDOException $e) {
