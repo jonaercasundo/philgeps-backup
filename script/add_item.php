@@ -52,7 +52,7 @@ try {
     echo json_encode([
         'success' => true,
         'message' => 'Item added successfully!',
-        'redirect' => "/philgeps/items.php?id={$projectId}&toast=Item%20added%20successfully&type=success"
+        'redirect' => "items.php?id={$projectId}&toast=Item%20added%20successfully&type=success"
     ]);
 
 } catch (PDOException $e) {
