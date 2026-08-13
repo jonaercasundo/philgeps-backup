@@ -43,8 +43,10 @@ $ref_id = $keystage_id;
 $ref_column = "keystage_id";
 
 if (!$keystage_id && $lot_id) {
+
     $ref_id = $lot_id;
     $ref_column = "lot_id";
+
 }
 
 
@@ -54,13 +56,13 @@ if (!$keystage_id && $lot_id) {
 
 try {
 
-    if ($ref_id) {
+    /*
+    |--------------------------------------------------------------------------
+    | FILTER BY KEYSTAGE OR LOT
+    |--------------------------------------------------------------------------
+    */
 
-        /*
-        |--------------------------------------------------------------------------
-        | PACKAGE FILTERED BY KEYSTAGE OR LOT
-        |--------------------------------------------------------------------------
-        */
+    if ($ref_id) {
 
         $stmt = $pdo->prepare("
             SELECT
@@ -68,29 +70,43 @@ try {
                 p.package_id,
                 p.package_num,
 
-                /* Lot */
+                /* ==========================
+                   LOT
+                ========================== */
+
                 p.lot_id,
                 l.lot_name AS lot_no,
 
-                /* Keystage */
+                /* ==========================
+                   KEYSTAGE
+                ========================== */
+
                 p.keystage_id,
                 ks.keystage_num AS keystage_no,
+                ks.description AS keystage_description,
 
-                /* Package Contents */
+                /* ==========================
+                   PACKAGE CONTENT
+                ========================== */
+
                 GROUP_CONCAT(
                     i.item_name
-                    ORDER BY pc.package_content_id
                     SEPARATOR '<br>'
                 ) AS Content,
 
-                /* Quantities */
+                /* ==========================
+                   QUANTITY
+                ========================== */
+
                 GROUP_CONCAT(
                     pc.qty
-                    ORDER BY pc.package_content_id
                     SEPARATOR '<br>'
                 ) AS qty,
 
-                /* Dimensions */
+                /* ==========================
+                   DIMENSIONS
+                ========================== */
+
                 p.width,
                 p.height,
                 p.length,
@@ -120,12 +136,17 @@ try {
             WHERE p.$ref_column = ?
 
             GROUP BY
+
                 p.package_id,
                 p.package_num,
+
                 p.lot_id,
                 l.lot_name,
+
                 p.keystage_id,
-                ks.keystage_name,
+                ks.keystage_num,
+                ks.description,
+
                 p.width,
                 p.height,
                 p.length
@@ -133,16 +154,18 @@ try {
             ORDER BY p.package_num ASC
         ");
 
-        $stmt->execute([$ref_id]);
+        $stmt->execute([
+            $ref_id
+        ]);
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | FILTER BY PROJECT
+    |--------------------------------------------------------------------------
+    */
 
     } elseif ($project_id) {
-
-        /*
-        |--------------------------------------------------------------------------
-        | PACKAGE FILTERED BY PROJECT
-        |--------------------------------------------------------------------------
-        */
 
         $stmt = $pdo->prepare("
             SELECT
@@ -150,29 +173,43 @@ try {
                 p.package_id,
                 p.package_num,
 
-                /* Lot */
+                /* ==========================
+                   LOT
+                ========================== */
+
                 p.lot_id,
                 l.lot_name AS lot_no,
 
-                /* Keystage */
+                /* ==========================
+                   KEYSTAGE
+                ========================== */
+
                 p.keystage_id,
                 ks.keystage_num AS keystage_no,
+                ks.description AS keystage_description,
 
-                /* Package Contents */
+                /* ==========================
+                   PACKAGE CONTENT
+                ========================== */
+
                 GROUP_CONCAT(
                     i.item_name
-                    ORDER BY pc.package_content_id
                     SEPARATOR '<br>'
                 ) AS Content,
 
-                /* Quantities */
+                /* ==========================
+                   QUANTITY
+                ========================== */
+
                 GROUP_CONCAT(
                     pc.qty
-                    ORDER BY pc.package_content_id
                     SEPARATOR '<br>'
                 ) AS qty,
 
-                /* Dimensions */
+                /* ==========================
+                   DIMENSIONS
+                ========================== */
+
                 p.width,
                 p.height,
                 p.length,
@@ -202,12 +239,17 @@ try {
             WHERE l.project_id = ?
 
             GROUP BY
+
                 p.package_id,
                 p.package_num,
+
                 p.lot_id,
                 l.lot_name,
+
                 p.keystage_id,
-                ks.keystage_name,
+                ks.keystage_num,
+                ks.description,
+
                 p.width,
                 p.height,
                 p.length
@@ -215,22 +257,31 @@ try {
             ORDER BY p.package_num ASC
         ");
 
-        $stmt->execute([$project_id]);
+        $stmt->execute([
+            $project_id
+        ]);
 
 
     } else {
 
-        die("Missing keystage_id, lot_id, or project_id");
+        die(
+            "Missing keystage_id, lot_id, or project_id"
+        );
 
     }
 
 
-    $packages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $packages = $stmt->fetchAll(
+        PDO::FETCH_ASSOC
+    );
 
 
 } catch (PDOException $e) {
 
-    die("DB Error: " . $e->getMessage());
+    die(
+        "DB Error: " .
+        $e->getMessage()
+    );
 
 }
 
@@ -241,12 +292,14 @@ try {
 
 
 <!-- ============================================================
-     PAGE
+     PACKAGE LIST
 ============================================================ -->
 
 <div class="container mt-4">
 
-    <h2 class="mb-3">Package List</h2>
+    <h2 class="mb-3">
+        Package List
+    </h2>
 
 
     <!-- ========================================================
@@ -255,41 +308,41 @@ try {
 
     <div class="d-flex mb-3 justify-content-between">
 
-        <!-- LEFT -->
+
+        <!-- LEFT SIDE -->
+
         <div class="d-flex mb-3">
 
             <button
                 data-bs-toggle="modal"
                 data-bs-target="#addModal"
-                class="btn btn-success mb-3">
-
+                class="btn btn-success mb-3"
+            >
                 + Add New Package
-
             </button>
 
         </div>
 
 
-        <!-- RIGHT -->
+        <!-- RIGHT SIDE -->
+
         <div class="d-flex mb-3">
 
             <a
-                href="script/generate_qr_per_package.php?project_id=<?= $project_id ?>"
+                href="script/generate_qr_per_package.php?project_id=<?= (int) $project_id ?>"
                 target="_blank"
-                class="btn btn-primary mb-3">
-
+                class="btn btn-primary mb-3"
+            >
                 Generate QR
-
             </a>
 
 
             <a
-                href="script/generate_barcode_per_package.php?project_id=<?= $project_id ?>"
+                href="script/generate_barcode_per_package.php?project_id=<?= (int) $project_id ?>"
                 target="_blank"
-                class="btn btn-info mb-3 ms-2">
-
+                class="btn btn-info mb-3 ms-2"
+            >
                 Generate Barcode
-
             </a>
 
         </div>
@@ -303,31 +356,50 @@ try {
 
     <?php if (empty($packages)): ?>
 
-        <p>No Packages found.</p>
+        <div class="alert alert-info">
+            No Packages found.
+        </div>
 
     <?php else: ?>
 
+
         <div class="table-responsive">
 
-            <table class="table table-bordered table-striped align-middle">
+            <table
+                class="table table-bordered table-striped align-middle"
+            >
 
                 <thead class="table-dark">
 
                     <tr>
 
-                        <th>Package No.</th>
+                        <th>
+                            Package No.
+                        </th>
 
-                        <th>Lot No.</th>
+                        <th>
+                            Lot No.
+                        </th>
 
-                        <th>Keystage No.</th>
+                        <th>
+                            Keystage No.
+                        </th>
 
-                        <th>Content</th>
+                        <th>
+                            Content
+                        </th>
 
-                        <th>Quantity</th>
+                        <th>
+                            Quantity
+                        </th>
 
-                        <th>Dimension</th>
+                        <th>
+                            Dimension
+                        </th>
 
-                        <th>Actions</th>
+                        <th>
+                            Actions
+                        </th>
 
                     </tr>
 
@@ -336,13 +408,15 @@ try {
 
                 <tbody>
 
+
                     <?php foreach ($packages as $package): ?>
 
                         <tr>
 
-                            <!-- ==================================================
+
+                            <!-- ==================================
                                  PACKAGE NUMBER
-                            =================================================== -->
+                            =================================== -->
 
                             <td>
 
@@ -353,13 +427,17 @@ try {
                             </td>
 
 
-                            <!-- ==================================================
+                            <!-- ==================================
                                  LOT NUMBER
-                            =================================================== -->
+                            =================================== -->
 
                             <td>
 
-                                <?php if (!empty($package['lot_no'])): ?>
+                                <?php if (
+                                    isset($package['lot_no']) &&
+                                    $package['lot_no'] !== null &&
+                                    $package['lot_no'] !== ''
+                                ): ?>
 
                                     <?= htmlspecialchars(
                                         $package['lot_no']
@@ -376,13 +454,16 @@ try {
                             </td>
 
 
-                            <!-- ==================================================
+                            <!-- ==================================
                                  KEYSTAGE NUMBER
-                            =================================================== -->
+                            =================================== -->
 
                             <td>
 
-                                <?php if (!empty($package['keystage_no'])): ?>
+                                <?php if (
+                                    isset($package['keystage_no']) &&
+                                    $package['keystage_no'] !== null
+                                ): ?>
 
                                     <?= htmlspecialchars(
                                         $package['keystage_no']
@@ -399,9 +480,9 @@ try {
                             </td>
 
 
-                            <!-- ==================================================
+                            <!-- ==================================
                                  CONTENT
-                            =================================================== -->
+                            =================================== -->
 
                             <td>
 
@@ -410,9 +491,9 @@ try {
                             </td>
 
 
-                            <!-- ==================================================
+                            <!-- ==================================
                                  QUANTITY
-                            =================================================== -->
+                            =================================== -->
 
                             <td>
 
@@ -421,9 +502,9 @@ try {
                             </td>
 
 
-                            <!-- ==================================================
+                            <!-- ==================================
                                  DIMENSION
-                            =================================================== -->
+                            =================================== -->
 
                             <td>
 
@@ -434,17 +515,18 @@ try {
                             </td>
 
 
-                            <!-- ==================================================
+                            <!-- ==================================
                                  ACTIONS
-                            =================================================== -->
+                            =================================== -->
 
                             <td>
 
-                                <!-- VIEW PACKAGE ITEMS -->
+                                <!-- VIEW -->
 
                                 <a
-                                    href="items.php?id=<?= $project_id ?>&package_id=<?= $package['package_id'] ?>"
-                                    class="btn btn-primary d-inline-flex align-items-center mb-1">
+                                    href="items.php?id=<?= (int) $project_id ?>&package_id=<?= (int) $package['package_id'] ?>"
+                                    class="btn btn-primary d-inline-flex align-items-center mb-1"
+                                >
 
                                     <i class="bi bi-eye fs-4 me-1"></i>
 
@@ -458,10 +540,11 @@ try {
                                 <a
                                     href="#"
                                     class="btn btn-warning editBtn mb-1"
+
                                     data-bs-toggle="modal"
                                     data-bs-target="#editModal"
 
-                                    data-id="<?= $package['package_id'] ?>"
+                                    data-id="<?= (int) $package['package_id'] ?>"
 
                                     data-num="<?= htmlspecialchars(
                                         $package['package_num'] ?? ''
@@ -477,7 +560,8 @@ try {
 
                                     data-height="<?= htmlspecialchars(
                                         $package['height'] ?? ''
-                                    ) ?>">
+                                    ) ?>"
+                                >
 
                                     <i class="bi bi-pencil-square fs-4"></i>
 
@@ -487,17 +571,20 @@ try {
                                 <!-- DELETE -->
 
                                 <button
+                                    type="button"
+
                                     data-bs-toggle="modal"
                                     data-bs-target="#deleteModal"
 
                                     onclick="
-                                        document.getElementById('delete_packages').value =
-                                        <?= htmlspecialchars(
-                                            $package['package_id']
-                                        ) ?>;
+                                        document.getElementById(
+                                            'delete_packages'
+                                        ).value =
+                                        <?= (int) $package['package_id'] ?>;
                                     "
 
-                                    class="btn btn-danger mb-1">
+                                    class="btn btn-danger mb-1"
+                                >
 
                                     <i class="bi bi-trash fs-4"></i>
 
@@ -509,6 +596,7 @@ try {
 
                     <?php endforeach; ?>
 
+
                 </tbody>
 
             </table>
@@ -516,407 +604,503 @@ try {
         </div>
 
 
-        <!-- ========================================================
-             ADD ITEM FORM
-        ========================================================= -->
+    <?php endif; ?>
 
-        <script>
+</div>
 
-        document
-            .getElementById("addItemForm")
-            ?.addEventListener("submit", function(e) {
 
-                e.preventDefault();
+<!-- ============================================================
+     PRELOAD ITEMS
+============================================================ -->
 
-                let formData = new FormData(this);
+<?php
 
-                fetch("script/add_items.php", {
+$itemsStmt = $pdo->query("
+    SELECT
+        item_id,
+        item_name
+    FROM item
+    ORDER BY item_name
+");
+
+$allItems = $itemsStmt->fetchAll(
+    PDO::FETCH_ASSOC
+);
+
+?>
+
+
+<script>
+
+// ============================================================
+// ALL ITEMS
+// ============================================================
+
+const allItems =
+    <?= json_encode(
+        $allItems,
+        JSON_HEX_TAG |
+        JSON_HEX_APOS |
+        JSON_HEX_QUOT |
+        JSON_HEX_AMP
+    ) ?>;
+
+
+// ============================================================
+// ADD ITEM FORM
+// ============================================================
+
+document
+    .getElementById("addItemForm")
+    ?.addEventListener(
+        "submit",
+        function(e) {
+
+            e.preventDefault();
+
+
+            let formData =
+                new FormData(this);
+
+
+            fetch(
+                "script/add_items.php",
+                {
                     method: "POST",
                     body: formData
-                })
+                }
+            )
 
-                .then(res => res.json())
+            .then(res => res.json())
 
-                .then(data => {
+            .then(data => {
 
-                    if (data.success) {
+                if (data.success) {
 
-                        window.location.href = data.redirect;
+                    window.location.href =
+                        data.redirect;
 
-                    } else {
+                } else {
 
-                        alert("❌ Error: " + data.message);
-
-                    }
-
-                })
-
-                .catch(err => {
-
-                    console.log(
-                        "Server error: " + err
+                    alert(
+                        "❌ Error: " +
+                        data.message
                     );
 
-                });
+                }
+
+            })
+
+            .catch(err => {
+
+                console.error(
+                    "Server error:",
+                    err
+                );
+
+                alert(
+                    "Server error while adding items."
+                );
 
             });
 
-
-        // =========================================================
-        // ADD MORE ITEMS
-        // =========================================================
-
-        document
-            .getElementById("addMoreItem")
-            ?.addEventListener("click", function() {
-
-                let container =
-                    document.getElementById("itemsContainer");
-
-                let options = allItems.map(i =>
-
-                    `<option value="${i.item_id}">
-                        ${i.item_name}
-                    </option>`
-
-                ).join("");
+        }
+    );
 
 
-                let newRow =
-                    document.createElement("div");
+// ============================================================
+// ADD MORE ITEM
+// ============================================================
 
-                newRow.classList.add(
-                    "row",
-                    "g-2",
-                    "align-items-center",
-                    "item-row",
-                    "mb-2"
+document
+    .getElementById("addMoreItem")
+    ?.addEventListener(
+        "click",
+        function() {
+
+            let container =
+                document.getElementById(
+                    "itemsContainer"
                 );
 
 
-                newRow.innerHTML = `
-
-                    <div class="d-flex mb-2 itemRow">
-
-                        <select
-                            class="form-select"
-                            name="items[]">
-
-                            <option value="">
-                                -- Select Item --
-                            </option>
-
-                            ${options}
-
-                        </select>
+            if (!container) {
+                return;
+            }
 
 
-                        <input
-                            type="number"
-                            class="form-control"
-                            name="quantities[]"
-                            min="1"
-                            required>
+            let options =
+                allItems.map(
+                    i => `
+
+                        <option
+                            value="${i.item_id}"
+                        >
+                            ${i.item_name}
+                        </option>
+
+                    `
+                ).join("");
 
 
-                        <button
-                            type="button"
-                            class="btn btn-danger btn-sm removeItemBtn">
-
-                            x
-
-                        </button>
-
-                    </div>
-
-                `;
+            let newRow =
+                document.createElement(
+                    "div"
+                );
 
 
-                container.appendChild(newRow);
-
-            });
-
-        </script>
-
-    <?php endif; ?>
-
-
-    <?php
-
-    // ============================================================
-    // PRELOAD ITEMS
-    // ============================================================
-
-    $itemsStmt = $pdo->query("
-        SELECT
-            item_id,
-            item_name
-        FROM item
-        ORDER BY item_name
-    ");
-
-    $allItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    ?>
+            newRow.classList.add(
+                "row",
+                "g-2",
+                "align-items-center",
+                "item-row",
+                "mb-2"
+            );
 
 
-    <script>
+            newRow.innerHTML = `
 
-    // ============================================================
-    // ALL ITEMS
-    // ============================================================
+                <div class="d-flex mb-2 itemRow">
 
-    const allItems =
-        <?= json_encode(
-            $allItems,
-            JSON_HEX_TAG |
-            JSON_HEX_APOS |
-            JSON_HEX_QUOT |
-            JSON_HEX_AMP
-        ) ?>;
+                    <select
+                        class="form-select"
+                        name="items[]"
+                    >
+
+                        <option value="">
+                            -- Select Item --
+                        </option>
+
+                        ${options}
+
+                    </select>
 
 
-    // ============================================================
-    // RENDER EDIT ITEM ROW
-    // ============================================================
+                    <input
+                        type="number"
+                        class="form-control"
+                        name="quantities[]"
+                        min="1"
+                        required
+                    >
 
-    function renderItemRow(item_id = "", qty = "") {
 
-        let options = allItems.map(i =>
+                    <button
+                        type="button"
+                        class="btn btn-danger btn-sm removeItemBtn"
+                    >
+                        x
+                    </button>
 
-            `<option
-                value="${i.item_id}"
-                ${i.item_id == item_id ? "selected" : ""}
-            >
+                </div>
 
-                ${i.item_name}
+            `;
 
-            </option>`
 
+            container.appendChild(
+                newRow
+            );
+
+        }
+    );
+
+
+// ============================================================
+// RENDER EDIT ITEM ROW
+// ============================================================
+
+function renderItemRow(
+    item_id = "",
+    qty = ""
+) {
+
+    let options =
+        allItems.map(
+            i => `
+
+                <option
+                    value="${i.item_id}"
+                    ${
+                        i.item_id == item_id
+                            ? "selected"
+                            : ""
+                    }
+                >
+
+                    ${i.item_name}
+
+                </option>
+
+            `
         ).join("");
 
 
-        return `
+    return `
 
-            <div class="d-flex mb-2 itemRow">
+        <div class="d-flex mb-2 itemRow">
 
-                <select
-                    name="items[]"
-                    class="form-control me-2">
+            <select
+                name="items[]"
+                class="form-control me-2"
+            >
 
-                    <option value="">
-                        -- Select Item --
-                    </option>
+                <option value="">
+                    -- Select Item --
+                </option>
 
-                    ${options}
+                ${options}
 
-                </select>
-
-
-                <input
-                    type="number"
-                    name="qty[]"
-                    value="${qty}"
-                    class="form-control me-2"
-                    placeholder="Qty">
+            </select>
 
 
-                <button
-                    type="button"
-                    class="btn btn-danger btn-sm removeItemBtn">
-
-                    x
-
-                </button>
-
-            </div>
-
-        `;
-
-    }
+            <input
+                type="number"
+                name="qty[]"
+                value="${qty}"
+                class="form-control me-2"
+                placeholder="Qty"
+            >
 
 
-    // ============================================================
-    // DOM READY
-    // ============================================================
+            <button
+                type="button"
+                class="btn btn-danger btn-sm removeItemBtn"
+            >
+                x
+            </button>
 
-    document.addEventListener(
-        "DOMContentLoaded",
-        function() {
+        </div>
 
-            const editButtons =
-                document.querySelectorAll(".editBtn");
+    `;
 
-            const editItemsDiv =
-                document.getElementById("edit_items");
+}
 
 
-            // ====================================================
-            // EDIT PACKAGE
-            // ====================================================
+// ============================================================
+// DOM READY
+// ============================================================
 
-            editButtons.forEach(btn => {
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+
+        // ====================================================
+        // EDIT BUTTONS
+        // ====================================================
+
+        const editButtons =
+            document.querySelectorAll(
+                ".editBtn"
+            );
+
+
+        const editItemsDiv =
+            document.getElementById(
+                "edit_items"
+            );
+
+
+        editButtons.forEach(
+            btn => {
 
                 btn.addEventListener(
                     "click",
                     function() {
+
 
                         let package_id =
                             this.dataset.id;
 
 
                         fetch(
-                            "script/get_package.php?package_id="
-                            + package_id
+                            "script/get_package.php?package_id=" +
+                            package_id
                         )
 
-                        .then(res => res.json())
+                        .then(
+                            res => res.json()
+                        )
 
-                        .then(resp => {
-
-                            if (!resp.success) {
-
-                                alert(resp.message);
-
-                                return;
-
-                            }
+                        .then(
+                            resp => {
 
 
-                            // ====================================
-                            // PACKAGE INFORMATION
-                            // ====================================
+                                if (
+                                    !resp.success
+                                ) {
 
-                            document
-                                .getElementById(
-                                    "edit_package_id"
-                                )
-                                .value =
-                                resp.package.package_id;
-
-
-                            document
-                                .getElementById(
-                                    "edit_package_num"
-                                )
-                                .value =
-                                resp.package.package_num;
-
-
-                            document
-                                .getElementById(
-                                    "edit_lot_num"
-                                )
-                                .value =
-                                resp.package.lot_name
-                                    ? "Lot " +
-                                      resp.package.lot_name
-                                    : "N/A";
-
-
-                            document
-                                .getElementById(
-                                    "edit_key_num"
-                                )
-                                .value =
-                                resp.package.keystage_name
-                                    ? "Keystage " +
-                                      resp.package.keystage_name +
-                                      " " +
-                                      (
-                                          resp.package.description
-                                          ?? ""
-                                      )
-                                    : "No Keystage Assigned";
-
-
-                            document
-                                .getElementById(
-                                    "edit_width"
-                                )
-                                .value =
-                                resp.package.width;
-
-
-                            document
-                                .getElementById(
-                                    "edit_height"
-                                )
-                                .value =
-                                resp.package.height;
-
-
-                            document
-                                .getElementById(
-                                    "edit_length"
-                                )
-                                .value =
-                                resp.package.length;
-
-
-                            // ====================================
-                            // ITEMS
-                            // ====================================
-
-                            editItemsDiv.innerHTML = "";
-
-
-                            resp.items.forEach(it => {
-
-                                editItemsDiv.innerHTML +=
-                                    renderItemRow(
-                                        it.item_id,
-                                        it.qty
+                                    alert(
+                                        resp.message
                                     );
 
-                            });
+                                    return;
 
-                        });
+                                }
+
+
+                                // ==================================
+                                // PACKAGE ID
+                                // ==================================
+
+                                document
+                                    .getElementById(
+                                        "edit_package_id"
+                                    )
+                                    .value =
+                                    resp.package.package_id;
+
+
+                                // ==================================
+                                // PACKAGE NUMBER
+                                // ==================================
+
+                                document
+                                    .getElementById(
+                                        "edit_package_num"
+                                    )
+                                    .value =
+                                    resp.package.package_num;
+
+
+                                // ==================================
+                                // LOT
+                                // ==================================
+
+                                const lotInput =
+                                    document.getElementById(
+                                        "edit_lot_num"
+                                    );
+
+
+                                if (lotInput) {
+
+                                    lotInput.value =
+                                        resp.package.lot_name
+                                            ? "Lot " +
+                                              resp.package.lot_name
+                                            : "N/A";
+
+                                }
+
+
+                                // ==================================
+                                // KEYSTAGE
+                                // ==================================
+
+                                const keyInput =
+                                    document.getElementById(
+                                        "edit_key_num"
+                                    );
+
+
+                                if (keyInput) {
+
+                                    keyInput.value =
+                                        resp.package.keystage_name
+                                            ? "Keystage " +
+                                              resp.package.keystage_name +
+                                              " " +
+                                              (
+                                                  resp.package.description ??
+                                                  ""
+                                              )
+                                            : "No Keystage Assigned";
+
+                                }
+
+
+                                // ==================================
+                                // DIMENSIONS
+                                // ==================================
+
+                                document
+                                    .getElementById(
+                                        "edit_width"
+                                    )
+                                    .value =
+                                    resp.package.width;
+
+
+                                document
+                                    .getElementById(
+                                        "edit_height"
+                                    )
+                                    .value =
+                                    resp.package.height;
+
+
+                                document
+                                    .getElementById(
+                                        "edit_length"
+                                    )
+                                    .value =
+                                    resp.package.length;
+
+
+                                // ==================================
+                                // ITEMS
+                                // ==================================
+
+                                if (editItemsDiv) {
+
+                                    editItemsDiv.innerHTML =
+                                        "";
+
+
+                                    resp.items.forEach(
+                                        it => {
+
+                                            editItemsDiv.innerHTML +=
+                                                renderItemRow(
+                                                    it.item_id,
+                                                    it.qty
+                                                );
+
+                                        }
+                                    );
+
+                                }
+
+                            }
+                        )
+
+                        .catch(
+                            err => {
+
+                                console.error(
+                                    "Error loading package:",
+                                    err
+                                );
+
+                                alert(
+                                    "Unable to load package information."
+                                );
+
+                            }
+                        );
 
                     }
                 );
 
-            });
+            }
+        );
 
 
-            // ====================================================
-            // ADD ITEM ROW
-            // ====================================================
+        // ====================================================
+        // ADD EDIT ITEM
+        // ====================================================
 
-            document
-                .getElementById("addItemBtn")
-                ?.addEventListener(
-                    "click",
-                    function() {
+        document
+            .getElementById("addItemBtn")
+            ?.addEventListener(
+                "click",
+                function() {
+
+                    if (editItemsDiv) {
 
                         editItemsDiv.innerHTML +=
                             renderItemRow();
-
-                    }
-                );
-
-
-            // ====================================================
-            // REMOVE ITEM ROW
-            // ====================================================
-
-            document.addEventListener(
-                "click",
-                function(e) {
-
-                    if (
-                        e.target.classList
-                            .contains("removeItemBtn")
-                    ) {
-
-                        let row =
-                            e.target.closest(".itemRow");
-
-                        if (row) {
-
-                            row.remove();
-
-                        }
 
                     }
 
@@ -924,39 +1108,89 @@ try {
             );
 
 
-            // ====================================================
-            // SAVE EDIT
-            // ====================================================
+        // ====================================================
+        // REMOVE ITEM
+        // ====================================================
 
-            document
-                .getElementById("saveEditBtn")
-                ?.addEventListener(
-                    "click",
-                    function() {
+        document.addEventListener(
+            "click",
+            function(e) {
 
-                        let form =
-                            document.getElementById(
-                                "editForm"
-                            );
+                if (
+                    e.target.classList.contains(
+                        "removeItemBtn"
+                    )
+                ) {
+
+                    const row =
+                        e.target.closest(
+                            ".itemRow"
+                        );
 
 
-                        let formData =
-                            new FormData(form);
+                    if (row) {
+
+                        row.remove();
+
+                    }
+
+                }
+
+            }
+        );
 
 
-                        fetch(
-                            "script/update_package.php",
-                            {
-                                method: "POST",
-                                body: formData
-                            }
-                        )
+        // ====================================================
+        // SAVE EDIT
+        // ====================================================
 
-                        .then(res => res.json())
+        document
+            .getElementById("saveEditBtn")
+            ?.addEventListener(
+                "click",
+                function() {
 
-                        .then(resp => {
 
-                            if (resp.success) {
+                    const form =
+                        document.getElementById(
+                            "editForm"
+                        );
+
+
+                    if (!form) {
+
+                        alert(
+                            "Edit form not found."
+                        );
+
+                        return;
+
+                    }
+
+
+                    const formData =
+                        new FormData(form);
+
+
+                    fetch(
+                        "script/update_package.php",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    )
+
+                    .then(
+                        res => res.json()
+                    )
+
+                    .then(
+                        resp => {
+
+
+                            if (
+                                resp.success
+                            ) {
 
                                 window.location.href =
                                     resp.redirect;
@@ -970,63 +1204,90 @@ try {
 
                             }
 
-                        })
+                        }
+                    )
 
-                        .catch(err => {
+                    .catch(
+                        err => {
 
-                            console.error(err);
+                            console.error(
+                                "Update error:",
+                                err
+                            );
 
                             alert(
                                 "Server error while updating package."
                             );
 
-                        });
+                        }
+                    );
 
-                    }
-                );
-
-        }
-    );
-
-
-    // ============================================================
-    // POPULATE KEYSTAGE
-    // ============================================================
-
-    function populateKeystage() {
-
-        let lot_id =
-            document.getElementById(
-                'lot_id'
-            ).value;
-
-
-        let keystage_id =
-            document.getElementById(
-                'keystage_id'
+                }
             );
 
-
-        // Clear options
-
-        keystage_id.innerHTML = '';
+    }
+);
 
 
-        fetch(
-            "script/get_keystage.php?lotid="
-            + lot_id,
-            {
-                method: "GET"
-            }
-        )
+// ============================================================
+// POPULATE KEYSTAGE
+// ============================================================
 
-        .then(res => res.json())
+function populateKeystage() {
 
-        .then(data => {
+
+    const lotElement =
+        document.getElementById(
+            "lot_id"
+        );
+
+
+    const keystageElement =
+        document.getElementById(
+            "keystage_id"
+        );
+
+
+    if (
+        !lotElement ||
+        !keystageElement
+    ) {
+
+        return;
+
+    }
+
+
+    const lot_id =
+        lotElement.value;
+
+
+    // Clear existing options
+
+    keystageElement.innerHTML = "";
+
+
+    fetch(
+        "script/get_keystage.php?lotid=" +
+        encodeURIComponent(lot_id),
+        {
+            method: "GET"
+        }
+    )
+
+    .then(
+        res => res.json()
+    )
+
+    .then(
+        data => {
+
 
             if (
                 !data.keystages ||
-                !Array.isArray(data.keystages)
+                !Array.isArray(
+                    data.keystages
+                )
             ) {
 
                 return;
@@ -1036,6 +1297,7 @@ try {
 
             data.keystages.forEach(
                 keystage => {
+
 
                     let option =
                         document.createElement(
@@ -1051,29 +1313,34 @@ try {
                         keystage.name;
 
 
-                    keystage_id.appendChild(
+                    keystageElement.appendChild(
                         option
                     );
 
 
-                    keystage_id.disabled =
-                        false;
-
                 }
             );
 
-        })
 
-        .catch(err => {
+            keystageElement.disabled =
+                data.keystages.length === 0;
+
+        }
+    )
+
+    .catch(
+        err => {
 
             console.error(
-                "Error:",
+                "Error loading keystages:",
                 err
             );
 
-        })
+        }
+    )
 
-        .finally(() => {
+    .finally(
+        () => {
 
             if (
                 typeof hideLoading ===
@@ -1084,149 +1351,152 @@ try {
 
             }
 
-        });
-
-    }
-
-
-    // ============================================================
-    // SYNC TABLE TO FORM
-    // ============================================================
-
-    const myTable =
-        document.getElementById(
-            "myTable"
-        );
-
-
-    if (myTable) {
-
-        myTable.addEventListener(
-            "input",
-            syncTableToForm
-        );
-
-    }
-
-
-    function syncTableToForm() {
-
-        let rows =
-            document.querySelectorAll(
-                "#myTable tr"
-            );
-
-
-        let container =
-            document.getElementById(
-                "itemsContainer"
-            );
-
-
-        if (!container) {
-
-            return;
-
         }
+    );
+
+}
 
 
-        container.innerHTML = "";
+// ============================================================
+// SYNC TABLE TO FORM
+// ============================================================
+
+const myTable =
+    document.getElementById(
+        "myTable"
+    );
 
 
-        rows.forEach(
-            (row, index) => {
+if (myTable) {
 
-                // Skip header row
+    myTable.addEventListener(
+        "input",
+        syncTableToForm
+    );
 
-                if (index === 1) {
-
-                    return;
-
-                }
+}
 
 
-                let cells =
-                    row.querySelectorAll(
-                        "td"
-                    );
+function syncTableToForm() {
 
 
-                if (
-                    cells.length < 1
-                ) {
-
-                    return;
-
-                }
+    const rows =
+        document.querySelectorAll(
+            "#myTable tr"
+        );
 
 
-                let itemText =
-                    (
-                        cells[0]?.innerText
-                        || ""
-                    ).trim();
+    const container =
+        document.getElementById(
+            "itemsContainer"
+        );
 
 
-                let qtyText =
-                    (
-                        cells[1]?.innerText
-                        || ""
-                    ).trim();
+    if (!container) {
+
+        return;
+
+    }
 
 
-                let dimText =
-                    (
-                        cells[2]?.innerText
-                        || ""
-                    ).trim();
+    container.innerHTML = "";
 
 
-                // ================================================
-                // NORMALIZE DIMENSION
-                // ================================================
-
-                let normalizedDim = "";
+    rows.forEach(
+        (row, index) => {
 
 
-                if (dimText) {
+            // Skip header
 
-                    normalizedDim =
-                        dimText
-                            .replace(
-                                /\s*/g,
-                                ""
-                            )
-                            .replace(
-                                /[X×]/gi,
-                                "x"
-                            );
+            if (index === 0) {
 
-                }
+                return;
+
+            }
 
 
-                // ================================================
-                // FIND ITEM
-                // ================================================
-
-                let selectedItem =
-                    allItems.find(
-                        i =>
-                            normalize(
-                                i.item_name
-                            ) ===
-                            normalize(
-                                itemText
-                            )
-                    );
+            const cells =
+                row.querySelectorAll(
+                    "td"
+                );
 
 
-                // ================================================
-                // OPTIONS
-                // ================================================
+            if (
+                cells.length < 1
+            ) {
 
-                let options =
-                    allItems.map(
-                        i => `
+                return;
+
+            }
+
+
+            const itemText =
+                (
+                    cells[0]?.innerText ||
+                    ""
+                ).trim();
+
+
+            const qtyText =
+                (
+                    cells[1]?.innerText ||
+                    ""
+                ).trim();
+
+
+            const dimText =
+                (
+                    cells[2]?.innerText ||
+                    ""
+                ).trim();
+
+
+            // ================================================
+            // NORMALIZE DIMENSION
+            // ================================================
+
+            let normalizedDim = "";
+
+
+            if (dimText) {
+
+                normalizedDim =
+                    dimText
+                        .replace(
+                            /\s*/g,
+                            ""
+                        )
+                        .replace(
+                            /[X×]/gi,
+                            "x"
+                        );
+
+            }
+
+
+            // ================================================
+            // FIND ITEM
+            // ================================================
+
+            const selectedItem =
+                allItems.find(
+                    i =>
+                        normalize(
+                            i.item_name
+                        ) ===
+                        normalize(
+                            itemText
+                        )
+                );
+
+
+            // ================================================
+            // ITEM OPTIONS
+            // ================================================
+
+            const options =
+                allItems.map(
+                    i => `
 
                         <option
                             value="${i.item_id}"
@@ -1244,110 +1514,111 @@ try {
                         </option>
 
                     `
-                    ).join("");
+                ).join("");
 
 
-                // ================================================
-                // NEW ROW
-                // ================================================
+            // ================================================
+            // CREATE ROW
+            // ================================================
 
-                let newRow =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                newRow.classList.add(
-                    "row",
-                    "g-2",
-                    "align-items-center",
-                    "item-row",
-                    "mb-2"
+            const newRow =
+                document.createElement(
+                    "div"
                 );
 
 
-                newRow.innerHTML = `
-
-                    <div class="d-flex mb-2 itemRow">
-
-                        <select
-                            class="form-select"
-                            name="items[]">
-
-                            <option value="">
-                                -- Select Item --
-                            </option>
-
-                            ${options}
-
-                        </select>
+            newRow.classList.add(
+                "row",
+                "g-2",
+                "align-items-center",
+                "item-row",
+                "mb-2"
+            );
 
 
-                        <input
-                            type="number"
-                            class="form-control"
-                            name="quantities[]"
-                            value="${qtyText || 1}"
-                            min="1"
-                            required>
+            newRow.innerHTML = `
+
+                <div class="d-flex mb-2 itemRow">
+
+                    <select
+                        class="form-select"
+                        name="items[]"
+                    >
+
+                        <option value="">
+                            -- Select Item --
+                        </option>
+
+                        ${options}
+
+                    </select>
 
 
-                        <input
-                            type="hidden"
-                            name="dimention[]"
-                            value="${normalizedDim}">
+                    <input
+                        type="number"
+                        class="form-control"
+                        name="quantities[]"
+                        value="${qtyText || 1}"
+                        min="1"
+                        required
+                    >
 
 
-                        <button
-                            type="button"
-                            class="btn btn-danger btn-sm removeItemBtn">
-
-                            x
-
-                        </button>
-
-                    </div>
-
-                `;
+                    <input
+                        type="hidden"
+                        name="dimention[]"
+                        value="${normalizedDim}"
+                    >
 
 
-                container.appendChild(
-                    newRow
-                );
+                    <button
+                        type="button"
+                        class="btn btn-danger btn-sm removeItemBtn"
+                    >
+                        x
+                    </button>
 
-            }
-        );
+                </div>
 
-    }
-
-
-    // ============================================================
-    // NORMALIZE STRING
-    // ============================================================
-
-    function normalize(str) {
-
-        return String(str || "")
-
-            .toLowerCase()
-
-            .replace(
-                /[^\w\s]/gi,
-                ""
-            )
-
-            .trim();
-
-    }
-
-    </script>
+            `;
 
 
-    <!-- ========================================================
-         PROJECT DETAILS JS
-    ========================================================= -->
+            container.appendChild(
+                newRow
+            );
 
-    <script src="assets/js/project_details.js"></script>
+        }
+    );
+
+}
+
+
+// ============================================================
+// NORMALIZE
+// ============================================================
+
+function normalize(str) {
+
+    return String(
+        str || ""
+    )
+    .toLowerCase()
+    .replace(
+        /[^\w\s]/gi,
+        ""
+    )
+    .trim();
+
+}
+
+</script>
+
+
+<!-- ============================================================
+     PROJECT DETAILS JS
+============================================================ -->
+
+<script src="assets/js/project_details.js"></script>
 
 
 <?php require "template/footer.php"; ?>
