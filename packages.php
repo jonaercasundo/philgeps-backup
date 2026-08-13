@@ -74,7 +74,7 @@ try {
 
                 /* Keystage */
                 p.keystage_id,
-                ks.keystage_name AS keystage_no,
+                ks.keystage_num AS keystage_no,
 
                 /* Package Contents */
                 GROUP_CONCAT(
@@ -156,7 +156,7 @@ try {
 
                 /* Keystage */
                 p.keystage_id,
-                ks.keystage_name AS keystage_no,
+                ks.keystage_num AS keystage_no,
 
                 /* Package Contents */
                 GROUP_CONCAT(
