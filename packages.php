@@ -362,10 +362,50 @@ try {
 
     <?php else: ?>
 
+<div class="row mb-3">
 
+    <div class="col-md-6">
+
+        <div class="input-group">
+
+            <span class="input-group-text">
+                <i class="bi bi-search"></i>
+            </span>
+
+            <input
+                type="text"
+                id="packageSearch"
+                class="form-control"
+                placeholder="Search Package No., Lot No., Keystage No., Content..."
+                autocomplete="off"
+            >
+
+            <button
+                type="button"
+                id="clearPackageSearch"
+                class="btn btn-secondary"
+            >
+                Clear
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-6 text-end">
+
+        <span
+            id="packageSearchResult"
+            class="text-muted"
+        ></span>
+
+    </div>
+
+</div>
         <div class="table-responsive">
 
             <table
+                 id="packageTable"
                 class="table table-bordered table-striped align-middle"
             >
 
@@ -1610,7 +1650,113 @@ function normalize(str) {
     .trim();
 
 }
+// ============================================================
+// PACKAGE SEARCH
+// ============================================================
 
+document.addEventListener("DOMContentLoaded", function () {
+
+    const searchInput =
+        document.getElementById("packageSearch");
+
+    const clearButton =
+        document.getElementById("clearPackageSearch");
+
+    const table =
+        document.getElementById("packageTable");
+
+    const result =
+        document.getElementById("packageSearchResult");
+
+
+    if (!searchInput || !table) {
+        return;
+    }
+
+
+    function searchPackages() {
+
+        const searchValue =
+            searchInput.value
+                .toLowerCase()
+                .trim();
+
+
+        const rows =
+            table.querySelectorAll(
+                "tbody tr"
+            );
+
+
+        let visibleCount = 0;
+
+
+        rows.forEach(function (row) {
+
+            const rowText =
+                row.innerText
+                    .toLowerCase();
+
+
+            if (
+                searchValue === "" ||
+                rowText.includes(searchValue)
+            ) {
+
+                row.style.display = "";
+
+                visibleCount++;
+
+            } else {
+
+                row.style.display = "none";
+
+            }
+
+        });
+
+
+        // Display result count
+
+        if (searchValue === "") {
+
+            result.textContent = "";
+
+        } else {
+
+            result.textContent =
+                visibleCount +
+                " package(s) found";
+
+        }
+
+    }
+
+
+    // Search while typing
+
+    searchInput.addEventListener(
+        "input",
+        searchPackages
+    );
+
+
+    // Clear search
+
+    clearButton.addEventListener(
+        "click",
+        function () {
+
+            searchInput.value = "";
+
+            searchPackages();
+
+            searchInput.focus();
+
+        }
+    );
+
+});
 </script>
 
 
