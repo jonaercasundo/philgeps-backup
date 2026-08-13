@@ -41,10 +41,15 @@ $project_id = isset($_GET['id'])
 
 $ref_id = $keystage_id;
 $ref_column = "keystage_id";
-
-if (!$keystage_id && $lot_id) {
+if (!$keystage_id) {
     $ref_id = $lot_id;
     $ref_column = "lot_id";
+}
+
+// Whitelist the interpolated column name — never interpolate raw request data into SQL.
+$allowed_ref_columns = ['keystage_id', 'lot_id'];
+if (!in_array($ref_column, $allowed_ref_columns, true)) {
+    die("Invalid reference column.");
 }
 
 
@@ -146,72 +151,27 @@ try {
 
         $stmt = $pdo->prepare("
             SELECT
-
                 p.package_id,
                 p.package_num,
-
-                /* Lot */
-                p.lot_id,
-                l.lot_name AS lot_no,
-
-                /* Keystage */
+                GROUP_CONCAT(i.item_name SEPARATOR '<br>') AS Content,
+                GROUP_CONCAT(pc.qty SEPARATOR '<br>') AS qty,
                 p.keystage_id,
-                ks.keystage_name AS keystage_no,
-
-                /* Package Contents */
-                GROUP_CONCAT(
-                    i.item_name
-                    ORDER BY pc.package_content_id
-                    SEPARATOR '<br>'
-                ) AS Content,
-
-                /* Quantities */
-                GROUP_CONCAT(
-                    pc.qty
-                    ORDER BY pc.package_content_id
-                    SEPARATOR '<br>'
-                ) AS qty,
-
-                /* Dimensions */
                 p.width,
                 p.height,
                 p.length,
-
-                CONCAT(
-                    p.width,
-                    'x',
-                    p.height,
-                    'x',
-                    p.length
-                ) AS Dimension
-
+                CONCAT(p.width,'x',p.height,'x',p.length) AS Dimension
             FROM package p
-
-            LEFT JOIN package_content pc
-                ON p.package_id = pc.package_id
-
-            LEFT JOIN item i
-                ON pc.item_id = i.item_id
-
-            LEFT JOIN lot l
-                ON p.lot_id = l.lot_id
-
-            LEFT JOIN keystage ks
-                ON p.keystage_id = ks.keystage_id
-
+            LEFT JOIN package_content pc ON p.package_id = pc.package_id
+            LEFT JOIN item i ON pc.item_id = i.item_id
+            LEFT JOIN lot l ON p.lot_id = l.lot_id
             WHERE l.project_id = ?
-
             GROUP BY
                 p.package_id,
                 p.package_num,
-                p.lot_id,
-                l.lot_name,
                 p.keystage_id,
-                ks.keystage_name,
+                p.length,
                 p.width,
-                p.height,
-                p.length
-
+                p.height
             ORDER BY p.package_num ASC
         ");
 
@@ -234,451 +194,450 @@ try {
 
 }
 
+// preload items for dropdown
+$itemsStmt = $pdo->query("SELECT item_id, item_name FROM item ORDER BY item_name");
+$allItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Quick summary stats for the header bar
+$totalPackages = count($packages);
+$totalItemsQty = 0;
+foreach ($packages as $pkg) {
+    if (!empty($pkg['qty'])) {
+        foreach (explode('<br>', $pkg['qty']) as $q) {
+            $totalItemsQty += (int)$q;
+        }
+    }
+}
 ?>
 
 
 <?php include "partials/packages_modal.php"; ?>
 
+<style>
+  :root {
+    --pkg-accent: #2563eb;
+    --pkg-accent-soft: #eff6ff;
+    --pkg-border: #e5e7eb;
+  }
 
-<!-- ============================================================
-     PAGE
-============================================================ -->
+  .pkg-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .pkg-title h2 {
+    margin-bottom: 0.15rem;
+    font-weight: 700;
+  }
+
+  .pkg-title .text-muted {
+    font-size: 0.9rem;
+  }
+
+  .pkg-stats {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+
+  .pkg-stat-card {
+    background: #fff;
+    border: 1px solid var(--pkg-border);
+    border-radius: 0.6rem;
+    padding: 0.75rem 1.1rem;
+    min-width: 140px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+
+  .pkg-stat-card .stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #111827;
+  }
+
+  .pkg-stat-card .stat-label {
+    font-size: 0.78rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .pkg-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .pkg-search {
+    position: relative;
+    max-width: 320px;
+    flex: 1 1 220px;
+  }
+
+  .pkg-search input {
+    padding-left: 2.25rem;
+  }
+
+  .pkg-search i {
+    position: absolute;
+    left: 0.7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+  }
+
+  .pkg-actions-right {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .table-responsive-wrapper {
+    border: 1px solid var(--pkg-border);
+    border-radius: 0.6rem;
+    overflow: hidden;
+  }
+
+  #packagesTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  #packagesTable tbody tr {
+    transition: background-color 0.12s ease;
+  }
+
+  #packagesTable tbody tr:hover {
+    background-color: var(--pkg-accent-soft);
+  }
+
+  #packagesTable td {
+    vertical-align: middle;
+  }
+
+  .qty-badge {
+    display: inline-block;
+    background: #eef2ff;
+    color: #3730a3;
+    border-radius: 0.4rem;
+    padding: 0.05rem 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .dim-chip {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.85rem;
+    background: #f3f4f6;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.4rem;
+    white-space: nowrap;
+  }
+
+  .row-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+  }
+
+  .row-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
+
+  .pkg-empty-state {
+    text-align: center;
+    padding: 3.5rem 1.5rem;
+    color: #6b7280;
+  }
+
+  .pkg-empty-state i {
+    font-size: 2.4rem;
+    color: #d1d5db;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+
+  #toastStack {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1080;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .no-results-row td {
+    text-align: center;
+    color: #9ca3af;
+    padding: 2rem !important;
+  }
+
+  @media (max-width: 576px) {
+    .pkg-actions-right { width: 100%; }
+    .pkg-actions-right .btn { flex: 1 1 auto; justify-content: center; }
+    .row-actions { flex-wrap: wrap; }
+  }
+</style>
+
+<div id="toastStack" aria-live="polite" aria-atomic="true"></div>
 
 <div class="container mt-4">
 
-    <h2 class="mb-3">Package List</h2>
-
-
-    <!-- ========================================================
-         ACTION BUTTONS
-    ========================================================= -->
-
-    <div class="d-flex mb-3 justify-content-between">
-
-        <!-- LEFT -->
-        <div class="d-flex mb-3">
-
-            <button
-                data-bs-toggle="modal"
-                data-bs-target="#addModal"
-                class="btn btn-success mb-3">
-
-                + Add New Package
-
-            </button>
-
-        </div>
-
-
-        <!-- RIGHT -->
-        <div class="d-flex mb-3">
-
-            <a
-                href="script/generate_qr_per_package.php?project_id=<?= $project_id ?>"
-                target="_blank"
-                class="btn btn-primary mb-3">
-
-                Generate QR
-
-            </a>
-
-
-            <a
-                href="script/generate_barcode_per_package.php?project_id=<?= $project_id ?>"
-                target="_blank"
-                class="btn btn-info mb-3 ms-2">
-
-                Generate Barcode
-
-            </a>
-
-        </div>
-
+  <div class="pkg-header">
+    <div class="pkg-title">
+      <h2>Package List</h2>
+      <div class="text-muted">Track packages, contents, and dimensions for this shipment.</div>
     </div>
-
-
-    <!-- ========================================================
-         PACKAGE TABLE
-    ========================================================= -->
-
-    <?php if (empty($packages)): ?>
-
-        <p>No Packages found.</p>
-
-    <?php else: ?>
-
-        <div class="table-responsive">
-
-            <table class="table table-bordered table-striped align-middle">
-
-                <thead class="table-dark">
-
-                    <tr>
-
-                        <th>Package No.</th>
-
-                        <th>Lot No.</th>
-
-                        <th>Keystage No.</th>
-
-                        <th>Content</th>
-
-                        <th>Quantity</th>
-
-                        <th>Dimension</th>
-
-                        <th>Actions</th>
-
-                    </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                    <?php foreach ($packages as $package): ?>
-
-                        <tr>
-
-                            <!-- ==================================================
-                                 PACKAGE NUMBER
-                            =================================================== -->
-
-                            <td>
-
-                                <?= htmlspecialchars(
-                                    $package['package_num'] ?? ''
-                                ) ?>
-
-                            </td>
-
-
-                            <!-- ==================================================
-                                 LOT NUMBER
-                            =================================================== -->
-
-                            <td>
-
-                                <?php if (!empty($package['lot_no'])): ?>
-
-                                    <?= htmlspecialchars(
-                                        $package['lot_no']
-                                    ) ?>
-
-                                <?php else: ?>
-
-                                    <span class="text-muted">
-                                        N/A
-                                    </span>
-
-                                <?php endif; ?>
-
-                            </td>
-
-
-                            <!-- ==================================================
-                                 KEYSTAGE NUMBER
-                            =================================================== -->
-
-                            <td>
-
-                                <?php if (!empty($package['keystage_no'])): ?>
-
-                                    <?= htmlspecialchars(
-                                        $package['keystage_no']
-                                    ) ?>
-
-                                <?php else: ?>
-
-                                    <span class="text-muted">
-                                        N/A
-                                    </span>
-
-                                <?php endif; ?>
-
-                            </td>
-
-
-                            <!-- ==================================================
-                                 CONTENT
-                            =================================================== -->
-
-                            <td>
-
-                                <?= $package['Content'] ?? '' ?>
-
-                            </td>
-
-
-                            <!-- ==================================================
-                                 QUANTITY
-                            =================================================== -->
-
-                            <td>
-
-                                <?= $package['qty'] ?? '' ?>
-
-                            </td>
-
-
-                            <!-- ==================================================
-                                 DIMENSION
-                            =================================================== -->
-
-                            <td>
-
-                                <?= htmlspecialchars(
-                                    $package['Dimension'] ?? ''
-                                ) ?>
-
-                            </td>
-
-
-                            <!-- ==================================================
-                                 ACTIONS
-                            =================================================== -->
-
-                            <td>
-
-                                <!-- VIEW PACKAGE ITEMS -->
-
-                                <a
-                                    href="items.php?id=<?= $project_id ?>&package_id=<?= $package['package_id'] ?>"
-                                    class="btn btn-primary d-inline-flex align-items-center mb-1">
-
-                                    <i class="bi bi-eye fs-4 me-1"></i>
-
-                                    Packages
-
-                                </a>
-
-
-                                <!-- EDIT -->
-
-                                <a
-                                    href="#"
-                                    class="btn btn-warning editBtn mb-1"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editModal"
-
-                                    data-id="<?= $package['package_id'] ?>"
-
-                                    data-num="<?= htmlspecialchars(
-                                        $package['package_num'] ?? ''
-                                    ) ?>"
-
-                                    data-width="<?= htmlspecialchars(
-                                        $package['width'] ?? ''
-                                    ) ?>"
-
-                                    data-length="<?= htmlspecialchars(
-                                        $package['length'] ?? ''
-                                    ) ?>"
-
-                                    data-height="<?= htmlspecialchars(
-                                        $package['height'] ?? ''
-                                    ) ?>">
-
-                                    <i class="bi bi-pencil-square fs-4"></i>
-
-                                </a>
-
-
-                                <!-- DELETE -->
-
-                                <button
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#deleteModal"
-
-                                    onclick="
-                                        document.getElementById('delete_packages').value =
-                                        <?= htmlspecialchars(
-                                            $package['package_id']
-                                        ) ?>;
-                                    "
-
-                                    class="btn btn-danger mb-1">
-
-                                    <i class="bi bi-trash fs-4"></i>
-
-                                </button>
-
-                            </td>
-
-                        </tr>
-
-                    <?php endforeach; ?>
-
-                </tbody>
-
-            </table>
-
+    <div class="pkg-actions-right">
+      <button data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success">
+        <i class="bi bi-plus-lg me-1"></i>Add Package
+      </button>
+      <a href="script/generate_qr_per_package.php?project_id=<?= (int)$project_id ?>" target="_blank" class="btn btn-outline-primary">
+        <i class="bi bi-qr-code me-1"></i>QR Codes
+      </a>
+      <a href="script/generate_barcode_per_package.php?project_id=<?= (int)$project_id ?>" target="_blank" class="btn btn-outline-secondary">
+        <i class="bi bi-upc me-1"></i>Barcodes
+      </a>
+    </div>
+  </div>
+
+  <div class="pkg-stats">
+    <div class="pkg-stat-card">
+      <div class="stat-value" id="statTotalPackages"><?= (int)$totalPackages ?></div>
+      <div class="stat-label">Packages</div>
+    </div>
+    <div class="pkg-stat-card">
+      <div class="stat-value"><?= (int)$totalItemsQty ?></div>
+      <div class="stat-label">Total Item Qty</div>
+    </div>
+  </div>
+
+  <?php if (empty($packages)): ?>
+      <div class="pkg-empty-state">
+        <i class="bi bi-box-seam"></i>
+        <h5 class="mb-1">No packages yet</h5>
+        <p class="mb-3">Add your first package to start tracking contents and dimensions.</p>
+        <button data-bs-toggle="modal" data-bs-target="#addModal" class="btn btn-success">
+          <i class="bi bi-plus-lg me-1"></i>Add New Package
+        </button>
+      </div>
+  <?php else: ?>
+
+      <div class="pkg-toolbar">
+        <div class="pkg-search">
+          <i class="bi bi-search"></i>
+          <input type="text" id="packageSearch" class="form-control" placeholder="Search package #, content, dimensions…" autocomplete="off">
         </div>
+        <div class="text-muted small" id="resultCount"><?= (int)$totalPackages ?> package<?= $totalPackages === 1 ? '' : 's' ?></div>
+      </div>
 
+      <div class="table-responsive-wrapper">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" id="packagesTable">
+              <thead class="table-dark">
+                  <tr>
+                      <th>Package #</th>
+                      <th>Content</th>
+                      <th>Quantity</th>
+                      <th>Keystage ID</th>
+                      <th>Dimension</th>
+                      <th style="width: 1%;">Actions</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <?php foreach ($packages as $package): ?>
+                      <tr>
+                          <td><strong><?= htmlspecialchars($package['package_num']) ?></strong></td>
+                          <td><?= $package['Content'] ?: '<span class="text-muted">—</span>' ?></td>
+                          <td>
+                            <?php if ($package['qty']): ?>
+                              <?php foreach (explode('<br>', $package['qty']) as $q): ?>
+                                <span class="qty-badge"><?= htmlspecialchars($q) ?></span><br>
+                              <?php endforeach; ?>
+                            <?php else: ?>
+                              <span class="text-muted">—</span>
+                            <?php endif; ?>
+                          </td>
+                          <td><?= htmlspecialchars($package['keystage_id'] ?? '—') ?></td>
+                          <td><span class="dim-chip"><?= htmlspecialchars($package['Dimension']) ?></span></td>
+                          <td>
+                            <div class="row-actions">
+                              <a href="items.php?id=<?= (int)$project_id ?>&package_id=<?= (int)$package['package_id'] ?>"
+                                 class="btn btn-primary btn-sm" title="View package items">
+                                 <i class='bi bi-eye'></i><span class="d-none d-lg-inline">Packages</span>
+                              </a>
+                              <a href="#"
+                                  class="btn btn-warning btn-sm editBtn"
+                                  data-bs-toggle="modal"
+                                  data-bs-target="#editModal"
+                                  data-id="<?= (int)$package['package_id'] ?>"
+                                  data-num="<?= htmlspecialchars($package['package_num']) ?>"
+                                  data-width="<?= htmlspecialchars($package['width']) ?>"
+                                  data-length="<?= htmlspecialchars($package['length']) ?>"
+                                  data-height="<?= htmlspecialchars($package['height']) ?>"
+                                  title="Edit package">
+                                  <i class="bi bi-pencil-square"></i>
+                              </a>
+                              <button data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                      onclick="document.getElementById('delete_packages').value = <?= (int)$package['package_id'] ?>;"
+                                      class="btn btn-danger btn-sm" title="Delete package">
+                                  <i class="bi bi-trash"></i>
+                              </button>
+                            </div>
+                          </td>
+                      </tr>
+                  <?php endforeach; ?>
+                  <tr class="no-results-row d-none">
+                    <td colspan="6">No packages match your search.</td>
+                  </tr>
+              </tbody>
+          </table>
+        </div>
+      </div>
+  <?php endif; ?>
+</div>
 
-        <!-- ========================================================
-             ADD ITEM FORM
-        ========================================================= -->
+<script>
+const allItems = <?= json_encode($allItems) ?>;
 
-        <script>
+/* ---------- Lightweight toast helper (replaces alert()) ---------- */
+function showToast(message, type = "success") {
+  const stack = document.getElementById("toastStack");
+  const icon = type === "success" ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill";
+  const bg = type === "success" ? "text-bg-success" : "text-bg-danger";
 
-        document
-            .getElementById("addItemForm")
-            ?.addEventListener("submit", function(e) {
+  const toastEl = document.createElement("div");
+  toastEl.className = `toast align-items-center ${bg} border-0`;
+  toastEl.setAttribute("role", "alert");
+  toastEl.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi ${icon} me-2"></i>${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>`;
+  stack.appendChild(toastEl);
 
-                e.preventDefault();
+  if (window.bootstrap && bootstrap.Toast) {
+    const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+    toast.show();
+    toastEl.addEventListener("hidden.bs.toast", () => toastEl.remove());
+  } else {
+    // Fallback if Bootstrap JS toast isn't loaded
+    setTimeout(() => toastEl.remove(), 3500);
+  }
+}
 
-                let formData = new FormData(this);
+/* ---------- Button loading-state helper ---------- */
+function setButtonLoading(btn, loading, loadingText = "Saving…") {
+  if (!btn) return;
+  if (loading) {
+    btn.dataset.originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${loadingText}`;
+  } else {
+    btn.disabled = false;
+    if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+  }
+}
 
-                fetch("script/add_items.php", {
-                    method: "POST",
-                    body: formData
-                })
+/* ---------- Live search / filter ---------- */
+(function initSearch() {
+  const searchInput = document.getElementById("packageSearch");
+  if (!searchInput) return;
 
-                .then(res => res.json())
+  const table = document.getElementById("packagesTable");
+  const rows = Array.from(table.querySelectorAll("tbody tr")).filter(r => !r.classList.contains("no-results-row"));
+  const noResultsRow = table.querySelector(".no-results-row");
+  const resultCount = document.getElementById("resultCount");
 
-                .then(data => {
+  searchInput.addEventListener("input", function () {
+    const term = this.value.trim().toLowerCase();
+    let visible = 0;
 
-                    if (data.success) {
+    rows.forEach(row => {
+      const matches = row.innerText.toLowerCase().includes(term);
+      row.classList.toggle("d-none", !matches);
+      if (matches) visible++;
+    });
 
-                        window.location.href = data.redirect;
+    noResultsRow.classList.toggle("d-none", visible !== 0);
+    resultCount.textContent = `${visible} package${visible === 1 ? "" : "s"}`;
+  });
+})();
 
-                    } else {
+/* ---------- Add Package form ---------- */
+const addItemForm = document.getElementById("addItemForm");
+if (addItemForm) {
+  addItemForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const submitBtn = this.querySelector('[type="submit"]');
+    setButtonLoading(submitBtn, true, "Adding…");
 
-                        alert("❌ Error: " + data.message);
+    let formData = new FormData(this);
 
-                    }
+    fetch("script/add_items.php", { method: "POST", body: formData })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast("Package added successfully.");
+          setTimeout(() => window.location.href = data.redirect, 500);
+        } else {
+          setButtonLoading(submitBtn, false);
+          showToast("Error: " + data.message, "error");
+        }
+      })
+      .catch(err => {
+        setButtonLoading(submitBtn, false);
+        showToast("Server error: " + err, "error");
+      });
+  });
+}
 
-                })
+// Add More Items Button (for Add Modal)
+const addMoreItemBtn = document.getElementById("addMoreItem");
+if (addMoreItemBtn) {
+  addMoreItemBtn.addEventListener("click", function () {
+    let container = document.getElementById("itemsContainer");
 
-                .catch(err => {
+    let options = allItems.map(i =>
+      `<option value="${i.item_id}">${i.item_name}</option>`
+    ).join("");
 
-                    console.log(
-                        "Server error: " + err
-                    );
+    let newRow = document.createElement("div");
+    newRow.classList.add("row", "g-2", "align-items-center", "item-row", "mb-2");
 
-                });
+    newRow.innerHTML = `
+      <div class="d-flex mb-2 itemRow">
+        <select class="form-select" name="items[]">
+          <option value="">-- Select Item --</option>
+          ${options}
+        </select>
+        <input type="number" class="form-control" name="quantities[]" min="1" required>
+        <button type="button" class="btn btn-danger btn-sm removeItemBtn">x</button>
+      </div>
+    `;
 
-            });
-
-
-        // =========================================================
-        // ADD MORE ITEMS
-        // =========================================================
-
-        document
-            .getElementById("addMoreItem")
-            ?.addEventListener("click", function() {
-
-                let container =
-                    document.getElementById("itemsContainer");
-
-                let options = allItems.map(i =>
-
-                    `<option value="${i.item_id}">
-                        ${i.item_name}
-                    </option>`
-
-                ).join("");
-
-
-                let newRow =
-                    document.createElement("div");
-
-                newRow.classList.add(
-                    "row",
-                    "g-2",
-                    "align-items-center",
-                    "item-row",
-                    "mb-2"
-                );
-
-
-                newRow.innerHTML = `
-
-                    <div class="d-flex mb-2 itemRow">
-
-                        <select
-                            class="form-select"
-                            name="items[]">
-
-                            <option value="">
-                                -- Select Item --
-                            </option>
-
-                            ${options}
-
-                        </select>
-
-
-                        <input
-                            type="number"
-                            class="form-control"
-                            name="quantities[]"
-                            min="1"
-                            required>
-
-
-                        <button
-                            type="button"
-                            class="btn btn-danger btn-sm removeItemBtn">
-
-                            x
-
-                        </button>
-
-                    </div>
-
-                `;
-
-
-                container.appendChild(newRow);
-
-            });
-
-        </script>
-
-    <?php endif; ?>
-
-
-    <?php
-
-    // ============================================================
-    // PRELOAD ITEMS
-    // ============================================================
-
-    $itemsStmt = $pdo->query("
-        SELECT
-            item_id,
-            item_name
-        FROM item
-        ORDER BY item_name
-    ");
-
-    $allItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    ?>
-
-
-    <script>
-
-    // ============================================================
-    // ALL ITEMS
-    // ============================================================
-
-    const allItems =
-        <?= json_encode(
-            $allItems,
-            JSON_HEX_TAG |
-            JSON_HEX_APOS |
-            JSON_HEX_QUOT |
-            JSON_HEX_AMP
-        ) ?>;
-
-
-    // ============================================================
-    // RENDER EDIT ITEM ROW
-    // ============================================================
+    container.appendChild(newRow);
+  });
+}
 
     function renderItemRow(item_id = "", qty = "") {
 
@@ -735,516 +694,140 @@ try {
 
     }
 
-
-    // ============================================================
-    // DOM READY
-    // ============================================================
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        function() {
-
-            const editButtons =
-                document.querySelectorAll(".editBtn");
-
-            const editItemsDiv =
-                document.getElementById("edit_items");
-
-
-            // ====================================================
-            // EDIT PACKAGE
-            // ====================================================
-
-            editButtons.forEach(btn => {
-
-                btn.addEventListener(
-                    "click",
-                    function() {
-
-                        let package_id =
-                            this.dataset.id;
-
-
-                        fetch(
-                            "script/get_package.php?package_id="
-                            + package_id
-                        )
-
-                        .then(res => res.json())
-
-                        .then(resp => {
-
-                            if (!resp.success) {
-
-                                alert(resp.message);
-
-                                return;
-
-                            }
-
-
-                            // ====================================
-                            // PACKAGE INFORMATION
-                            // ====================================
-
-                            document
-                                .getElementById(
-                                    "edit_package_id"
-                                )
-                                .value =
-                                resp.package.package_id;
-
-
-                            document
-                                .getElementById(
-                                    "edit_package_num"
-                                )
-                                .value =
-                                resp.package.package_num;
-
-
-                            document
-                                .getElementById(
-                                    "edit_lot_num"
-                                )
-                                .value =
-                                resp.package.lot_name
-                                    ? "Lot " +
-                                      resp.package.lot_name
-                                    : "N/A";
-
-
-                            document
-                                .getElementById(
-                                    "edit_key_num"
-                                )
-                                .value =
-                                resp.package.keystage_name
-                                    ? "Keystage " +
-                                      resp.package.keystage_name +
-                                      " " +
-                                      (
-                                          resp.package.description
-                                          ?? ""
-                                      )
-                                    : "No Keystage Assigned";
-
-
-                            document
-                                .getElementById(
-                                    "edit_width"
-                                )
-                                .value =
-                                resp.package.width;
-
-
-                            document
-                                .getElementById(
-                                    "edit_height"
-                                )
-                                .value =
-                                resp.package.height;
-
-
-                            document
-                                .getElementById(
-                                    "edit_length"
-                                )
-                                .value =
-                                resp.package.length;
-
-
-                            // ====================================
-                            // ITEMS
-                            // ====================================
-
-                            editItemsDiv.innerHTML = "";
-
-
-                            resp.items.forEach(it => {
-
-                                editItemsDiv.innerHTML +=
-                                    renderItemRow(
-                                        it.item_id,
-                                        it.qty
-                                    );
-
-                            });
-
-                        });
-
-                    }
-                );
-
-            });
-
-
-            // ====================================================
-            // ADD ITEM ROW
-            // ====================================================
-
-            document
-                .getElementById("addItemBtn")
-                ?.addEventListener(
-                    "click",
-                    function() {
-
-                        editItemsDiv.innerHTML +=
-                            renderItemRow();
-
-                    }
-                );
-
-
-            // ====================================================
-            // REMOVE ITEM ROW
-            // ====================================================
-
-            document.addEventListener(
-                "click",
-                function(e) {
-
-                    if (
-                        e.target.classList
-                            .contains("removeItemBtn")
-                    ) {
-
-                        let row =
-                            e.target.closest(".itemRow");
-
-                        if (row) {
-
-                            row.remove();
-
-                        }
-
-                    }
-
-                }
-            );
-
-
-            // ====================================================
-            // SAVE EDIT
-            // ====================================================
-
-            document
-                .getElementById("saveEditBtn")
-                ?.addEventListener(
-                    "click",
-                    function() {
-
-                        let form =
-                            document.getElementById(
-                                "editForm"
-                            );
-
-
-                        let formData =
-                            new FormData(form);
-
-
-                        fetch(
-                            "script/update_package.php",
-                            {
-                                method: "POST",
-                                body: formData
-                            }
-                        )
-
-                        .then(res => res.json())
-
-                        .then(resp => {
-
-                            if (resp.success) {
-
-                                window.location.href =
-                                    resp.redirect;
-
-                            } else {
-
-                                alert(
-                                    "❌ Error: " +
-                                    resp.message
-                                );
-
-                            }
-
-                        })
-
-                        .catch(err => {
-
-                            console.error(err);
-
-                            alert(
-                                "Server error while updating package."
-                            );
-
-                        });
-
-                    }
-                );
-
-        }
-    );
-
-
-    // ============================================================
-    // POPULATE KEYSTAGE
-    // ============================================================
-
-    function populateKeystage() {
-
-        let lot_id =
-            document.getElementById(
-                'lot_id'
-            ).value;
-
-
-        let keystage_id =
-            document.getElementById(
-                'keystage_id'
-            );
-
-
-        // Clear options
-
-        keystage_id.innerHTML = '';
-
-
-        fetch(
-            "script/get_keystage.php?lotid="
-            + lot_id,
-            {
-                method: "GET"
-            }
-        )
-
+document.addEventListener("DOMContentLoaded", function () {
+  const editButtons = document.querySelectorAll(".editBtn");
+  const editItemsDiv = document.getElementById("edit_items");
+
+  editButtons.forEach(btn => {
+    btn.addEventListener("click", function () {
+      let package_id = this.dataset.id;
+      if (editItemsDiv) {
+        editItemsDiv.innerHTML = `<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>Loading items…</div>`;
+      }
+
+      fetch("script/get_package.php?package_id=" + package_id)
         .then(res => res.json())
-
-        .then(data => {
-
-            if (
-                !data.keystages ||
-                !Array.isArray(data.keystages)
-            ) {
-
-                return;
-
-            }
-
-
-            data.keystages.forEach(
-                keystage => {
-
-                    let option =
-                        document.createElement(
-                            "option"
-                        );
-
-
-                    option.value =
-                        keystage.id;
-
-
-                    option.textContent =
-                        keystage.name;
-
-
-                    keystage_id.appendChild(
-                        option
-                    );
-
-
-                    keystage_id.disabled =
-                        false;
-
-                }
-            );
-
-        })
-
-        .catch(err => {
-
-            console.error(
-                "Error:",
-                err
-            );
-
-        })
-
-        .finally(() => {
-
-            if (
-                typeof hideLoading ===
-                "function"
-            ) {
-
-                hideLoading();
-
-            }
-
-        });
-
-    }
-
-
-    // ============================================================
-    // SYNC TABLE TO FORM
-    // ============================================================
-
-    const myTable =
-        document.getElementById(
-            "myTable"
-        );
-
-
-    if (myTable) {
-
-        myTable.addEventListener(
-            "input",
-            syncTableToForm
-        );
-
-    }
-
-
-    function syncTableToForm() {
-
-        let rows =
-            document.querySelectorAll(
-                "#myTable tr"
-            );
-
-
-        let container =
-            document.getElementById(
-                "itemsContainer"
-            );
-
-
-        if (!container) {
-
+        .then(resp => {
+          if (!resp.success) {
+            showToast(resp.message, "error");
             return;
+          }
 
-        }
+          document.getElementById("edit_package_id").value = resp.package.package_id;
+          document.getElementById("edit_package_num").value = resp.package.package_num;
+          document.getElementById("edit_lot_num").value = resp.package.lot_name ? "Lot " + resp.package.lot_name : "N/A";
+          document.getElementById("edit_key_num").value = resp.package.keystage_name ? "Keystage " + resp.package.keystage_name + " " + resp.package.description : "No Keystage Assigned";
+          document.getElementById("edit_width").value = resp.package.width;
+          document.getElementById("edit_height").value = resp.package.height;
+          document.getElementById("edit_length").value = resp.package.length;
 
+          editItemsDiv.innerHTML = "";
+          resp.items.forEach(it => {
+            editItemsDiv.innerHTML += renderItemRow(it.item_id, it.qty);
+          });
+        })
+        .catch(err => showToast("Failed to load package: " + err, "error"));
+    });
+  });
 
-        container.innerHTML = "";
+  // Add new item row
+  const addItemBtn = document.getElementById("addItemBtn");
+  if (addItemBtn) {
+    addItemBtn.addEventListener("click", function () {
+      editItemsDiv.innerHTML += renderItemRow();
+    });
+  }
 
+  // Remove item row
+  document.addEventListener("click", function (e) {
+    if (e.target.classList.contains("removeItemBtn")) {
+      e.target.closest(".itemRow").remove();
+    }
+  });
 
-        rows.forEach(
-            (row, index) => {
+  const saveEditBtn = document.getElementById("saveEditBtn");
+  if (saveEditBtn) {
+    saveEditBtn.addEventListener("click", function () {
+      setButtonLoading(saveEditBtn, true);
+      let formData = new FormData(document.getElementById("editForm"));
 
-                // Skip header row
+      fetch("script/update_package.php", { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(resp => {
+          if (resp.success) {
+            showToast("Package updated successfully.");
+            setTimeout(() => window.location.href = resp.redirect, 500);
+          } else {
+            setButtonLoading(saveEditBtn, false);
+            showToast("Error: " + resp.message, "error");
+          }
+        })
+        .catch(err => {
+          setButtonLoading(saveEditBtn, false);
+          showToast("Server error: " + err, "error");
+        });
+    });
+  }
+});
 
-                if (index === 1) {
+function populateKeystage() {
+  lot_id = document.getElementById('lot_id').value;
+  keystage_id = document.getElementById('keystage_id');
 
-                    return;
+  keystage_id.innerHTML = '';
 
-                }
+  fetch("script/get_keystage.php?lotid=" + lot_id, { method: "GET" })
+    .then(res => res.json())
+    .then(data => {
+      data.keystages.forEach(keystage => {
+        let option = document.createElement("option");
+        option.value = keystage.id;
+        option.textContent = keystage.name;
+        keystage_id.appendChild(option);
+        keystage_id.disabled = false;
+      });
+    })
+    .catch(err => {
+      console.error("Error:", err);
+      showToast("Could not load keystages.", "error");
+    })
+    .finally(() => {
+      hideLoading();
+    });
+}
 
+// Trigger whenever table changes (typing or pasting) — for the paste-in-items table, if present
+const myTableEl = document.getElementById("myTable");
+if (myTableEl) {
+  myTableEl.addEventListener("input", syncTableToForm);
+}
 
-                let cells =
-                    row.querySelectorAll(
-                        "td"
-                    );
+function syncTableToForm() {
+  let rows = document.querySelectorAll("#myTable tr");
+  let container = document.getElementById("itemsContainer");
+  container.innerHTML = "";
 
+  rows.forEach((row, index) => {
+    if (index === 1) return; // skip the header row
+    let cells = row.querySelectorAll("td");
+    if (cells.length < 1) return;
 
-                if (
-                    cells.length < 1
-                ) {
+    let itemText = (cells[0]?.innerText || "").trim();
+    let qtyText = (cells[1]?.innerText || "").trim();
+    let dimText = (cells[2]?.innerText || "").trim();
 
-                    return;
+    let normalizedDim = "";
+    if (dimText) {
+      normalizedDim = dimText.replace(/\s*/g, "").replace(/[X×]/gi, "x");
+    }
 
-                }
+    let selectedItem = allItems.find(i => normalize(i.item_name) === normalize(itemText));
 
-
-                let itemText =
-                    (
-                        cells[0]?.innerText
-                        || ""
-                    ).trim();
-
-
-                let qtyText =
-                    (
-                        cells[1]?.innerText
-                        || ""
-                    ).trim();
-
-
-                let dimText =
-                    (
-                        cells[2]?.innerText
-                        || ""
-                    ).trim();
-
-
-                // ================================================
-                // NORMALIZE DIMENSION
-                // ================================================
-
-                let normalizedDim = "";
-
-
-                if (dimText) {
-
-                    normalizedDim =
-                        dimText
-                            .replace(
-                                /\s*/g,
-                                ""
-                            )
-                            .replace(
-                                /[X×]/gi,
-                                "x"
-                            );
-
-                }
-
-
-                // ================================================
-                // FIND ITEM
-                // ================================================
-
-                let selectedItem =
-                    allItems.find(
-                        i =>
-                            normalize(
-                                i.item_name
-                            ) ===
-                            normalize(
-                                itemText
-                            )
-                    );
-
-
-                // ================================================
-                // OPTIONS
-                // ================================================
-
-                let options =
-                    allItems.map(
-                        i => `
-
-                        <option
-                            value="${i.item_id}"
-                            ${
-                                selectedItem &&
-                                i.item_id ===
-                                selectedItem.item_id
-                                    ? "selected"
-                                    : ""
-                            }
-                        >
-
-                            ${i.item_name}
-
-                        </option>
-
-                    `
-                    ).join("");
+    let options = allItems.map(i =>
+      `<option value="${i.item_id}" ${selectedItem && i.item_id === selectedItem.item_id ? "selected" : ""}>
+        ${i.item_name}
+      </option>`
+    ).join("");
 
 
                 // ================================================
@@ -1310,44 +893,17 @@ try {
 
                 `;
 
+    container.appendChild(newRow);
+  });
+}
 
-                container.appendChild(
-                    newRow
-                );
+function normalize(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^\w\s]/gi, "")
+    .trim();
+}
+</script>
 
-            }
-        );
-
-    }
-
-
-    // ============================================================
-    // NORMALIZE STRING
-    // ============================================================
-
-    function normalize(str) {
-
-        return String(str || "")
-
-            .toLowerCase()
-
-            .replace(
-                /[^\w\s]/gi,
-                ""
-            )
-
-            .trim();
-
-    }
-
-    </script>
-
-
-    <!-- ========================================================
-         PROJECT DETAILS JS
-    ========================================================= -->
-
-    <script src="assets/js/project_details.js"></script>
-
-
+<script src="assets/js/project_details.js"></script>
 <?php require "template/footer.php"; ?>
